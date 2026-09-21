@@ -1,0 +1,13 @@
+{
+	"servers": {
+		"kitwright": {
+			"url": "http://127.0.0.1:9415/p/9665eec9/t/ab0cd783aff3791d3ba13d3ddc2ae9e6/",
+			"type": "http"
+		},
+		"my-mcp-server-bfb17e69": {
+			"url": "http://127.0.0.1:9415",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

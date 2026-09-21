@@ -1,0 +1,10 @@
+{
+  "mcp": {
+    "kitwright": {
+      "url": "http://127.0.0.1:9415/p/9665eec9/t/ab0cd783aff3791d3ba13d3ddc2ae9e6/",
+      "type": "remote",
+      "enabled": true
+    }
+  },
+  "$schema": "https://app.kilo.ai/config.json"
+}
