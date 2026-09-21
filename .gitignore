@@ -1,0 +1,13 @@
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Mm]emoryCaptures/
+/[Mm]emory_Logs/
+/Logs/
+/UserSettings/
+
+# Never track OS specific metadata
+.DS_Store
+Thumbs.db
