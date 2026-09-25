@@ -75,6 +75,15 @@ public class LoginUI : MonoBehaviour
     private AudioSource _errorAudioSource;
     private AudioSource _bgMusicSource;
 
+    [Header("Create Account")]
+    public CanvasGroup createAccountPopup;
+    public TMP_InputField createUsernameInput;
+    public TMP_InputField createPasswordInput;
+    public TMP_InputField confirmPasswordInput;
+    public Button createButton;
+    public Button closeCreateAccountButton;
+    public Button openCreateAccountButton; // inside AccountLoginPopup RegisterButton
+
     [Header("Feedback")]
     public TMP_Text errorText;
     public CanvasGroup loadingCanvasGroup;
@@ -97,6 +106,7 @@ public class LoginUI : MonoBehaviour
         AutoWireTermsCheckboxes();
         EnsureCheckmarkLabels();
         AutoWireErrorPopup();
+        AutoWireCreateAccountPopup();
         InitAudio();
 
         // wire buttons (avoid double listeners if scene reloads)
@@ -108,14 +118,20 @@ public class LoginUI : MonoBehaviour
         if (forgotPasswordButton) { forgotPasswordButton.onClick.RemoveListener(OnForgotPasswordClicked); forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked); }
         if (ageCheckboxButton) { ageCheckboxButton.onClick.RemoveListener(ToggleAge); ageCheckboxButton.onClick.AddListener(ToggleAge); }
         if (termsCheckboxButton) { termsCheckboxButton.onClick.RemoveListener(ToggleTerms); termsCheckboxButton.onClick.AddListener(ToggleTerms); }
+        if (createButton) { createButton.onClick.RemoveListener(OnCreateAccountClicked); createButton.onClick.AddListener(OnCreateAccountClicked); }
+        if (closeCreateAccountButton) { closeCreateAccountButton.onClick.RemoveListener(OnCloseCreateAccount); closeCreateAccountButton.onClick.AddListener(OnCloseCreateAccount); }
+        if (openCreateAccountButton) { openCreateAccountButton.onClick.RemoveListener(OnOpenCreateAccount); openCreateAccountButton.onClick.AddListener(OnOpenCreateAccount); }
 
         if (passwordInput) passwordInput.contentType = hidePasswordByDefault ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard;
         if (passwordInput) passwordInput.ForceLabelUpdate();
+        if (createPasswordInput) { createPasswordInput.contentType = hidePasswordByDefault ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard; createPasswordInput.ForceLabelUpdate(); }
+        if (confirmPasswordInput) { confirmPasswordInput.contentType = hidePasswordByDefault ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard; confirmPasswordInput.ForceLabelUpdate(); }
 
         UpdateCheckboxesVisual();
         SetError(null);
         SetLoading(false);
         SetAccountLoginPopup(false);
+        SetCreateAccountPopup(false);
 
         // also listen to service success for fallback nav
         if (AuthenticationService.Instance != null)
@@ -135,6 +151,9 @@ public class LoginUI : MonoBehaviour
         if (termsCheckboxButton) termsCheckboxButton.onClick.RemoveListener(ToggleTerms);
         if (errorPopupOKButton) errorPopupOKButton.onClick.RemoveListener(OnPopupOKClicked);
         if (errorPopupCancelButton) errorPopupCancelButton.onClick.RemoveListener(OnPopupCancelClicked);
+        if (createButton) createButton.onClick.RemoveListener(OnCreateAccountClicked);
+        if (closeCreateAccountButton) closeCreateAccountButton.onClick.RemoveListener(OnCloseCreateAccount);
+        if (openCreateAccountButton) openCreateAccountButton.onClick.RemoveListener(OnOpenCreateAccount);
         // Stop bg music
         if (_bgMusicSource) { _bgMusicSource.Stop(); Destroy(_bgMusicSource.gameObject); }
     }
@@ -490,7 +509,6 @@ public class LoginUI : MonoBehaviour
 
     private void OnGoogleLoginClicked()
     {
-        PlayTickSound();
         if (!CheckTermsAccepted()) return;
         if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Authentication service is not available. Please restart the game.", "error"); return; }
         SetError(null);
@@ -540,7 +558,6 @@ public class LoginUI : MonoBehaviour
 
     private void OnLoginClicked()
     {
-        PlayTickSound();
         if (!CheckTermsAccepted()) return;
         if (string.IsNullOrWhiteSpace(usernameInput?.text) || string.IsNullOrEmpty(passwordInput?.text))
         {
@@ -555,7 +572,6 @@ public class LoginUI : MonoBehaviour
 
     private async void OnRegisterClicked()
     {
-        PlayTickSound();
         if (!CheckTermsAccepted()) return;
         // This button is "PLAY AS GUEST" in your LoginMenu.unity -> do device auth.
         if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Authentication service is not available. Please restart the game.", "error"); return; }
@@ -568,11 +584,10 @@ public class LoginUI : MonoBehaviour
     // ------------------------------------------------------------------ Forgot
     private void OnForgotPasswordClicked()
     {
-        PlayTickSound();
         ShowErrorPopup("NOT AVAILABLE", "Password reset is not yet implemented. Please contact support.", "info");
     }
 
-    public void OnMoreLogin() { PlayTickSound(); SetAccountLoginPopup(true); }
+    public void OnMoreLogin() { SetAccountLoginPopup(true); }
     public void OnCloseAccountLogin() { PlayTickSound(); SetAccountLoginPopup(false); }
 
     // ------------------------------------------------------------------ Server connectivity check
@@ -679,8 +694,93 @@ public class LoginUI : MonoBehaviour
         accountLoginPopup.alpha = visible ? 1f : 0f;
         accountLoginPopup.interactable = visible;
         accountLoginPopup.blocksRaycasts = visible;
-        // ensure GameObject active so alpha works (LoginMenuController also does this)
         if (visible && !accountLoginPopup.gameObject.activeSelf) accountLoginPopup.gameObject.SetActive(true);
         if (!visible) accountLoginPopup.gameObject.SetActive(false);
+    }
+
+    private void SetCreateAccountPopup(bool visible)
+    {
+        if (!createAccountPopup) return;
+        createAccountPopup.alpha = visible ? 1f : 0f;
+        createAccountPopup.interactable = visible;
+        createAccountPopup.blocksRaycasts = visible;
+        if (visible && !createAccountPopup.gameObject.activeSelf) createAccountPopup.gameObject.SetActive(true);
+        if (!visible) createAccountPopup.gameObject.SetActive(false);
+    }
+
+    private void AutoWireCreateAccountPopup()
+    {
+        var canvas = GameObject.Find("Canvas");
+        if (canvas == null) return;
+        var popupT = canvas.transform.Find("CreateAccountPopup");
+        if (createAccountPopup == null && popupT != null) createAccountPopup = popupT.GetComponent<CanvasGroup>();
+        var cardT = popupT != null ? popupT.Find("CreateAccountCard") : null;
+        if (cardT != null)
+        {
+            if (createUsernameInput == null) createUsernameInput = cardT.Find("UsernameInput")?.GetComponent<TMP_InputField>();
+            if (createPasswordInput == null) createPasswordInput = cardT.Find("PasswordInput")?.GetComponent<TMP_InputField>();
+            if (confirmPasswordInput == null) confirmPasswordInput = cardT.Find("ConfirmPasswordInput")?.GetComponent<TMP_InputField>();
+            if (createButton == null) createButton = cardT.Find("CreateButton")?.GetComponent<Button>();
+            if (closeCreateAccountButton == null) closeCreateAccountButton = cardT.Find("CloseButton")?.GetComponent<Button>();
+        }
+        if (openCreateAccountButton == null)
+        {
+            var accCard = canvas.transform.Find("AccountLoginPopup/AccountLoginCard");
+            if (accCard != null) openCreateAccountButton = accCard.Find("RegisterButton")?.GetComponent<Button>();
+        }
+        if (createButton)
+        {
+            createButton.onClick.RemoveListener(OnCreateAccountClicked);
+            createButton.onClick.AddListener(OnCreateAccountClicked);
+        }
+        if (closeCreateAccountButton)
+        {
+            closeCreateAccountButton.onClick.RemoveListener(OnCloseCreateAccount);
+            closeCreateAccountButton.onClick.AddListener(OnCloseCreateAccount);
+        }
+        if (openCreateAccountButton)
+        {
+            openCreateAccountButton.onClick.RemoveListener(OnOpenCreateAccount);
+            openCreateAccountButton.onClick.AddListener(OnOpenCreateAccount);
+        }
+        SetCreateAccountPopup(false);
+    }
+
+    public void OnOpenCreateAccount()
+    {
+        PlayTickSound();
+        SetAccountLoginPopup(false);
+        SetCreateAccountPopup(true);
+    }
+
+    public void OnCloseCreateAccount()
+    {
+        PlayTickSound();
+        SetCreateAccountPopup(false);
+    }
+
+    private async void OnCreateAccountClicked()
+    {
+        PlayTickSound();
+        if (!CheckTermsAccepted()) return;
+        if (createUsernameInput == null || createPasswordInput == null || confirmPasswordInput == null)
+        {
+            ShowErrorPopup("Setup Error", "Create account form not wired.", "error");
+            return;
+        }
+        string user = createUsernameInput.text.Trim();
+        string pass = createPasswordInput.text;
+        string confirm = confirmPasswordInput.text;
+        if (string.IsNullOrWhiteSpace(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(confirm))
+        {
+            ShowErrorPopup("Missing Fields", "Please fill all fields to create an account.", "warning");
+            return;
+        }
+        if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Auth service unavailable.", "error"); return; }
+        SetError(null);
+        SetLoading(true);
+        var result = await AuthenticationService.Instance.CreateAccountAsync(user, pass, confirm);
+        HandleResult(result);
+        if (result.IsSuccess) SetCreateAccountPopup(false);
     }
 }

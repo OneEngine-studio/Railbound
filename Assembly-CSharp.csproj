@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets/all_Projects/Scripts/AI/JUCharacterArtificialInteligenceBrain.cs" />
+    <Compile Include="Assets/Project/Scripts/ClickEffect.cs" />
     <Compile Include="Assets/all_Projects/Scripts/Gameplay/Weapon Management/Weapon.cs" />
     <Compile Include="Assets/all_Projects/Scripts/Armor System/Armor.cs" />
     <Compile Include="Assets/all_Projects/Scripts/UI/UIElementToWorldPosition.cs" />

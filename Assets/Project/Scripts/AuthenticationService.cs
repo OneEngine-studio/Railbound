@@ -113,7 +113,7 @@ public class AuthenticationService : MonoBehaviour
 
     // ------------------------------------------------------------------ public API used by LoginUI
 
-    /// <summary>Login with username + password (Nakama email auth). Creates account if not exists.</summary>
+    /// <summary>Login with username/email + password. Fails if account does not exist (create:false).</summary>
     public async Task<AuthResult> LoginAsync(string username, string password)
     {
         if (string.IsNullOrWhiteSpace(username))
@@ -124,28 +124,22 @@ public class AuthenticationService : MonoBehaviour
         InitClient();
         try
         {
-            // Nakama email auth requires an email-shaped string. If user gave plain username, map to railbound.local
             string email = username.Trim();
             string uname = email;
             if (!email.Contains("@"))
-            {
                 email = $"{email}@railbound.local";
-            }
             else
-            {
-                // use part before @ as username for display
                 uname = email.Split('@')[0];
-            }
 
-            _session = await _client.AuthenticateEmailAsync(email, password, uname, create: true);
+            _session = await _client.AuthenticateEmailAsync(email, password, uname, create: false);
             return await HandleNewSessionAsync(_session);
         }
         catch (ApiResponseException apiEx)
         {
             string msg = apiEx.Message;
-            // 401 or "already exists" handling - try login without create then
-            Debug.LogWarning($"[Auth] Email auth failed: {msg} (code {apiEx.StatusCode})");
-            var fail = AuthResult.Failure(CleanError(msg));
+            Debug.LogWarning($"[Auth] Login failed: {msg} (code {apiEx.StatusCode})");
+            string friendly = apiEx.StatusCode == 404 || msg.Contains("not found") ? "Account not found. Please create an account first." : CleanError(msg);
+            var fail = AuthResult.Failure(friendly);
             OnLoginFailed?.Invoke(fail.Error);
             return fail;
         }
@@ -155,6 +149,69 @@ public class AuthenticationService : MonoBehaviour
             OnLoginFailed?.Invoke(fail.Error);
             return fail;
         }
+    }
+
+    /// <summary>Create new account with validation. Uses create:true, fails if duplicate.</summary>
+    public async Task<AuthResult> CreateAccountAsync(string username, string password, string confirmPassword)
+    {
+        string userErr = ValidateUsername(username);
+        if (userErr != null) return AuthResult.Failure(userErr);
+        string passErr = ValidatePassword(password);
+        if (passErr != null) return AuthResult.Failure(passErr);
+        if (password != confirmPassword) return AuthResult.Failure("Passwords do not match.");
+
+        InitClient();
+        try
+        {
+            string email = username.Trim();
+            string uname = email;
+            if (!email.Contains("@"))
+                email = $"{email}@railbound.local";
+            else
+            {
+                uname = email.Split('@')[0];
+                // if real email, also validate format
+                if (!email.Contains(".") || email.Length < 5) return AuthResult.Failure("Please enter a valid email address.");
+            }
+
+            _session = await _client.AuthenticateEmailAsync(email, password, uname, create: true);
+            return await HandleNewSessionAsync(_session);
+        }
+        catch (ApiResponseException apiEx)
+        {
+            string msg = apiEx.Message;
+            bool duplicate = apiEx.StatusCode == 409 || msg.ToLower().Contains("already") || msg.ToLower().Contains("exists");
+            string friendly = duplicate ? "Account already exists. Please log in instead." : CleanError(msg);
+            Debug.LogWarning($"[Auth] CreateAccount failed: {msg} (code {apiEx.StatusCode})");
+            var fail = AuthResult.Failure(friendly);
+            OnLoginFailed?.Invoke(fail.Error);
+            return fail;
+        }
+        catch (Exception ex)
+        {
+            var fail = AuthResult.Failure("Create account failed: " + ex.Message);
+            OnLoginFailed?.Invoke(fail.Error);
+            return fail;
+        }
+    }
+
+    private static string ValidateUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return "Username is required.";
+        string u = username.Trim();
+        string baseName = u.Contains("@") ? u.Split('@')[0] : u;
+        if (baseName.Length < 3) return "Username must be at least 3 characters.";
+        if (baseName.Length > 16) return "Username must be at most 16 characters.";
+        if (u.Contains("@") && (!u.Contains(".") || u.Length < 5)) return "Please enter a valid email address.";
+        return null;
+    }
+
+    private static string ValidatePassword(string password)
+    {
+        if (string.IsNullOrEmpty(password)) return "Password is required.";
+        if (password.Length < 6) return "Password must be at least 6 characters.";
+        if (password.Length > 64) return "Password is too long.";
+        return null;
     }
 
     public async Task<AuthResult> LoginAsGuestAsync()
