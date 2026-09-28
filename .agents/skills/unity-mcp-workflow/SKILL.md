@@ -59,7 +59,7 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
 If native MCP tools are not directly available, probe the local HTTP endpoint:
 
 ```bash
-curl -sS -m 1 -X POST http://127.0.0.1:9415/p/9665eec9/t/ab0cd783aff3791d3ba13d3ddc2ae9e6/mcp \
+curl -sS -m 1 -X POST http://127.0.0.1:9285/p/2d134c5c/t/92023d1a44efcc017ce53ab4a8bf3409/mcp \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
