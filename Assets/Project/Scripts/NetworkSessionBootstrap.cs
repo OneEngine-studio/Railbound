@@ -62,6 +62,12 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
 
     private void HandleLoginSuccess(AuthResult _)
     {
+        if (AuthenticationService.Instance == null || !AuthenticationService.Instance.IsAuthenticated)
+        {
+            Debug.LogError("[NetworkSessionBootstrap] Refusing Netcode startup without authenticated Nakama session.");
+            return;
+        }
+
         if (!startClientAfterAuthentication || _networkManager == null)
             return;
 

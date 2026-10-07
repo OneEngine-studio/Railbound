@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -12,7 +13,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     private static readonly Color SelectedColor = new Color(0.9f, 0.17f, 0.55f, 1f);
 
     [SerializeField] private bool showForIncompleteProfiles = true;
-    [SerializeField] private Sprite experienceSelectionArtwork;
+    [SerializeField] private Sprite inexpertArtwork;
+    [SerializeField] private Sprite accomplishedArtwork;
+    [SerializeField] private Sprite masterArtwork;
 
     private CanvasGroup _overlay;
     private TMP_Text _title;
@@ -24,7 +27,7 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     private Button _continueButton;
     private GameObject _usernameStep;
     private GameObject _levelStep;
-    private Image _levelArtwork;
+    private readonly List<SelectableLevelCard> _levelCards = new List<SelectableLevelCard>();
     private PlayerExperienceLevel _selectedLevel;
     private bool _levelSelected;
     private bool _busy;
@@ -94,29 +97,21 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
         _levelStep = new GameObject("LevelStep", typeof(RectTransform));
         _levelStep.transform.SetParent(card.transform, false);
-        var levelStepRect = _levelStep.GetComponent<RectTransform>();
         var levelStepLayout = _levelStep.AddComponent<LayoutElement>();
-        levelStepLayout.minHeight = 650f;
-        levelStepLayout.preferredHeight = 650f;
+        levelStepLayout.minHeight = 590f;
+        levelStepLayout.preferredHeight = 590f;
 
-        var artworkObject = new GameObject("ExperienceSelectionArtwork", typeof(RectTransform), typeof(Image));
-        artworkObject.transform.SetParent(_levelStep.transform, false);
-        _levelArtwork = artworkObject.GetComponent<Image>();
-        _levelArtwork.sprite = experienceSelectionArtwork;
-        _levelArtwork.preserveAspect = true;
-        _levelArtwork.raycastTarget = false;
-        Stretch(artworkObject.GetComponent<RectTransform>());
+        CreateLevelCard(_levelStep.transform, "InexpertCard", inexpertArtwork, PlayerExperienceLevel.Inexpert,
+            new Vector2(0.02f, 0.20f), new Vector2(0.32f, 0.94f));
+        CreateLevelCard(_levelStep.transform, "AccomplishedCard", accomplishedArtwork, PlayerExperienceLevel.Accomplished,
+            new Vector2(0.35f, 0.20f), new Vector2(0.65f, 0.94f));
+        CreateLevelCard(_levelStep.transform, "MasterCard", masterArtwork, PlayerExperienceLevel.Master,
+            new Vector2(0.68f, 0.20f), new Vector2(0.98f, 0.94f));
 
-        CreateLevelButton(_levelStep.transform, "INEXPERT", PlayerExperienceLevel.Inexpert,
-            new Vector2(0.05f, 0.23f), new Vector2(0.32f, 0.75f));
-        CreateLevelButton(_levelStep.transform, "ACCOMPLISHED", PlayerExperienceLevel.Accomplished,
-            new Vector2(0.35f, 0.23f), new Vector2(0.65f, 0.75f));
-        CreateLevelButton(_levelStep.transform, "MASTER", PlayerExperienceLevel.Master,
-            new Vector2(0.68f, 0.23f), new Vector2(0.95f, 0.75f));
-        _continueButton = CreateOverlayButton(_levelStep.transform, "ContinueButton",
-            new Vector2(0.37f, 0.02f), new Vector2(0.63f, 0.15f), SaveLevel);
-        _backButton = CreateOverlayButton(_levelStep.transform, "BackButton",
-            new Vector2(0.44f, 0.84f), new Vector2(0.56f, 0.94f), ShowUsernameStep);
+        _continueButton = CreateAnchoredButton(_levelStep.transform, "CONTINUE",
+            new Vector2(0.38f, 0.01f), new Vector2(0.62f, 0.11f), SaveLevel);
+        _backButton = CreateAnchoredButton(_levelStep.transform, "BACK",
+            new Vector2(0.43f, 0.12f), new Vector2(0.57f, 0.20f), ShowUsernameStep);
 
         _error = CreateText(card.transform, "Error", string.Empty, 15f, TextAlignmentOptions.Center, new Color(1f, 0.35f, 0.4f));
         SetPreferredHeight(_error.gameObject, 42f);
@@ -206,36 +201,87 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         }
     }
 
-    private void CreateLevelButton(Transform parent, string label, PlayerExperienceLevel level, Vector2 anchorMin, Vector2 anchorMax)
-    {
-        var button = CreateOverlayButton(parent, label, anchorMin, anchorMax, () =>
-        {
-            _selectedLevel = level;
-            _levelSelected = true;
-            SetError(string.Empty);
-        });
-        var image = button.GetComponent<Image>();
-        image.color = new Color(SelectedColor.r, SelectedColor.g, SelectedColor.b, 0.01f);
-    }
-
-    private static Button CreateOverlayButton(
+    private void CreateLevelCard(
         Transform parent,
         string name,
+        Sprite artwork,
+        PlayerExperienceLevel level,
         Vector2 anchorMin,
-        Vector2 anchorMax,
-        UnityEngine.Events.UnityAction action)
+        Vector2 anchorMax)
     {
-        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement), typeof(Outline));
         root.transform.SetParent(parent, false);
         var rect = root.GetComponent<RectTransform>();
         rect.anchorMin = anchorMin;
         rect.anchorMax = anchorMax;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
-        root.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
+
+        var image = root.GetComponent<Image>();
+        image.sprite = artwork;
+        image.preserveAspect = true;
+        image.color = Color.white;
+        image.raycastTarget = true;
+
+        var button = root.GetComponent<Button>();
+        button.transition = Selectable.Transition.ColorTint;
+        button.colors = new ColorBlock
+        {
+            normalColor = Color.white,
+            highlightedColor = new Color(1f, 1f, 1f, 0.95f),
+            pressedColor = new Color(1f, 1f, 1f, 0.8f),
+            selectedColor = Color.white,
+            disabledColor = Color.gray,
+            colorMultiplier = 1f,
+            fadeDuration = 0.08f
+        };
+        button.onClick.AddListener(() =>
+        {
+            _selectedLevel = level;
+            _levelSelected = true;
+            SetError(string.Empty);
+            RefreshLevelCardSelection(root);
+        });
+        var outline = root.GetComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.75f, 0.1f, 1f);
+        outline.effectDistance = new Vector2(4f, 4f);
+        outline.enabled = false;
+        _levelCards.Add(new SelectableLevelCard { root = root, level = level });
+    }
+
+    private static Button CreateAnchoredButton(
+        Transform parent,
+        string label,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        UnityEngine.Events.UnityAction action)
+    {
+        var root = new GameObject(label.Replace(" ", string.Empty), typeof(RectTransform), typeof(Image), typeof(Button));
+        root.transform.SetParent(parent, false);
+        var rect = root.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        root.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.2f, 1f);
         var button = root.GetComponent<Button>();
         button.onClick.AddListener(action);
+        var text = CreateText(root.transform, "Label", label, 16f, TextAlignmentOptions.Center, Color.white);
+        Stretch(text.rectTransform);
         return button;
+    }
+
+    private void RefreshLevelCardSelection(GameObject selectedRoot)
+    {
+        for (var i = 0; i < _levelCards.Count; i++)
+            _levelCards[i].root.GetComponent<Outline>().enabled = _levelCards[i].root == selectedRoot;
+    }
+
+    [Serializable]
+    private sealed class SelectableLevelCard
+    {
+        public GameObject root;
+        public PlayerExperienceLevel level;
     }
 
     private static string ValidateUsername(string username)
