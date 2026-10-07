@@ -4,13 +4,16 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using Railbound.UI.Anim;
 
 namespace Railbound.UI
 {
     /// <summary>
-    /// Cyberpunk multiplayer lobby controller.
+    /// Battle-royale multiplayer lobby controller.
     /// Wires every UI element of the Lobby scene (see LobbyUIHierarchy.md for the
     /// recommended RectTransform layout) and exposes data-driven refresh methods.
+    /// Interactive elements animate through Railbound.UI.Anim (AnimatedButton,
+    /// IconAnimator, Notifications).
     ///
     /// Scene: Assets/Project/GameLobby.unity
     /// Canvas: 1920x1080 reference, Scale With Screen Size, Match Width Or Height (0.5)
@@ -115,7 +118,7 @@ namespace Railbound.UI
         [SerializeField] private TextMeshProUGUI challengerNameText;  // "Luna"
         [SerializeField] private Image challengerPortrait;
 
-        [SerializeField] private Button readyButton;                  // big magenta READY
+        [SerializeField] private Button readyButton;                  // big gold READY
         [SerializeField] private Image readyGlow;
         [SerializeField] private TextMeshProUGUI readyText;
 
@@ -124,9 +127,9 @@ namespace Railbound.UI
 
         // ------------------------------------------------------------------  5. Cyberpunk palette
 
-        [Header("5. Cyberpunk Palette")]
-        [SerializeField] private Color neonPink   = new Color(1.00f, 0.11f, 0.55f);  // READY / accents
-        [SerializeField] private Color neonRed    = new Color(1.00f, 0.10f, 0.15f);  // active tab / WEEK 3
+        [Header("5. Battle Royale Palette")]
+        [SerializeField] private Color goldAccent  = new Color(1.00f, 0.75f, 0.20f);  // READY / active tab / progress
+        [SerializeField] private Color neonRed    = new Color(1.00f, 0.10f, 0.15f);  // WEEK 3 / alerts
         [SerializeField] private Color neonGreen  = new Color(0.10f, 1.00f, 0.45f);  // currency gem
         [SerializeField] private Color neonCyan   = new Color(0.00f, 0.90f, 1.00f);  // secondary glow
         [SerializeField] private Color darkPanel  = new Color(0.04f, 0.05f, 0.09f, 0.85f);
@@ -281,7 +284,11 @@ namespace Railbound.UI
                 if (navTabs[i].activeIndicator != null)
                     navTabs[i].activeIndicator.gameObject.SetActive(active);
                 if (navTabs[i].labelText != null)
-                    navTabs[i].labelText.color = active ? neonPink : Color.white;
+                    navTabs[i].labelText.color = active ? goldAccent : Color.white;
+                // Persistent hover ring on the active tab (AnimatedButton.Selected state).
+                var animated = navTabs[i].button != null ? navTabs[i].button.GetComponent<AnimatedButton>() : null;
+                if (animated != null)
+                    animated.SetSelected(active);
             }
             onNavTabClicked?.Invoke(navTabs[_activeTabIndex].label);
         }
@@ -304,7 +311,14 @@ namespace Railbound.UI
         private void HandlePower() => Debug.Log("[LobbyUI] Power / exit");
         private void HandleSettings() => Debug.Log("[LobbyUI] Settings");
         private void HandleMail() => Debug.Log("[LobbyUI] Mail");
-        private void HandleNotifications() => Debug.Log("[LobbyUI] Notifications");
+        private void HandleNotifications()
+        {
+            Debug.Log("[LobbyUI] Notifications");
+            // Demo toast for the spec example: slides in, warning icon pulses,
+            // progress bar depletes, auto-dismisses when the countdown hits zero.
+            var canvas = topBar != null ? topBar.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+            Notifications.ShowCountdown(canvas, "TRAIN CAR DESTROYING", 10);
+        }
         private void HandleFriends() => Debug.Log("[LobbyUI] Friends");
 
         // ------------------------------------------------------------------  palette
@@ -312,9 +326,9 @@ namespace Railbound.UI
         private void ApplyPalette()
         {
             if (currencyIcon != null) currencyIcon.color = neonGreen;
-            if (readyGlow != null) readyGlow.color = neonPink;
+            if (readyGlow != null) readyGlow.color = new Color(goldAccent.r, goldAccent.g, goldAccent.b, 0.45f);
             if (weekSubtitleText != null) weekSubtitleText.color = neonRed;
-            if (xpFillImage != null) xpFillImage.color = neonPink;
+            if (xpFillImage != null) xpFillImage.color = goldAccent;
         }
 
         // ------------------------------------------------------------------  public API for backend binding
