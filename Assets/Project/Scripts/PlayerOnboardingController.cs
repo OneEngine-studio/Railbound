@@ -66,12 +66,12 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         overlayObject.GetComponent<Image>().color = BackgroundColor;
         _overlay = overlayObject.GetComponent<CanvasGroup>();
 
-        var card = CreatePanel(overlayObject.transform, "OnboardingCard", PanelColor, new Vector2(720f, 540f));
+        var card = CreatePanel(overlayObject.transform, "OnboardingCard", PanelColor, new Vector2(1100f, 780f));
         var layout = card.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(56, 56, 42, 42);
-        layout.spacing = 18f;
+        layout.padding = new RectOffset(28, 28, 28, 28);
+        layout.spacing = 10f;
         layout.childControlWidth = true;
-        layout.childControlHeight = false;
+        layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
 
         _title = CreateText(card.transform, "Title", "WELCOME ABOARD", 32f, TextAlignmentOptions.Center, AccentColor);
@@ -96,7 +96,8 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _levelStep.transform.SetParent(card.transform, false);
         var levelStepRect = _levelStep.GetComponent<RectTransform>();
         var levelStepLayout = _levelStep.AddComponent<LayoutElement>();
-        levelStepLayout.preferredHeight = 520f;
+        levelStepLayout.minHeight = 650f;
+        levelStepLayout.preferredHeight = 650f;
 
         var artworkObject = new GameObject("ExperienceSelectionArtwork", typeof(RectTransform), typeof(Image));
         artworkObject.transform.SetParent(_levelStep.transform, false);
