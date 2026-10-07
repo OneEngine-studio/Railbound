@@ -31,6 +31,7 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     private PlayerExperienceLevel _selectedLevel;
     private bool _levelSelected;
     private bool _busy;
+    private bool _isDestroyed;
 
     private async void Start()
     {
@@ -39,7 +40,25 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
         try
         {
+            var authentication = AuthenticationService.Instance;
+            if (authentication == null)
+                return;
+
+            var waitFrames = 0;
+            while (!authentication.IsAuthenticationReady && waitFrames++ < 480)
+            {
+                await Task.Yield();
+                if (!IsAlive)
+                    return;
+            }
+
+            if (!IsAlive || !authentication.IsAuthenticationReady || !authentication.IsAuthenticated)
+                return;
+
             var profile = await PlayerProfileService.LoadAsync();
+            if (!IsAlive)
+                return;
+
             if (profile == null)
                 ShowUsernameStep();
             else
@@ -50,14 +69,34 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         }
         catch (Exception exception)
         {
+            if (!IsAlive)
+                return;
+
             ShowUsernameStep();
             SetError("We could not load your profile. Check your connection and try again.");
             Debug.LogError($"[PlayerOnboardingController] Profile load failed: {exception}");
         }
     }
 
+    private void OnDestroy()
+    {
+        _isDestroyed = true;
+
+        if (_saveUsernameButton != null)
+            _saveUsernameButton.onClick.RemoveListener(SaveUsername);
+        if (_continueButton != null)
+            _continueButton.onClick.RemoveListener(SaveLevel);
+        if (_backButton != null)
+            _backButton.onClick.RemoveListener(ShowUsernameStep);
+    }
+
+    private bool IsAlive => !_isDestroyed && this != null && gameObject != null;
+
     private void BuildOverlay()
     {
+        if (!IsAlive)
+            return;
+
         if (_overlay != null)
             return;
 
@@ -120,7 +159,13 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void ShowUsernameStep()
     {
+        if (!IsAlive)
+            return;
+
         BuildOverlay();
+        if (!IsAlive || _usernameStep == null || _levelStep == null)
+            return;
+
         _usernameStep.SetActive(true);
         _levelStep.SetActive(false);
         _title.gameObject.SetActive(true);
@@ -134,6 +179,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void ShowLevelStep()
     {
+        if (!IsAlive)
+            return;
+
         _usernameStep.SetActive(false);
         _levelStep.SetActive(true);
         _title.gameObject.SetActive(false);
@@ -160,11 +208,17 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         try
         {
             await PlayerProfileService.SaveAsync(username, PlayerExperienceLevel.Inexpert, false);
+            if (!IsAlive)
+                return;
+
             ApplyProfileToLobby(new PlayerProfile { username = username, experienceLevel = PlayerExperienceLevel.Inexpert });
             ShowLevelStep();
         }
         catch (Exception exception)
         {
+            if (!IsAlive)
+                return;
+
             SetBusy(false);
             SetError(GetFriendlySaveError(exception));
             Debug.LogWarning($"[PlayerOnboardingController] Username save failed: {exception.Message}");
@@ -186,6 +240,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         try
         {
             await PlayerProfileService.SaveAsync(_usernameInput.text.Trim(), _selectedLevel);
+            if (!IsAlive)
+                return;
+
             ApplyProfileToLobby(new PlayerProfile
             {
                 username = _usernameInput.text.Trim(),
@@ -195,6 +252,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         }
         catch (Exception exception)
         {
+            if (!IsAlive)
+                return;
+
             SetBusy(false);
             SetError("Profile could not be saved. Check your connection and try again.");
             Debug.LogWarning($"[PlayerOnboardingController] Profile save failed: {exception.Message}");
@@ -237,6 +297,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         };
         button.onClick.AddListener(() =>
         {
+            if (!IsAlive)
+                return;
+
             _selectedLevel = level;
             _levelSelected = true;
             SetError(string.Empty);
@@ -274,7 +337,14 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     private void RefreshLevelCardSelection(GameObject selectedRoot)
     {
         for (var i = 0; i < _levelCards.Count; i++)
-            _levelCards[i].root.GetComponent<Outline>().enabled = _levelCards[i].root == selectedRoot;
+        {
+            if (_levelCards[i].root == null)
+                continue;
+
+            var outline = _levelCards[i].root.GetComponent<Outline>();
+            if (outline != null)
+                outline.enabled = _levelCards[i].root == selectedRoot;
+        }
     }
 
     [Serializable]
@@ -313,6 +383,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void SetBusy(bool busy)
     {
+        if (!IsAlive)
+            return;
+
         _busy = busy;
         if (_saveUsernameButton != null) _saveUsernameButton.interactable = !busy;
         if (_continueButton != null) _continueButton.interactable = !busy;
@@ -321,6 +394,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void ApplyProfileToLobby(PlayerProfile profile)
     {
+        if (!IsAlive)
+            return;
+
         var lobbyController = GetComponent<Railbound.UI.LobbyUIController>();
         if (lobbyController != null && profile != null)
             lobbyController.SetPlayerInfo(0, profile.username);
@@ -328,6 +404,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void SetError(string message)
     {
+        if (!IsAlive)
+            return;
+
         if (_error != null)
             _error.text = message ?? string.Empty;
     }
