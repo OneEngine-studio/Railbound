@@ -28,7 +28,7 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private const float CardWidth = 1100f;
     private const float CardHeight = 780f;
-    private const float UsernameCardHeight = 420f;   // compact card for the nickname form
+    private const float UsernameCardHeight = 500f;   // must be tall enough to fit label+input+button+error without overlap
     private const float LevelStepHeight = 540f;
     private const float FrameThickness = 5f;
     private const float BadgeCoverPad = 17f; // hides the cut-off badge baked into the card artwork
@@ -151,10 +151,13 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         var card = CreatePanel(overlayObject.transform, "OnboardingCard", PanelColor, new Vector2(CardWidth, CardHeight));
         _cardRect = card.GetComponent<RectTransform>();
         ApplyChamfer(card.GetComponent<Image>());
-        AddCardAccents(card);
+
+        // NOTE: AddCardAccents is called AFTER the VerticalLayoutGroup and all children
+        // are added. Accents are siblings of the card on the overlayObject so they are
+        // never inside the VLG hierarchy, preventing the diagonal-line geometry bug.
         var layout = card.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(28, 28, 28, 28);
-        layout.spacing = 10f;
+        layout.padding = new RectOffset(40, 40, 32, 32);
+        layout.spacing = 14f;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
@@ -166,20 +169,26 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _title = CreateText(card.transform, "Title", "WELCOME ABOARD", 30f, TextAlignmentOptions.Center, Color.white);
         _title.characterSpacing = TitleLetterSpacing;
         SetPreferredHeight(_title.gameObject, 44f);
-        _subtitle = CreateText(card.transform, "Subtitle", "Set up your player profile before entering the lobby.", 16f, TextAlignmentOptions.Center, MutedTextColor);
-        SetPreferredHeight(_subtitle.gameObject, 36f);
+        _subtitle = CreateText(card.transform, "Subtitle", "Set up your player profile before entering the lobby.", 15f, TextAlignmentOptions.Center, MutedTextColor);
+        SetPreferredHeight(_subtitle.gameObject, 34f);
 
         _usernameStep = new GameObject("UsernameStep", typeof(RectTransform));
         _usernameStep.transform.SetParent(card.transform, false);
         var usernameLayout = _usernameStep.AddComponent<VerticalLayoutGroup>();
-        usernameLayout.spacing = 18f;
-        usernameLayout.padding = new RectOffset(10, 10, 10, 10);
+        usernameLayout.spacing = 16f;
+        usernameLayout.padding = new RectOffset(160, 160, 8, 8);
         usernameLayout.childControlWidth = true;
         usernameLayout.childControlHeight = true;
         usernameLayout.childForceExpandWidth = true;
         usernameLayout.childForceExpandHeight = false;
-        var stepLabel = CreateText(_usernameStep.transform, "Label", "CHOOSE YOUR NICKNAME", 14f, TextAlignmentOptions.Left, GoldColor);
-        SetPreferredHeight(stepLabel.gameObject, 26f);
+        {
+            var usernameStepLayout = _usernameStep.AddComponent<LayoutElement>();
+            usernameStepLayout.minHeight = 175f;
+            usernameStepLayout.preferredHeight = 175f;
+        }
+        var stepLabel = CreateText(_usernameStep.transform, "Label", "CHOOSE YOUR NICKNAME", 13f, TextAlignmentOptions.Left, GoldColor);
+        stepLabel.characterSpacing = 3f;
+        SetPreferredHeight(stepLabel.gameObject, 24f);
         _usernameInput = CreateInputField(_usernameStep.transform);
         _usernameInput.characterLimit = 16;
         _usernameInput.onValueChanged.AddListener(_ => SetError(string.Empty));
@@ -206,12 +215,16 @@ public sealed class PlayerOnboardingController : MonoBehaviour
             new Vector2(0.28f, 0f), new Vector2(0.485f, 0.12f), ButtonIdleColor, GoldColor, Color.white);
         _backButton.onClick.AddListener(ShowUsernameStep);
 
-        _error = CreateText(card.transform, "Error", string.Empty, 15f, TextAlignmentOptions.Center, ErrorColor);
-        SetPreferredHeight(_error.gameObject, 36f);
+        _error = CreateText(card.transform, "Error", string.Empty, 14f, TextAlignmentOptions.Center, ErrorColor);
+        SetPreferredHeight(_error.gameObject, 30f);
 
         // Layout must be resolved before aligning frames/shelves to the letterboxed artwork.
         LayoutRebuilder.ForceRebuildLayoutImmediate(card.GetComponent<RectTransform>());
         FinalizeLevelCards();
+
+        // Accents are on the overlayObject (sibling of card), so the card's VLG never
+        // sees them. They are drawn last (SetAsLastSibling) so they appear above the card.
+        AddCardAccents(overlayObject, _cardRect);
 
         _levelStep.SetActive(false);
     }
@@ -228,7 +241,7 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _usernameStep.SetActive(true);
         _levelStep.SetActive(false);
         if (_cardRect != null)
-            _cardRect.sizeDelta = new Vector2(CardWidth, UsernameCardHeight + 40f);
+            _cardRect.sizeDelta = new Vector2(CardWidth, UsernameCardHeight);
         _stepLabel.gameObject.SetActive(true);
         _title.gameObject.SetActive(true);
         _subtitle.gameObject.SetActive(true);
@@ -484,34 +497,44 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         image.raycastTarget = false;
     }
 
-    private static void AddCardAccents(GameObject card)
+    /// <summary>
+    /// Gold accent rails drawn as siblings of the card on the overlay container.
+    /// They are never children of the card's VerticalLayoutGroup, preventing the
+    /// diagonal-line geometry bug caused by stretch-anchored RectTransforms inside a VLG.
+    /// Parent must be the overlay object (parent of card). CardRect is used to align.
+    /// </summary>
+    private static void AddCardAccents(GameObject overlayParent, RectTransform cardRect)
     {
-        // Top and left gold accent rails strictly bounded inside the card container.
-        var top = new GameObject("Accent_Top", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-        top.transform.SetParent(card.transform, false);
-        top.GetComponent<LayoutElement>().ignoreLayout = true;
-        var topRect = top.GetComponent<RectTransform>();
-        topRect.anchorMin = new Vector2(0f, 1f);
-        topRect.anchorMax = new Vector2(1f, 1f);
-        topRect.pivot = new Vector2(0.5f, 1f);
-        topRect.anchoredPosition = Vector2.zero;
-        topRect.sizeDelta = new Vector2(0f, 4f);
-        var topImage = top.GetComponent<Image>();
-        topImage.color = GoldColor;
-        topImage.raycastTarget = false;
+        if (overlayParent == null || cardRect == null)
+            return;
 
-        var left = new GameObject("Accent_Left", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-        left.transform.SetParent(card.transform, false);
-        left.GetComponent<LayoutElement>().ignoreLayout = true;
+        // Top rail: full-width, 4px tall, at the top edge of the card.
+        var top = new GameObject("Accent_Top", typeof(RectTransform), typeof(Image));
+        top.transform.SetParent(overlayParent.transform, false);
+        top.transform.SetAsLastSibling();
+        var topRect = top.GetComponent<RectTransform>();
+        topRect.anchorMin = cardRect.anchorMin;
+        topRect.anchorMax = cardRect.anchorMax;
+        topRect.pivot = new Vector2(0.5f, 1f);
+        topRect.anchoredPosition = new Vector2(cardRect.anchoredPosition.x, cardRect.anchoredPosition.y + cardRect.sizeDelta.y * 0.5f);
+        topRect.sizeDelta = new Vector2(cardRect.sizeDelta.x - ChamferCut * 2f, 4f);
+        var topImg = top.GetComponent<Image>();
+        topImg.color = GoldColor;
+        topImg.raycastTarget = false;
+
+        // Left rail: 4px wide, full-height, at the left edge of the card.
+        var left = new GameObject("Accent_Left", typeof(RectTransform), typeof(Image));
+        left.transform.SetParent(overlayParent.transform, false);
+        left.transform.SetAsLastSibling();
         var leftRect = left.GetComponent<RectTransform>();
-        leftRect.anchorMin = new Vector2(0f, 0f);
-        leftRect.anchorMax = new Vector2(0f, 1f);
+        leftRect.anchorMin = cardRect.anchorMin;
+        leftRect.anchorMax = cardRect.anchorMax;
         leftRect.pivot = new Vector2(0f, 0.5f);
-        leftRect.anchoredPosition = Vector2.zero;
-        leftRect.sizeDelta = new Vector2(4f, 0f);
-        var leftImage = left.GetComponent<Image>();
-        leftImage.color = GoldColor;
-        leftImage.raycastTarget = false;
+        leftRect.anchoredPosition = new Vector2(cardRect.anchoredPosition.x - cardRect.sizeDelta.x * 0.5f, cardRect.anchoredPosition.y);
+        leftRect.sizeDelta = new Vector2(4f, cardRect.sizeDelta.y - ChamferCut * 2f);
+        var leftImg = left.GetComponent<Image>();
+        leftImg.color = GoldColor;
+        leftImg.raycastTarget = false;
     }
 
     /// <summary>
