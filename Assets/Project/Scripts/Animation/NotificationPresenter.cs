@@ -196,8 +196,10 @@ namespace Railbound.UI.Anim
             bodyRect.offsetMin = new Vector2(18f, -74f);
             bodyRect.offsetMax = new Vector2(-66f, -46f);
 
-            // warning icon: pops in and pulses while the toast is visible
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(TextMeshProUGUI));
+            // warning icon: pops in and pulses while the toast is visible.
+            // Unity 6 uGUI allows only one Graphic per GameObject, so the backing
+            // plate (Image) and the "!" glyph (TMP text) live on separate objects.
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(root.transform, false);
             var iconRect = (RectTransform)icon.transform;
             iconRect.anchorMin = new Vector2(1f, 1f);
@@ -210,7 +212,15 @@ namespace Railbound.UI.Anim
             iconImage.type = chamfer != null ? Image.Type.Sliced : Image.Type.Simple;
             iconImage.color = important ? new Color(0.9f, 0.15f, 0.18f, 1f) : new Color(0.12f, 0.10f, 0.03f, 1f);
             iconImage.raycastTarget = false;
-            var bang = icon.GetComponent<TextMeshProUGUI>();
+
+            var glyphObject = new GameObject("Glyph", typeof(RectTransform), typeof(TextMeshProUGUI));
+            glyphObject.transform.SetParent(icon.transform, false);
+            var glyphRect = (RectTransform)glyphObject.transform;
+            glyphRect.anchorMin = Vector2.zero;
+            glyphRect.anchorMax = Vector2.one;
+            glyphRect.offsetMin = Vector2.zero;
+            glyphRect.offsetMax = Vector2.zero;
+            var bang = glyphObject.GetComponent<TextMeshProUGUI>();
             bang.text = important ? "!" : "i";
             bang.fontSize = 22f;
             bang.fontStyle = FontStyles.Bold;

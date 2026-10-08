@@ -7,9 +7,9 @@ namespace Railbound.UI.Anim
     /// <summary>
     /// Experience level card (INEXPERT / ACCOMPLISHED / MASTER):
     /// - Idle: dimmed (when unselected), stable, selected card breathes slowly.
-    /// - Hover: lifts 5-10px, scales 1.00 -> 1.02, border (ring) brightens, artwork
+    /// - Hover: lifts 5-10px, scales 1.00 -> 1.02, soft gold glow halo fades in, artwork
     ///   zooms 1.04 inside its mask, description (baked into the art) becomes clearer.
-    /// - Selected: strong gold ring + glow, checkmark pops in (Back Out), scale 1.03,
+    /// - Selected: gold frame strips + glow halo, checkmark pops in (Back Out), scale 1.03,
     ///   ambient breathing; the controller dims the other cards (deselected).
     /// - Deselected: glow/checkmark fade, scale returns to normal.
     /// </summary>
@@ -26,11 +26,11 @@ namespace Railbound.UI.Anim
         private readonly object _scaleToken = new object();
         private readonly object _posToken = new object();
         private readonly object _artToken = new object();
-        private readonly object _ringToken = new object();
+        private readonly object _glowToken = new object();
         private readonly object _checkToken = new object();
         private readonly object _ambientToken = new object();
 
-        private Image _ring;
+        private Image _glow;               // soft radial halo (hover/selection highlight)
         private RectTransform _checkRoot;
         private Image _checkImage;
         private Color _dimColor = new Color(0.45f, 0.45f, 0.5f, 1f);
@@ -75,32 +75,32 @@ namespace Railbound.UI.Anim
                 if (frameTransform != null) frame = frameTransform.gameObject;
             }
 
-            EnsureRing();
+            EnsureGlow();
             EnsureCheckmark();
         }
 
-        private void EnsureRing()
+        /// <summary>Soft radial halo behind the frame - replaces the old hard outline.</summary>
+        private void EnsureGlow()
         {
-            if (_ring != null || frame == null) return;
-            var existing = frame.transform.Find("HoverRing");
-            if (existing != null) { _ring = existing.GetComponent<Image>(); return; }
+            if (_glow != null || frame == null) return;
+            var existing = frame.transform.Find("HoverGlow");
+            if (existing != null) { _glow = existing.GetComponent<Image>(); return; }
 
-            var sprite = Resources.Load<Sprite>("UI/Ring_Square");
+            var sprite = Resources.Load<Sprite>("UI/Glow_Square");
             if (sprite == null) return;
 
-            var ringObject = new GameObject("HoverRing", typeof(RectTransform), typeof(Image));
-            ringObject.transform.SetParent(frame.transform, false);
-            ringObject.transform.SetSiblingIndex(0);
-            _ring = ringObject.GetComponent<Image>();
-            _ring.sprite = sprite;
-            _ring.type = Image.Type.Sliced;
-            _ring.color = new Color(Gold.r, Gold.g, Gold.b, 0f);
-            _ring.raycastTarget = false;
-            var rect = (RectTransform)ringObject.transform;
+            var glowObject = new GameObject("HoverGlow", typeof(RectTransform), typeof(Image));
+            glowObject.transform.SetParent(frame.transform, false);
+            glowObject.transform.SetSiblingIndex(0); // behind the gold strips + checkmark
+            _glow = glowObject.GetComponent<Image>();
+            _glow.sprite = sprite;
+            _glow.color = new Color(Gold.r, Gold.g, Gold.b, 0f);
+            _glow.raycastTarget = false;
+            var rect = (RectTransform)glowObject.transform;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(-3f, -3f);
-            rect.offsetMax = new Vector2(3f, 3f);
+            rect.offsetMin = new Vector2(-14f, -14f);
+            rect.offsetMax = new Vector2(14f, 14f);
         }
 
         private void EnsureCheckmark()
@@ -226,27 +226,27 @@ namespace Railbound.UI.Anim
                 UITween.ScaleTo(artRect, zoom, duration, ease, null, _artToken);
             }
 
-            // border / glow --------------------------------------------------
-            if (_ring != null)
+            // soft glow halo (hover/selection highlight) ----------------------
+            if (_glow != null)
             {
                 var alpha = _selected
-                    ? (_hovered ? UIAnim.RingHoverSelected : UIAnim.RingSelected)
-                    : (_hovered ? UIAnim.RingHover : 0f);
+                    ? (_hovered ? UIAnim.GlowHoverSelected : UIAnim.GlowAmbientMin)
+                    : (_hovered ? UIAnim.GlowHover : 0f);
                 var color = new Color(Gold.r, Gold.g, Gold.b, alpha);
-                var fromRing = _ring.color;
-                UITween.Kill(_ringToken);
+                var fromGlow = _glow.color;
+                UITween.Kill(_glowToken);
                 UITween.To(0f, 1f, duration, ease,
-                    p => { if (_ring != null) _ring.color = Color.LerpUnclamped(fromRing, color, p); },
-                    null, 0f, _ringToken);
+                    p => { if (_glow != null) _glow.color = Color.LerpUnclamped(fromGlow, color, p); },
+                    null, 0f, _glowToken);
             }
 
             // ambient breathing on the selected card (slow + subtle) ------------
             UITween.Kill(_ambientToken);
-            if (_selected && Application.isPlaying && _ring != null)
+            if (_selected && Application.isPlaying && _glow != null)
             {
-                var ring = _ring;
-                UITween.Loop(UIAnim.RingAmbientMin, UIAnim.RingSelected, UIAnim.AmbientCycle, Ease.InOutCubic,
-                    a => { if (ring != null && ring.color.a > 0.01f) ring.color = new Color(Gold.r, Gold.g, Gold.b, a); },
+                var glow = _glow;
+                UITween.Loop(UIAnim.GlowAmbientMin, UIAnim.GlowSelected, UIAnim.AmbientCycle, Ease.InOutCubic,
+                    a => { if (glow != null && glow.color.a > 0.01f) glow.color = new Color(Gold.r, Gold.g, Gold.b, a); },
                     yoyo: true, target: _ambientToken);
             }
         }
@@ -264,7 +264,7 @@ namespace Railbound.UI.Anim
             UITween.Kill(_scaleToken);
             UITween.Kill(_posToken);
             UITween.Kill(_artToken);
-            UITween.Kill(_ringToken);
+            UITween.Kill(_glowToken);
             UITween.Kill(_checkToken);
             UITween.Kill(_ambientToken);
             _hovered = false;

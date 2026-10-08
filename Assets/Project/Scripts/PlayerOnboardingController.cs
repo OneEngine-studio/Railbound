@@ -172,7 +172,8 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _usernameStep = new GameObject("UsernameStep", typeof(RectTransform));
         _usernameStep.transform.SetParent(card.transform, false);
         var usernameLayout = _usernameStep.AddComponent<VerticalLayoutGroup>();
-        usernameLayout.spacing = 12f;
+        usernameLayout.spacing = 18f;
+        usernameLayout.padding = new RectOffset(10, 10, 10, 10);
         usernameLayout.childControlWidth = true;
         usernameLayout.childControlHeight = true;
         usernameLayout.childForceExpandWidth = true;
@@ -227,7 +228,7 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _usernameStep.SetActive(true);
         _levelStep.SetActive(false);
         if (_cardRect != null)
-            _cardRect.sizeDelta = new Vector2(CardWidth, UsernameCardHeight);
+            _cardRect.sizeDelta = new Vector2(CardWidth, UsernameCardHeight + 40f);
         _stepLabel.gameObject.SetActive(true);
         _title.gameObject.SetActive(true);
         _subtitle.gameObject.SetActive(true);
@@ -464,9 +465,8 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         var text = CreateText(root.transform, "Label", label, 16f, TextAlignmentOptions.Center, textColor);
         Stretch(text.rectTransform, 14f, 10f, 0f, 0f);
 
-        // Hover/click/press animation (chamfered ring matches the button chrome).
-        var animated = root.AddComponent<AnimatedButton>();
-        animated.SetRingStyle(AnimatedButton.RingStyle.Chamfer);
+        // Hover/click/press animation (soft gold glow halo + scale + brightness).
+        root.AddComponent<AnimatedButton>();
         return button;
     }
 
@@ -486,16 +486,16 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private static void AddCardAccents(GameObject card)
     {
-        // Gold rails along the top and left edge (ignored by the layout group).
-        // Inset by the chamfer cut so they stop where the straight edge begins.
+        // Top and left gold accent rails strictly bounded inside the card container.
         var top = new GameObject("Accent_Top", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
         top.transform.SetParent(card.transform, false);
         top.GetComponent<LayoutElement>().ignoreLayout = true;
         var topRect = top.GetComponent<RectTransform>();
         topRect.anchorMin = new Vector2(0f, 1f);
         topRect.anchorMax = new Vector2(1f, 1f);
-        topRect.offsetMin = new Vector2(ChamferCut, -4f);
-        topRect.offsetMax = new Vector2(-ChamferCut, 0f);
+        topRect.pivot = new Vector2(0.5f, 1f);
+        topRect.anchoredPosition = Vector2.zero;
+        topRect.sizeDelta = new Vector2(0f, 4f);
         var topImage = top.GetComponent<Image>();
         topImage.color = GoldColor;
         topImage.raycastTarget = false;
@@ -506,8 +506,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         var leftRect = left.GetComponent<RectTransform>();
         leftRect.anchorMin = new Vector2(0f, 0f);
         leftRect.anchorMax = new Vector2(0f, 1f);
-        leftRect.offsetMin = new Vector2(0f, ChamferCut);
-        leftRect.offsetMax = new Vector2(4f, -ChamferCut);
+        leftRect.pivot = new Vector2(0f, 0.5f);
+        leftRect.anchoredPosition = Vector2.zero;
+        leftRect.sizeDelta = new Vector2(4f, 0f);
         var leftImage = left.GetComponent<Image>();
         leftImage.color = GoldColor;
         leftImage.raycastTarget = false;

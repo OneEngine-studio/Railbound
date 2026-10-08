@@ -12,11 +12,12 @@ namespace Railbound.UI.Anim
     }
 
     /// <summary>
-    /// Drives every button animation state: hover (scale 1.00 -> 1.04, brightness, border/glow,
-    /// icon nudge 2-4px), press/click (1.04 -> 0.96 -> 1.00 + flash + sound), selected, disabled,
-    /// locked (icon shake), loading (Linear spinner ring), success, error and focus.
-    /// Brightness applies to the whole visual group (fill, children, labels) so icon-only
-    /// buttons respond too. The Button's transition is forced to None - tweens own all visuals.
+    /// Drives every button animation state:
+    /// - Full style: soft gold glow halo fades in behind the button (no hard outline), scale
+    ///   1.00 -> 1.04, brightness x1.15, icon nudge/rotation.
+    /// - Light style (small icon tiles): no glow, scale 1.00 -> 1.03, brightness x1.12, icon nudge.
+    /// - Press/click: 1.04 -> 0.96 -> 1.00 + glow flash + sound. Loading spins a Linear ring.
+    /// The Button's transition is forced to None - tweens own all visuals.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Button))]
@@ -24,12 +25,16 @@ namespace Railbound.UI.Anim
         IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler,
         ISelectHandler, IDeselectHandler
     {
-        public enum RingStyle { None, Square, Chamfer }
+        public enum HoverStyle
+        {
+            Full,   // glow halo + scale 1.04 + brightness 1.15 (READY, CHECK AWARDS, tabs, cards' cousins)
+            Light   // no glow, scale 1.03 + brightness 1.12 (small icon tiles)
+        }
 
         [SerializeField] private Button button;
         [SerializeField] private RectTransform icon;            // optional: nudge/rotate target
-        [SerializeField] private RingStyle ringStyle = RingStyle.Square;
-        [SerializeField] private Color ringColor = new Color(1f, 0.75f, 0.2f, 1f);
+        [SerializeField] private HoverStyle hoverStyle = HoverStyle.Full;
+        [SerializeField] private Color glowColor = new Color(1f, 0.75f, 0.2f, 1f);
         [SerializeField] private bool rotateIconOnHover;
         [SerializeField] private float iconNudge = UIAnim.IconNudge;
 
@@ -38,13 +43,15 @@ namespace Railbound.UI.Anim
         // tween channels - killing one never disturbs the others
         private readonly object _scaleToken = new object();
         private readonly object _colorToken = new object();
+        private readonly object _glowToken = new object();
         private readonly object _ringToken = new object();
         private readonly object _rotToken = new object();
         private readonly object _fxToken = new object();
 
         private RectTransform _rt;
-        private Image _ring;
-        private Graphic[] _group;              // every graphic under the button (ring excluded)
+        private Image _glow;               // soft halo (Full style only)
+        private Image _ring;               // loading spinner only
+        private Graphic[] _group;          // every graphic under the button (glow + ring excluded)
         private Color[] _groupColors;
         private Vector3 _baseScale;
         private Vector2 _iconBasePos;
@@ -56,6 +63,9 @@ namespace Railbound.UI.Anim
         private bool _lastInteractable = true;
         private bool _initialized;
 
+        private float HoverScaleValue => hoverStyle == HoverStyle.Light ? UIAnim.HoverScaleLight : UIAnim.HoverScale;
+        private float HoverBrightness => hoverStyle == HoverStyle.Light ? UIAnim.BrightnessHoverLight : UIAnim.BrightnessHover;
+
         // ------------------------------------------------------------------ setup
 
         /// <summary>Editor tooling hook: assign the icon and hover rotation before Play Mode.</summary>
@@ -65,8 +75,9 @@ namespace Railbound.UI.Anim
             rotateIconOnHover = rotateOnHover;
         }
 
-        public void SetRingStyle(RingStyle style) => ringStyle = style;
-        public void SetRingColor(Color color) => ringColor = color;
+        /// <summary>Full = soft glow + 1.04 scale; Light = no glow, 1.03 scale (icon tiles).</summary>
+        public void SetHoverStyle(HoverStyle style) => hoverStyle = style;
+        public void SetGlowColor(Color color) => glowColor = color;
 
         private void Awake() => EnsureInitialized();
 
@@ -90,37 +101,64 @@ namespace Railbound.UI.Anim
                 _iconBaseRot = icon.localEulerAngles.z;
             }
 
-            EnsureRing();
+            EnsureGlow();
             CacheGraphics();
         }
 
+        /// <summary>Soft radial halo behind the button - the hover/selection highlight.</summary>
+        private void EnsureGlow()
+        {
+            if (_glow != null || hoverStyle != HoverStyle.Full) return;
+
+            var existing = transform.Find("HoverGlow");
+            if (existing != null) _glow = existing.GetComponent<Image>();
+            if (_glow != null) return;
+
+            var sprite = Resources.Load<Sprite>("UI/Glow_Square");
+            if (sprite == null) return;
+
+            var glowObject = new GameObject("HoverGlow", typeof(RectTransform), typeof(Image));
+            glowObject.transform.SetParent(transform, false);
+            glowObject.transform.SetSiblingIndex(0); // first child: above the fill, below labels
+            _glow = glowObject.GetComponent<Image>();
+            _glow.sprite = sprite;
+            _glow.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+            _glow.raycastTarget = false;
+            var rect = (RectTransform)glowObject.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            var outset = UIAnim.GlowOutset;
+            rect.offsetMin = new Vector2(-outset, -outset);
+            rect.offsetMax = new Vector2(outset, outset);
+        }
+
+        /// <summary>Loading spinner ring - only created when a loading state is needed.</summary>
         private void EnsureRing()
         {
-            if (_ring != null || ringStyle == RingStyle.None) return;
+            if (_ring != null) return;
 
             var existing = transform.Find("HoverRing");
             if (existing != null) _ring = existing.GetComponent<Image>();
             if (_ring != null) return;
 
-            var sprite = Resources.Load<Sprite>(ringStyle == RingStyle.Chamfer ? "UI/Ring_Chamfer" : "UI/Ring_Square");
+            var sprite = Resources.Load<Sprite>("UI/Ring_Square");
             if (sprite == null) return;
 
             var ringObject = new GameObject("HoverRing", typeof(RectTransform), typeof(Image));
             ringObject.transform.SetParent(transform, false);
-            ringObject.transform.SetSiblingIndex(0); // behind labels, above the button fill
             _ring = ringObject.GetComponent<Image>();
             _ring.sprite = sprite;
             _ring.type = Image.Type.Sliced;
-            _ring.color = new Color(ringColor.r, ringColor.g, ringColor.b, 0f);
+            _ring.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
             _ring.raycastTarget = false;
             var rect = (RectTransform)ringObject.transform;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(-3f, -3f);
-            rect.offsetMax = new Vector2(3f, 3f);
+            rect.offsetMin = new Vector2(-2f, -2f);
+            rect.offsetMax = new Vector2(2f, 2f);
         }
 
-        /// <summary>Brightness/flash targets: every graphic under the button except the ring.</summary>
+        /// <summary>Brightness/flash targets: every graphic under the button except glow/spinner.</summary>
         private void CacheGraphics()
         {
             var all = GetComponentsInChildren<Graphic>(true);
@@ -129,7 +167,9 @@ namespace Railbound.UI.Anim
             {
                 var graphic = all[i];
                 if (graphic == null) continue;
-                if (_ring != null && graphic.transform == _ring.transform) continue;
+                var t = graphic.transform;
+                if (_glow != null && t == _glow.transform) continue;
+                if (_ring != null && t == _ring.transform) continue;
                 list.Add(graphic);
             }
             _group = list.ToArray();
@@ -156,6 +196,7 @@ namespace Railbound.UI.Anim
         {
             UITween.Kill(_scaleToken);
             UITween.Kill(_colorToken);
+            UITween.Kill(_glowToken);
             UITween.Kill(_ringToken);
             UITween.Kill(_rotToken);
             UITween.Kill(_fxToken);
@@ -165,6 +206,7 @@ namespace Railbound.UI.Anim
             _flashAmount = 0f;
             if (_rt != null) _rt.localScale = _baseScale;
             ApplyVisuals();
+            if (_glow != null) _glow.color = ColorWithAlpha(0f);
             State = RestState();
         }
 
@@ -267,6 +309,7 @@ namespace Railbound.UI.Anim
             UITween.Kill(_rotToken);
             if (loading)
             {
+                EnsureRing();
                 if (_ring != null)
                 {
                     var ringRect = (RectTransform)_ring.transform;
@@ -328,9 +371,9 @@ namespace Railbound.UI.Anim
             State = ButtonAnimState.Click;
             UISfx.PlayClick();
 
-            // 1.04 -> 0.96 -> 1.00 within 0.08-0.15s, plus a short ring flash.
+            // 1.04 -> 0.96 -> 1.00 within 0.08-0.15s, plus a short glow flash.
             var pressScale = _baseScale * UIAnim.PressScale;
-            var restScale = _hovered ? _baseScale * UIAnim.HoverScale : _baseScale;
+            var restScale = _hovered ? _baseScale * HoverScaleValue : _baseScale;
             var start = _rt != null ? _rt.localScale : _baseScale;
             UITween.Kill(_scaleToken);
             if (_rt != null)
@@ -346,20 +389,17 @@ namespace Railbound.UI.Anim
                     }, 0f, _scaleToken);
             }
 
-            if (_ring != null)
+            if (_glow != null)
             {
-                var flash = RingColorAt(UIAnim.RingFlash);
-                var rest = RingColorAt(RestRingAlpha());
-                UITween.Kill(_ringToken);
-                UITween.To(0f, 1f, UIAnim.Flash * 0.4f, Ease.OutQuad,
-                    p => { if (_ring != null) _ring.color = Color.LerpUnclamped(_ring.color, flash, p); },
+                var rest = RestGlowAlpha();
+                UITween.Kill(_glowToken);
+                UITween.To(rest, UIAnim.GlowFlash, UIAnim.Flash * 0.4f, Ease.OutQuad,
+                    v => SetGlowAlpha(v),
                     () =>
                     {
-                        if (_ring == null) return;
-                        UITween.To(0f, 1f, UIAnim.Flash, Ease.OutCubic,
-                            p => { if (_ring != null) _ring.color = Color.LerpUnclamped(flash, rest, p); },
-                            null, 0f, _ringToken);
-                    }, 0f, _ringToken);
+                        UITween.To(UIAnim.GlowFlash, rest, UIAnim.Flash, Ease.OutCubic,
+                            v => SetGlowAlpha(v), null, 0f, _glowToken);
+                    }, 0f, _glowToken);
             }
 
             if (rotateIconOnHover && icon != null)
@@ -381,7 +421,7 @@ namespace Railbound.UI.Anim
             EnsureInitialized();
 
             // Colors are only re-cached from a neutral (untweened, unflashed) state so
-            // external recolors (e.g. SetActiveTab) are picked up without drift.
+            // external recolors (e.g. SetActiveTab gold labels) are picked up without drift.
             if (_flashAmount > 0f) _flashAmount = 0f;
             if (Mathf.Approximately(_brightness, 1f)) CacheGraphics();
 
@@ -391,7 +431,7 @@ namespace Railbound.UI.Anim
             else if (_locked) brightness = UIAnim.BrightnessLocked;
             else if (button != null && !button.interactable) brightness = UIAnim.BrightnessDisabled;
             else if (_pressed) brightness = UIAnim.BrightnessPressed;
-            else if (_hovered) brightness = UIAnim.BrightnessHover;
+            else if (_hovered) brightness = HoverBrightness;
             else brightness = 1f;
             TweenBrightness(brightness, duration, ease);
 
@@ -401,15 +441,26 @@ namespace Railbound.UI.Anim
                 Vector3 target;
                 if (_locked || (button != null && !button.interactable)) target = _baseScale;
                 else if (_pressed) target = _baseScale * UIAnim.PressScale;
-                else if (_hovered) target = _baseScale * UIAnim.HoverScale;
+                else if (_hovered) target = _baseScale * HoverScaleValue;
                 else target = _baseScale;
                 UITween.ScaleTo(_rt, target, duration, ease, null, _scaleToken);
             }
 
-            // border / glow ------------------------------------------------
-            EnsureRing();
-            if (_ring != null)
-                RingTo(RestRingAlpha(), duration, ease);
+            // glow halo (border/glow appears) ------------------------------
+            EnsureGlow();
+            if (_glow != null)
+                GlowTo(RestGlowAlpha(), duration, ease);
+
+            // loading spinner ring ------------------------------------------
+            if (_loading)
+            {
+                EnsureRing();
+                RingTo(UIAnim.RingSpinner, duration, ease);
+            }
+            else if (_ring != null)
+            {
+                RingTo(0f, duration, ease);
+            }
 
             // icon nudge / rotation ----------------------------------------
             if (icon != null)
@@ -432,26 +483,42 @@ namespace Railbound.UI.Anim
                 null, 0f, _colorToken);
         }
 
+        private void GlowTo(float alpha, float duration, Ease ease)
+        {
+            if (_glow == null) return;
+            var from = _glow.color.a;
+            UITween.Kill(_glowToken);
+            UITween.To(from, alpha, duration, ease,
+                v => SetGlowAlpha(v), null, 0f, _glowToken);
+        }
+
+        private void SetGlowAlpha(float alpha)
+        {
+            if (_glow != null) _glow.color = ColorWithAlpha(alpha);
+        }
+
+        private Color ColorWithAlpha(float alpha) => new Color(glowColor.r, glowColor.g, glowColor.b, alpha);
+
         private void RingTo(float alpha, float duration, Ease ease)
         {
+            if (_ring == null) return;
             var from = _ring.color;
-            var to = RingColorAt(alpha);
+            var to = new Color(glowColor.r, glowColor.g, glowColor.b, alpha);
             UITween.Kill(_ringToken);
             UITween.To(0f, 1f, duration, ease,
                 p => { if (_ring != null) _ring.color = Color.LerpUnclamped(from, to, p); },
                 null, 0f, _ringToken);
         }
 
-        private Color RingColorAt(float alpha) => new Color(ringColor.r, ringColor.g, ringColor.b, alpha);
-
-        private float RestRingAlpha()
+        private float RestGlowAlpha()
         {
-            if (_loading) return UIAnim.RingSelected;
+            if (_loading) return UIAnim.GlowLoading;
             if (_locked || (button != null && !button.interactable)) return 0f;
-            if (_selected && _hovered) return UIAnim.RingHoverSelected;
-            if (_selected) return UIAnim.RingSelected;
-            if (_focused && !_hovered) return 0.4f;
-            if (_hovered) return UIAnim.RingHover;
+            if (hoverStyle == HoverStyle.Light) return 0f;   // tiles: brightness + nudge only
+            if (_selected && _hovered) return UIAnim.GlowHoverSelected;
+            if (_selected) return UIAnim.GlowSelected;
+            if (_focused && !_hovered) return UIAnim.GlowFocused;
+            if (_hovered) return UIAnim.GlowHover;
             return 0f;
         }
 
