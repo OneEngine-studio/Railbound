@@ -146,13 +146,13 @@ namespace Railbound.UI
         // ------------------------------------------------------------------  runtime state
 
         private int _activeTabIndex;
-        private int _currency = 2350;
+        private int _currency = 613;
         private int _friendsOnline = 5;
-        private int _level = 32;
-        private string _username = "wtxinc";
-        private int _xpCurrent = 600;
-        private int _xpTarget = 1000;
-        private ChallengerEntry _challenger = new ChallengerEntry { name = "Luna" };
+        private int _level = 2;
+        private string _username = "EstheAda5813";
+        private int _xpCurrent = 255;
+        private int _xpTarget = 400;
+        private ChallengerEntry _challenger = new ChallengerEntry { name = "SF - RANKED" };
 
         // ------------------------------------------------------------------  lifecycle
 
@@ -174,7 +174,7 @@ namespace Railbound.UI
             if (readyButton != null)
                 readyButton.onClick.AddListener(HandleReadyClicked);
             if (checkAwardsButton != null)
-                checkAwardsButton.onClick.AddListener(() => onCheckAwardsClicked?.Invoke());
+                checkAwardsButton.onClick.AddListener(HandleTaskClicked);
             if (partySlotLeft != null)
                 partySlotLeft.onClick.AddListener(() => HandlePartyInvite(-1));
             if (partySlotRight != null)
@@ -214,7 +214,7 @@ namespace Railbound.UI
 
         public void RefreshTopBar()
         {
-            if (logoText != null) logoText.text = "BASIN";
+            if (logoText != null) logoText.text = "RAILBOUND";
             if (friendsCountText != null) friendsCountText.text = _friendsOnline.ToString();
             if (currencyText != null) currencyText.text = _currency.ToString("N0");
             SetActiveTab(_activeTabIndex);
@@ -222,16 +222,16 @@ namespace Railbound.UI
 
         public void RefreshPlayerTag()
         {
-            if (levelText != null) levelText.text = _level.ToString();
+            if (levelText != null) levelText.text = $"Lv.{Mathf.Max(1, _level)}";
             if (usernameText != null) usernameText.text = _username;
-            if (statsSubtitleText != null) statsSubtitleText.text = "Show statistics";
+            if (statsSubtitleText != null) statsSubtitleText.text = "New Invitation Code";
         }
 
         public void RefreshSeasonPanel()
         {
-            if (seasonTitleText != null) seasonTitleText.text = "SEASON 2";
-            if (weekSubtitleText != null) weekSubtitleText.text = "WEEK 3";
-            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent} / {_xpTarget}";
+            if (seasonTitleText != null) seasonTitleText.text = "STRIKE PASS";
+            if (weekSubtitleText != null) weekSubtitleText.text = "Bronze III";
+            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent}/{_xpTarget}";
             if (xpFillImage != null) xpFillImage.fillAmount = Mathf.Clamp01((float)_xpCurrent / Mathf.Max(1, _xpTarget));
         }
 
@@ -261,7 +261,7 @@ namespace Railbound.UI
 
         public void RefreshChallengerCard()
         {
-            if (challengerTitleText != null) challengerTitleText.text = "New Challenger";
+            if (challengerTitleText != null) challengerTitleText.text = "NEW SEASON";
             if (challengerNameText != null) challengerNameText.text = _challenger.name;
             if (challengerPortrait != null && _challenger.portrait != null)
                 challengerPortrait.sprite = _challenger.portrait;
@@ -269,26 +269,34 @@ namespace Railbound.UI
 
         public void RefreshReadyButton()
         {
-            if (readyText != null) readyText.text = "READY";
-            if (gameModeText != null) gameModeText.text = "Game Mode : Solo";
+            if (readyText != null) readyText.text = "PLAY";
+            if (gameModeText != null) gameModeText.text = "BR - Ranked";
         }
 
         // ------------------------------------------------------------------  interactions
 
         public void SetActiveTab(int index)
         {
+            if (navTabs == null || navTabs.Length == 0) return;
             _activeTabIndex = Mathf.Clamp(index, 0, navTabs.Length - 1);
             for (int i = 0; i < navTabs.Length; i++)
             {
                 bool active = i == _activeTabIndex;
                 if (navTabs[i].activeIndicator != null)
                     navTabs[i].activeIndicator.gameObject.SetActive(active);
+                if (navTabs[i].hoverGlow != null)
+                    navTabs[i].hoverGlow.gameObject.SetActive(false);
                 if (navTabs[i].labelText != null)
-                    navTabs[i].labelText.color = active ? goldAccent : Color.white;
-                // Persistent hover ring on the active tab (AnimatedButton.Selected state).
-                var animated = navTabs[i].button != null ? navTabs[i].button.GetComponent<AnimatedButton>() : null;
-                if (animated != null)
-                    animated.SetSelected(active);
+                    navTabs[i].labelText.color = active ? Color.white : new Color(0.84f, 0.88f, 0.92f, 0.88f);
+                if (navTabs[i].button != null)
+                {
+                    var bg = navTabs[i].button.GetComponent<Image>();
+                    if (bg != null)
+                        bg.color = active ? new Color(0.14f, 0.16f, 0.21f, 0.72f) : new Color(0.08f, 0.10f, 0.14f, 0.45f);
+                    var animated = navTabs[i].button.GetComponent<AnimatedButton>();
+                    if (animated != null)
+                        animated.SetSelected(false);
+                }
             }
             onNavTabClicked?.Invoke(navTabs[_activeTabIndex].label);
         }
@@ -296,8 +304,18 @@ namespace Railbound.UI
         private void HandleReadyClicked()
         {
             // TODO: call match-orchestrator ticket API via game-api BFF
-            Debug.Log("[LobbyUI] READY clicked - request match ticket");
+            Debug.Log("[LobbyUI] PLAY clicked - request match ticket");
             onReadyClicked?.Invoke();
+        }
+
+        private void HandleTaskClicked()
+        {
+            if (questScrollView != null)
+            {
+                bool next = !questScrollView.gameObject.activeSelf;
+                questScrollView.gameObject.SetActive(next);
+            }
+            onCheckAwardsClicked?.Invoke();
         }
 
         private void HandlePartyInvite(int side)
@@ -325,9 +343,7 @@ namespace Railbound.UI
 
         private void ApplyPalette()
         {
-            if (currencyIcon != null) currencyIcon.color = neonGreen;
-            if (readyGlow != null) readyGlow.color = new Color(goldAccent.r, goldAccent.g, goldAccent.b, 0.45f);
-            if (weekSubtitleText != null) weekSubtitleText.color = neonRed;
+            if (readyGlow != null) readyGlow.color = new Color(goldAccent.r, goldAccent.g, goldAccent.b, 0.35f);
             if (xpFillImage != null) xpFillImage.color = goldAccent;
         }
 
@@ -335,7 +351,7 @@ namespace Railbound.UI
 
         public void SetCurrency(int value) { _currency = value; RefreshTopBar(); }
         public void SetFriendsOnline(int count) { _friendsOnline = count; RefreshTopBar(); }
-        public void SetPlayerInfo(int level, string username) { _level = level; _username = username; RefreshPlayerTag(); }
+        public void SetPlayerInfo(int level, string username) { if (level > 0) _level = level; if (!string.IsNullOrEmpty(username)) _username = username; RefreshPlayerTag(); }
         public void SetXp(int current, int target) { _xpCurrent = current; _xpTarget = target; RefreshSeasonPanel(); }
         public void SetQuests(IList<QuestEntry> entries) { quests.Clear(); quests.AddRange(entries); RefreshQuests(); }
         public void SetChallenger(ChallengerEntry entry) { _challenger = entry; RefreshChallengerCard(); }

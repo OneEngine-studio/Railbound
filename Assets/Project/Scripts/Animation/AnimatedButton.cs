@@ -106,31 +106,13 @@ namespace Railbound.UI.Anim
             CacheGraphics();
         }
 
-        /// <summary>Soft radial halo behind the button - the hover/selection highlight.</summary>
+        /// <summary>Soft radial halo behind the button - disabled so buttons keep sharp tactical edges.</summary>
         private void EnsureGlow()
         {
-            if (_glow != null || hoverStyle != HoverStyle.Full) return;
-
             var existing = transform.Find("HoverGlow");
-            if (existing != null) _glow = existing.GetComponent<Image>();
-            if (_glow != null) return;
-
-            var sprite = Resources.Load<Sprite>("UI/Glow_Square");
-            if (sprite == null) return;
-
-            var glowObject = new GameObject("HoverGlow", typeof(RectTransform), typeof(Image));
-            glowObject.transform.SetParent(transform, false);
-            glowObject.transform.SetSiblingIndex(0); // first child: above the fill, below labels
-            _glow = glowObject.GetComponent<Image>();
-            _glow.sprite = sprite;
-            _glow.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
-            _glow.raycastTarget = false;
-            var rect = (RectTransform)glowObject.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            var outset = UIAnim.GlowOutset;
-            rect.offsetMin = new Vector2(-outset, -outset);
-            rect.offsetMax = new Vector2(outset, outset);
+            if (existing != null && existing.gameObject.activeSelf)
+                existing.gameObject.SetActive(false);
+            _glow = null;
         }
 
         /// <summary>Static button border outline - strictly pinned to button bounds, NEVER rotated.</summary>

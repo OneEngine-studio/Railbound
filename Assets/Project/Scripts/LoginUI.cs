@@ -47,10 +47,12 @@ public class LoginUI : MonoBehaviour
     [SerializeField] private string termsNotAcceptedError = "Please confirm your age and accept the Terms of Service to continue.";
     private bool ageConfirmed = false;
     private bool termsAccepted = false;
-    private TMP_Text ageCheckmarkLabel;
-    private TMP_Text termsCheckmarkLabel;
-    private static readonly Color uncheckedColor = new Color(0.95f, 0.95f, 0.95f, 0.9f);
-    private static readonly Color checkedColor = new Color(0.22f, 0.85f, 0.96f, 1f);
+    private GameObject ageCheckmark;
+    private GameObject termsCheckmark;
+    // Match the login UI: dark boxes like the buttons, orange accent when checked
+    private static readonly Color uncheckedColor = new Color(0.10f, 0.12f, 0.16f, 0.9f);
+    private static readonly Color checkedColor = new Color(1.0f, 0.67f, 0.20f, 1f);
+    private static readonly Color checkTickColor = new Color(0.08f, 0.09f, 0.12f, 1f);
 
     [Header("Error Popup")]
     public CanvasGroup errorPopupCanvasGroup;
@@ -364,6 +366,13 @@ public class LoginUI : MonoBehaviour
         errorPopupCanvasGroup.interactable = true;
         errorPopupCanvasGroup.blocksRaycasts = true;
 
+        // Replay Reach UI scale-in animation on the card, if present
+        var errorCard = GameObject.Find("Canvas/ErrorPopup/ErrorCard");
+        var reachPopup = errorCard != null
+            ? errorCard.GetComponent<Michsky.UI.Reach.UIPopup>()
+            : null;
+        if (reachPopup != null) reachPopup.PlayIn();
+
         // Play error sound
         PlayErrorSound();
 
@@ -406,21 +415,20 @@ public class LoginUI : MonoBehaviour
 
     private void OnPopupCancelClicked()
     {
+        // Dismiss only — never quit from a dialog button.
+        _onRetryAction = null;
         HideErrorPopup();
-        Debug.Log("[LoginUI] Cancel pressed — quitting game");
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        Debug.Log("[LoginUI] Popup dismissed via Cancel/Close");
     }
 
     // ------------------------------------------------------------------ Terms validation
-    private bool CheckTermsAccepted()
+    private bool CheckTermsAccepted(string action = "continue")
     {
         if (!ageConfirmed || !termsAccepted)
         {
-            ShowErrorPopup("Terms Not Accepted", termsNotAcceptedError, "warning");
+            string missing = !ageConfirmed && !termsAccepted ? "confirm your age and accept the Terms of Service"
+                : !ageConfirmed ? "confirm your age" : "accept the Terms of Service";
+            ShowErrorPopup("One More Step", $"Please {missing} below to {action}.", "warning");
             UpdateCheckboxesVisual();
             return false;
         }
@@ -447,8 +455,8 @@ public class LoginUI : MonoBehaviour
     {
         if (ageCheckboxImage) ageCheckboxImage.color = ageConfirmed ? checkedColor : uncheckedColor;
         if (termsCheckboxImage) termsCheckboxImage.color = termsAccepted ? checkedColor : uncheckedColor;
-        if (ageCheckmarkLabel) { ageCheckmarkLabel.enabled = ageConfirmed; ageCheckmarkLabel.text = ageConfirmed ? "✓" : ""; }
-        if (termsCheckmarkLabel) { termsCheckmarkLabel.enabled = termsAccepted; termsCheckmarkLabel.text = termsAccepted ? "✓" : ""; }
+        if (ageCheckmark) ageCheckmark.SetActive(ageConfirmed);
+        if (termsCheckmark) termsCheckmark.SetActive(termsAccepted);
     }
 
     private void AutoWireTermsCheckboxes()
@@ -473,27 +481,50 @@ public class LoginUI : MonoBehaviour
 
     private void EnsureCheckmarkLabels()
     {
-        ageCheckmarkLabel = GetOrCreateCheckmarkLabel(ageCheckboxImage, "AgeCheck");
-        termsCheckmarkLabel = GetOrCreateCheckmarkLabel(termsCheckboxImage, "TermsCheck");
+        ageCheckmark = GetOrCreateCheckmark(ageCheckboxImage, "AgeCheck");
+        termsCheckmark = GetOrCreateCheckmark(termsCheckboxImage, "TermsCheck");
     }
 
-    private TMP_Text GetOrCreateCheckmarkLabel(Image parentImage, string name)
+    /// <summary>Builds a two-bar vector checkmark (no font glyph needed).</summary>
+    private GameObject GetOrCreateCheckmark(Image parentImage, string name)
     {
         if (parentImage == null) return null;
-        var existing = parentImage.transform.Find(name)?.GetComponent<TMP_Text>();
-        if (existing) return existing;
-        // Try find any TMP_Text child
-        var any = parentImage.GetComponentInChildren<TMP_Text>(true);
-        if (any && any.transform.parent == parentImage.transform) return any;
-        // Create one
+        var existing = parentImage.transform.Find(name);
+        if (existing != null)
+        {
+            // Drop legacy TMP-based checkmarks from older builds
+            var legacy = existing.GetComponent<TMP_Text>();
+            if (legacy != null) Destroy(legacy);
+            if (existing.childCount == 0) Destroy(existing.gameObject);
+            else return existing.gameObject;
+        }
         var go = new GameObject(name);
         go.transform.SetParent(parentImage.transform, false);
         var rt = go.AddComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.sizeDelta = Vector2.zero; rt.anchoredPosition = Vector2.zero;
-        var txt = go.AddComponent<TextMeshProUGUI>();
-        txt.text = ""; txt.fontSize = 14; txt.alignment = TextAlignmentOptions.Center;
-        txt.color = Color.black; txt.raycastTarget = false; txt.enabled = false;
-        return txt;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.sizeDelta = Vector2.zero; rt.anchoredPosition = Vector2.zero;
+        // Short arm (bottom-left) + long arm, rotated into a tick
+        AddTickBar(go.transform, new Vector2(-0.13f, -0.03f), 0.30f, 45f);
+        AddTickBar(go.transform, new Vector2(0.12f, 0.07f), 0.58f, -45f);
+        go.SetActive(false);
+        return go;
+    }
+
+    private void AddTickBar(Transform parent, Vector2 centerFrac, float lenFrac, float angle)
+    {
+        var go = new GameObject("bar");
+        go.transform.SetParent(parent, false);
+        var rt = go.AddComponent<RectTransform>();
+        var box = ((RectTransform)parent).rect;
+        float w = Mathf.Max(box.width, 18f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(w * lenFrac, Mathf.Max(2.5f, w * 0.14f));
+        rt.anchoredPosition = new Vector2(centerFrac.x * w, centerFrac.y * w);
+        rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+        var img = go.AddComponent<Image>();
+        img.color = checkTickColor;
+        img.raycastTarget = false;
     }
 
     private void OnAuthSuccessGoLobby(AuthResult _)
@@ -509,7 +540,7 @@ public class LoginUI : MonoBehaviour
 
     private void OnGoogleLoginClicked()
     {
-        if (!CheckTermsAccepted()) return;
+        if (!CheckTermsAccepted("continue with Google")) return;
         if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Authentication service is not available. Please restart the game.", "error"); return; }
         SetError(null);
         SetLoading(true);
@@ -558,10 +589,15 @@ public class LoginUI : MonoBehaviour
 
     private void OnLoginClicked()
     {
-        if (!CheckTermsAccepted()) return;
-        if (string.IsNullOrWhiteSpace(usernameInput?.text) || string.IsNullOrEmpty(passwordInput?.text))
+        if (!CheckTermsAccepted("log in")) return;
+        if (string.IsNullOrWhiteSpace(usernameInput?.text))
         {
-            ShowErrorPopup("Missing Fields", "Please enter both a username and password to continue.", "warning");
+            ShowErrorPopup("Username Missing", "Please enter your username to log in.", "warning");
+            return;
+        }
+        if (string.IsNullOrEmpty(passwordInput?.text))
+        {
+            ShowErrorPopup("Password Missing", "Please enter your password to log in.", "warning");
             return;
         }
         OnLogin();
@@ -572,7 +608,7 @@ public class LoginUI : MonoBehaviour
 
     private async void OnRegisterClicked()
     {
-        if (!CheckTermsAccepted()) return;
+        if (!CheckTermsAccepted("play as guest")) return;
         // This button is "PLAY AS GUEST" in your LoginMenu.unity -> do device auth.
         if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Authentication service is not available. Please restart the game.", "error"); return; }
         SetError(null);
@@ -584,10 +620,10 @@ public class LoginUI : MonoBehaviour
     // ------------------------------------------------------------------ Forgot
     private void OnForgotPasswordClicked()
     {
-        ShowErrorPopup("NOT AVAILABLE", "Password reset is not yet implemented. Please contact support.", "info");
+        ShowErrorPopup("Reset Not Available", "Password reset isn't available in this build yet. You can continue as guest, or create a new account if you lost access.", "info");
     }
 
-    public void OnMoreLogin() { SetAccountLoginPopup(true); }
+    public void OnMoreLogin() { PlayTickSound(); SetError(null); SetAccountLoginPopup(true); }
     public void OnCloseAccountLogin() { PlayTickSound(); SetAccountLoginPopup(false); }
 
     // ------------------------------------------------------------------ Server connectivity check
@@ -646,7 +682,11 @@ public class LoginUI : MonoBehaviour
         EnableLoginControls(true);
         if (!result.IsSuccess)
         {
-            ShowErrorPopup("Login Failed", result.Error ?? "Unknown error. Please try again.", "error");
+            string message = result.Error ?? "Unknown error. Please try again.";
+            ShowErrorPopup("Login Failed", message, "error");
+            // Mirror into the account card so the message stays visible after dismiss
+            if (accountLoginPopup != null && accountLoginPopup.gameObject.activeSelf)
+                SetError(message);
             return;
         }
         // success -> AuthenticationService already triggers lobby load; show feedback briefly
@@ -762,7 +802,7 @@ public class LoginUI : MonoBehaviour
     private async void OnCreateAccountClicked()
     {
         PlayTickSound();
-        if (!CheckTermsAccepted()) return;
+        if (!CheckTermsAccepted("create an account")) return;
         if (createUsernameInput == null || createPasswordInput == null || confirmPasswordInput == null)
         {
             ShowErrorPopup("Setup Error", "Create account form not wired.", "error");
@@ -771,9 +811,19 @@ public class LoginUI : MonoBehaviour
         string user = createUsernameInput.text.Trim();
         string pass = createPasswordInput.text;
         string confirm = confirmPasswordInput.text;
-        if (string.IsNullOrWhiteSpace(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(confirm))
+        if (string.IsNullOrWhiteSpace(user))
         {
-            ShowErrorPopup("Missing Fields", "Please fill all fields to create an account.", "warning");
+            ShowErrorPopup("Username Missing", "Please choose a username for your new account.", "warning");
+            return;
+        }
+        if (string.IsNullOrEmpty(pass))
+        {
+            ShowErrorPopup("Password Missing", "Please choose a password for your new account.", "warning");
+            return;
+        }
+        if (pass != confirm)
+        {
+            ShowErrorPopup("Passwords Don't Match", "The two passwords are different. Please re-enter them.", "warning");
             return;
         }
         if (AuthenticationService.Instance == null) { ShowErrorPopup("Service Missing", "Auth service unavailable.", "error"); return; }
