@@ -115,38 +115,19 @@ namespace Railbound.UI.Anim
             _glow = null;
         }
 
-        /// <summary>Static button border outline - strictly pinned to button bounds, NEVER rotated.</summary>
+        /// <summary>Stale hover ring cleanup - buttons use clean micro-scale + brightness without border clutter.</summary>
         private void EnsureRing()
         {
-            if (_ring != null) return;
-
             var existing = transform.Find("HoverRing");
-            if (existing != null) _ring = existing.GetComponent<Image>();
-            if (_ring != null)
+            if (existing != null)
             {
-                ((RectTransform)_ring.transform).localEulerAngles = Vector3.zero;
-                return;
+                if (Application.isPlaying) Destroy(existing.gameObject);
+                else DestroyImmediate(existing.gameObject);
             }
-
-            var sprite = Resources.Load<Sprite>("UI/Ring_Square") ?? Resources.Load<Sprite>("UI/Ring_Chamfer");
-            if (sprite == null) return;
-
-            var ringObject = new GameObject("HoverRing", typeof(RectTransform), typeof(Image));
-            ringObject.transform.SetParent(transform, false);
-            _ring = ringObject.GetComponent<Image>();
-            _ring.sprite = sprite;
-            _ring.type = Image.Type.Sliced;
-            _ring.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
-            _ring.raycastTarget = false;
-            var rect = (RectTransform)ringObject.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(-2f, -2f);
-            rect.offsetMax = new Vector2(2f, 2f);
-            rect.localEulerAngles = Vector3.zero;
+            _ring = null;
         }
 
-        /// <summary>Small 22x22 rotating spinner icon inside the button during loading.</summary>
+        /// <summary>Centered round circular loading spinner icon inside the button during loading.</summary>
         private void EnsureSpinner()
         {
             if (_spinner != null) return;
@@ -155,7 +136,7 @@ namespace Railbound.UI.Anim
             if (existing != null) _spinner = existing.GetComponent<Image>();
             if (_spinner != null) return;
 
-            var sprite = Resources.Load<Sprite>("UI/Ring_Chamfer") ?? Resources.Load<Sprite>("UI/Ring_Square");
+            var sprite = Resources.Load<Sprite>("UI/Icon_Spinner");
             if (sprite == null) return;
 
             var spinnerObj = new GameObject("LoadingSpinner", typeof(RectTransform), typeof(Image));
@@ -171,25 +152,9 @@ namespace Railbound.UI.Anim
             sRect.anchorMin = new Vector2(0.5f, 0.5f);
             sRect.anchorMax = new Vector2(0.5f, 0.5f);
             sRect.pivot = new Vector2(0.5f, 0.5f);
-            sRect.sizeDelta = new Vector2(22f, 22f);
+            sRect.anchoredPosition = Vector2.zero;
+            sRect.sizeDelta = new Vector2(28f, 28f);
             sRect.localEulerAngles = Vector3.zero;
-            UpdateSpinnerPosition();
-        }
-
-        private void UpdateSpinnerPosition()
-        {
-            if (_spinner == null) return;
-            var sRect = (RectTransform)_spinner.transform;
-            var label = GetComponentInChildren<TMPro.TMP_Text>(true);
-            if (label != null && !string.IsNullOrEmpty(label.text))
-            {
-                var textWidth = label.preferredWidth;
-                sRect.anchoredPosition = new Vector2(-textWidth * 0.5f - 20f, 0f);
-            }
-            else
-            {
-                sRect.anchoredPosition = Vector2.zero;
-            }
         }
 
         /// <summary>Brightness/flash targets: every graphic under the button except glow/ring/spinner.</summary>
@@ -349,25 +314,37 @@ namespace Railbound.UI.Anim
 
             UITween.Kill(_rotToken);
 
-            // Border ALWAYS stays static around the button - NEVER rotated!
-            if (_ring != null)
+            // Hide button text and icons so the round loading spinner is cleanly centered in the middle
+            var label = GetComponentInChildren<TMPro.TMP_Text>(true);
+            if (label != null)
             {
-                ((RectTransform)_ring.transform).localEulerAngles = Vector3.zero;
+                label.gameObject.SetActive(!loading);
+            }
+            if (icon != null)
+            {
+                icon.gameObject.SetActive(!loading);
             }
 
             if (loading)
             {
-                EnsureRing();
                 EnsureSpinner();
                 if (_spinner != null)
                 {
-                    UpdateSpinnerPosition();
                     _spinner.gameObject.SetActive(true);
-                    _spinner.color = new Color(glowColor.r, glowColor.g, glowColor.b, 1f);
                     var sRect = (RectTransform)_spinner.transform;
+                    sRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    sRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    sRect.pivot = new Vector2(0.5f, 0.5f);
+                    sRect.anchoredPosition = Vector2.zero;
+                    sRect.sizeDelta = new Vector2(28f, 28f);
                     sRect.localEulerAngles = Vector3.zero;
-                    // Rotate ONLY the small 22x22 spinner icon!
-                    UITween.Loop(0f, -360f, UIAnim.SpinnerCycle, UIAnim.LoopEase,
+
+                    // Match spinner contrast: dark on light/amber fills, bright gold on dark fills
+                    var isLightBackground = label != null && (label.color.r < 0.25f && label.color.g < 0.25f && label.color.b < 0.25f);
+                    _spinner.color = isLightBackground ? new Color(0.12f, 0.09f, 0.04f, 1f) : new Color(1f, 0.78f, 0.2f, 1f);
+
+                    // Smooth, continuous 360-degree circular rotation
+                    UITween.Loop(0f, -360f, 0.85f, Ease.Linear,
                         v => { if (sRect != null) sRect.localEulerAngles = new Vector3(0f, 0f, v); },
                         yoyo: false, target: _rotToken);
                 }
@@ -376,7 +353,6 @@ namespace Railbound.UI.Anim
             {
                 if (_spinner != null)
                 {
-                    _spinner.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
                     _spinner.gameObject.SetActive(false);
                 }
             }
@@ -507,16 +483,8 @@ namespace Railbound.UI.Anim
             if (_glow != null)
                 GlowTo(RestGlowAlpha(), duration, ease);
 
-            // loading spinner ring ------------------------------------------
-            if (_loading)
-            {
-                EnsureRing();
-                RingTo(UIAnim.RingSpinner, duration, ease);
-            }
-            else if (_ring != null)
-            {
-                RingTo(0f, duration, ease);
-            }
+            // Clean up any stale hover ring so buttons remain clean and smooth
+            EnsureRing();
 
             // icon nudge / rotation ----------------------------------------
             if (icon != null)

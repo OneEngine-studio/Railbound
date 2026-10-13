@@ -454,19 +454,24 @@ public class AuthenticationService : MonoBehaviour
         return result;
     }
 
-    private async Task EnsureSocketAsync()
+    public async Task<ISocket> EnsureSocketAsync()
     {
-        if (_session == null || _session.IsExpired) return;
+        if (_session == null || _session.IsExpired) return null;
         try
         {
-            if (_socket != null) { try { await _socket.CloseAsync(); } catch { } }
-            _socket = _client.NewSocket();
-            await _socket.ConnectAsync(_session, true);
-            Debug.Log("[Auth] Socket connected");
+            if (_socket == null || !_socket.IsConnected)
+            {
+                if (_socket != null) { try { await _socket.CloseAsync(); } catch { } }
+                _socket = _client.NewSocket();
+                await _socket.ConnectAsync(_session, true);
+                Debug.Log("[Auth] Socket connected");
+            }
+            return _socket;
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"[Auth] Socket connect failed: {ex.Message} (auth still valid)");
+            return null;
         }
     }
 

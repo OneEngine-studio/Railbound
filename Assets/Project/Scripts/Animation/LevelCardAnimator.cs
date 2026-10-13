@@ -15,32 +15,36 @@ namespace Railbound.UI.Anim
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class LevelCardAnimator : MonoBehaviour,
-        IPointerEnterHandler, IPointerExitHandler
+        IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
     {
         [SerializeField] private Image art;                    // letterboxed artwork (inside ArtClip)
         [SerializeField] private GameObject frame;             // art-bounds container (holds strips)
-        [SerializeField] private Image[] frameStrips;          // the 4 gold selection strips
+        [SerializeField] private Image[] frameStrips;          // legacy references
         [SerializeField] private Button button;
         [SerializeField] private RectTransform cardRect;
 
         private readonly object _scaleToken = new object();
         private readonly object _posToken = new object();
         private readonly object _artToken = new object();
-        private readonly object _glowToken = new object();
+        private readonly object _borderToken = new object();
         private readonly object _checkToken = new object();
         private readonly object _ambientToken = new object();
 
-        private Image _glow;               // soft radial halo (hover/selection highlight)
+        private Image _chamferBorder;      // 9-sliced tactical chamfer frame hugging card artwork
         private RectTransform _checkRoot;
         private Image _checkImage;
         private Color _dimColor = new Color(0.45f, 0.45f, 0.5f, 1f);
         private static readonly Color Gold = new Color(1f, 0.75f, 0.2f, 1f);
+        private static readonly Color SlateBorder = new Color(0.24f, 0.32f, 0.44f, 0.5f);
+        private static readonly Color HoverBorder = new Color(0.38f, 0.48f, 0.62f, 0.55f);
+        private static readonly Color HoverGold = new Color(1f, 0.88f, 0.35f, 1f);
 
         private Vector2 _basePos;
         private Vector3 _baseScale = Vector3.one;
         private bool _baseCaptured;
         private bool _selected;
         private bool _hovered;
+        private bool _pressed;
         private bool _initialized;
 
         /// <summary>Called by the onboarding controller right after the card is built.</summary>
@@ -49,9 +53,8 @@ namespace Railbound.UI.Anim
             art = artwork;
             frame = frameObject;
             _dimColor = dimColor;
-            // Capture the strips before the animator adds ring/checkmark children to the frame.
             frameStrips = frame != null ? frame.GetComponentsInChildren<Image>(true) : new Image[0];
-            if (frame != null) frame.SetActive(true); // container stays alive; strips toggle instead
+            if (frame != null) frame.SetActive(true);
             _initialized = false;
             EnsureVisuals();
         }
@@ -75,34 +78,51 @@ namespace Railbound.UI.Anim
                 if (frameTransform != null) frame = frameTransform.gameObject;
             }
 
-            EnsureGlow();
+            EnsureBorder();
             EnsureCheckmark();
         }
 
-        /// <summary>Soft radial halo behind the frame - replaces the old hard outline.</summary>
-        private void EnsureGlow()
+        /// <summary>Ensures a single continuous 9-sliced chamfered frame hugging the rounded card art.</summary>
+        private void EnsureBorder()
         {
-            if (_glow != null || frame == null) return;
-            var existing = frame.transform.Find("HoverGlow");
-            if (existing != null) { _glow = existing.GetComponent<Image>(); return; }
+            if (frame == null) return;
 
-            var sprite = Resources.Load<Sprite>("UI/Glow_Square");
-            if (sprite == null) return;
+            // Hide legacy 4-strip images so only the sleek 9-sliced chamfer frame is visible
+            for (var i = 0; i < frame.transform.childCount; i++)
+            {
+                var child = frame.transform.GetChild(i);
+                if (child.name == "Top" || child.name == "Bottom" || child.name == "Left" || child.name == "Right")
+                    child.gameObject.SetActive(false);
+            }
 
-            var glowObject = new GameObject("HoverGlow", typeof(RectTransform), typeof(Image));
-            glowObject.transform.SetParent(frame.transform, false);
-            glowObject.transform.SetSiblingIndex(0); // behind the gold strips + checkmark
-            _glow = glowObject.GetComponent<Image>();
-            _glow.sprite = sprite;
-            _glow.color = new Color(Gold.r, Gold.g, Gold.b, 0f);
-            _glow.raycastTarget = false;
-            var rect = (RectTransform)glowObject.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(-14f, -14f);
-            rect.offsetMax = new Vector2(14f, 14f);
+            var existing = frame.transform.Find("ChamferBorder");
+            if (existing != null)
+            {
+                _chamferBorder = existing.GetComponent<Image>();
+                return;
+            }
+
+            var borderObj = new GameObject("ChamferBorder", typeof(RectTransform), typeof(Image));
+            borderObj.transform.SetParent(frame.transform, false);
+            borderObj.transform.SetAsFirstSibling();
+            var bRt = (RectTransform)borderObj.transform;
+            bRt.anchorMin = Vector2.zero;
+            bRt.anchorMax = Vector2.one;
+            bRt.offsetMin = Vector2.zero;
+            bRt.offsetMax = Vector2.zero;
+
+            _chamferBorder = borderObj.GetComponent<Image>();
+            var ringSprite = Resources.Load<Sprite>("UI/Ring_Chamfer");
+            if (ringSprite != null)
+            {
+                _chamferBorder.sprite = ringSprite;
+                _chamferBorder.type = Image.Type.Sliced;
+            }
+            _chamferBorder.color = _selected ? Gold : SlateBorder;
+            _chamferBorder.raycastTarget = false;
         }
 
+        /// <summary>Military hexagonal badge checkmark mirroring tactical rank insignia.</summary>
         private void EnsureCheckmark()
         {
             if (_checkRoot != null || frame == null) return;
@@ -115,34 +135,42 @@ namespace Railbound.UI.Anim
                 return;
             }
 
-            var sprite = Resources.Load<Sprite>("UI/Checkmark");
+            var hexSprite = Resources.Load<Sprite>("UI/Checkmark_Hex") ?? Resources.Load<Sprite>("UI/Checkmark");
             var backingSprite = Resources.Load<Sprite>("UI/Onboarding_Chamfer");
-            if (sprite == null) return;
 
-            var root = new GameObject("Checkmark", typeof(RectTransform), typeof(Image));
+            var root = new GameObject("Checkmark", typeof(RectTransform));
             root.transform.SetParent(frame.transform, false);
             _checkRoot = (RectTransform)root.transform;
             _checkRoot.anchorMin = new Vector2(1f, 1f);
             _checkRoot.anchorMax = new Vector2(1f, 1f);
             _checkRoot.pivot = new Vector2(1f, 1f);
             _checkRoot.anchoredPosition = new Vector2(-12f, -12f);
-            _checkRoot.sizeDelta = new Vector2(46f, 46f);
+            _checkRoot.sizeDelta = new Vector2(48f, 48f);
 
-            var backing = root.GetComponent<Image>();
+            // Dark chamfered backing
+            var backingObj = new GameObject("Backing", typeof(RectTransform), typeof(Image));
+            backingObj.transform.SetParent(root.transform, false);
+            var bRt = (RectTransform)backingObj.transform;
+            bRt.anchorMin = Vector2.zero;
+            bRt.anchorMax = Vector2.one;
+            bRt.offsetMin = Vector2.zero;
+            bRt.offsetMax = Vector2.zero;
+            var backing = backingObj.GetComponent<Image>();
             backing.sprite = backingSprite;
             backing.type = backingSprite != null ? Image.Type.Sliced : Image.Type.Simple;
             backing.color = new Color(0.04f, 0.05f, 0.09f, 0.95f);
             backing.raycastTarget = false;
 
+            // Tactical hexagonal badge glyph
             var glyphObject = new GameObject("Glyph", typeof(RectTransform), typeof(Image));
             glyphObject.transform.SetParent(root.transform, false);
             var glyphRect = (RectTransform)glyphObject.transform;
             glyphRect.anchorMin = Vector2.zero;
             glyphRect.anchorMax = Vector2.one;
-            glyphRect.offsetMin = new Vector2(7f, 7f);
-            glyphRect.offsetMax = new Vector2(-7f, -7f);
+            glyphRect.offsetMin = new Vector2(5f, 5f);
+            glyphRect.offsetMax = new Vector2(-5f, -5f);
             _checkImage = glyphObject.GetComponent<Image>();
-            _checkImage.sprite = sprite;
+            _checkImage.sprite = hexSprite;
             _checkImage.color = Gold;
             _checkImage.raycastTarget = false;
 
@@ -156,6 +184,7 @@ namespace Railbound.UI.Anim
             EnsureVisuals();
             if (button != null && !button.interactable) return;
             _hovered = true;
+            UISfx.PlayHover();
             Refresh(UIAnim.Hover, UIAnim.HoverEase);
         }
 
@@ -163,7 +192,23 @@ namespace Railbound.UI.Anim
         {
             EnsureVisuals();
             _hovered = false;
+            _pressed = false;
             Refresh(UIAnim.Hover, UIAnim.HoverEase);
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            EnsureVisuals();
+            if (button != null && !button.interactable) return;
+            _pressed = true;
+            Refresh(UIAnim.PressDown, Ease.OutQuad);
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            EnsureVisuals();
+            _pressed = false;
+            Refresh(UIAnim.PressRelease, Ease.OutCubic);
         }
 
         /// <summary>Selected / deselected - called by the onboarding controller.</summary>
@@ -173,20 +218,15 @@ namespace Railbound.UI.Anim
             var wasSelected = _selected;
             _selected = selected;
 
-            if (frameStrips != null)
-                for (var i = 0; i < frameStrips.Length; i++)
-                    if (frameStrips[i] != null)
-                        frameStrips[i].gameObject.SetActive(selected);
-
             if (_checkRoot != null)
             {
                 _checkRoot.gameObject.SetActive(selected);
                 if (selected && !wasSelected)
                 {
-                    // Checkmark: scale from 0 to 1 with a small overshoot (Back Out).
                     _checkRoot.localScale = Vector3.zero;
                     UITween.Kill(_checkToken);
                     UITween.ScaleTo(_checkRoot, Vector3.one, UIAnim.Popup, UIAnim.PopEase, null, _checkToken);
+                    UISfx.PlayClick();
                 }
             }
 
@@ -201,19 +241,21 @@ namespace Railbound.UI.Anim
             // scale + lift ------------------------------------------------
             if (cardRect != null)
             {
-                var scale = _selected
-                    ? (_hovered ? UIAnim.CardSelectedScale + 0.015f : UIAnim.CardSelectedScale)
-                    : (_hovered ? UIAnim.CardHoverScale : 1f);
-                UITween.ScaleTo(cardRect, _baseScale * scale, duration, ease, null, _scaleToken);
+                var scale = _pressed
+                    ? _baseScale * 0.98f
+                    : (_selected
+                        ? (_hovered ? _baseScale * (UIAnim.CardSelectedScale + 0.012f) : _baseScale * UIAnim.CardSelectedScale)
+                        : (_hovered ? _baseScale * UIAnim.CardHoverScale : _baseScale));
+                UITween.ScaleTo(cardRect, scale, duration, ease, null, _scaleToken);
 
-                var pos = _basePos + (_hovered ? new Vector2(0f, UIAnim.CardHoverLift) : Vector2.zero);
+                var pos = _basePos + (_hovered && !_pressed ? new Vector2(0f, UIAnim.CardHoverLift) : Vector2.zero);
                 UITween.MoveAnchoredTo(cardRect, pos, duration, ease, null, _posToken);
             }
 
-            // artwork: brightness (dim <-> full) + slight zoom on hover -------
+            // artwork: brightness + slight zoom on hover ------------------
             if (art != null)
             {
-                var brightness = _selected ? 1f : (_hovered ? 0.6f : 0f);
+                var brightness = _selected ? 1f : (_hovered ? 0.75f : 0f);
                 var to = Color.LerpUnclamped(_dimColor, Color.white, brightness);
                 var from = art.color;
                 UITween.Kill(_artToken);
@@ -226,28 +268,17 @@ namespace Railbound.UI.Anim
                 UITween.ScaleTo(artRect, zoom, duration, ease, null, _artToken);
             }
 
-            // soft glow halo (hover/selection highlight) ----------------------
-            if (_glow != null)
+            // chamfered tactical border color -----------------------------
+            if (_chamferBorder != null)
             {
-                var alpha = _selected
-                    ? (_hovered ? UIAnim.GlowHoverSelected : UIAnim.GlowAmbientMin)
-                    : (_hovered ? UIAnim.GlowHover : 0f);
-                var color = new Color(Gold.r, Gold.g, Gold.b, alpha);
-                var fromGlow = _glow.color;
-                UITween.Kill(_glowToken);
+                var targetBorderColor = _selected
+                    ? (_hovered ? HoverGold : Gold)
+                    : (_hovered ? HoverBorder : SlateBorder);
+                var fromColor = _chamferBorder.color;
+                UITween.Kill(_borderToken);
                 UITween.To(0f, 1f, duration, ease,
-                    p => { if (_glow != null) _glow.color = Color.LerpUnclamped(fromGlow, color, p); },
-                    null, 0f, _glowToken);
-            }
-
-            // ambient breathing on the selected card (slow + subtle) ------------
-            UITween.Kill(_ambientToken);
-            if (_selected && Application.isPlaying && _glow != null)
-            {
-                var glow = _glow;
-                UITween.Loop(UIAnim.GlowAmbientMin, UIAnim.GlowSelected, UIAnim.AmbientCycle, Ease.InOutCubic,
-                    a => { if (glow != null && glow.color.a > 0.01f) glow.color = new Color(Gold.r, Gold.g, Gold.b, a); },
-                    yoyo: true, target: _ambientToken);
+                    p => { if (_chamferBorder != null) _chamferBorder.color = Color.LerpUnclamped(fromColor, targetBorderColor, p); },
+                    null, 0f, _borderToken);
             }
         }
 
@@ -264,10 +295,11 @@ namespace Railbound.UI.Anim
             UITween.Kill(_scaleToken);
             UITween.Kill(_posToken);
             UITween.Kill(_artToken);
-            UITween.Kill(_glowToken);
+            UITween.Kill(_borderToken);
             UITween.Kill(_checkToken);
             UITween.Kill(_ambientToken);
             _hovered = false;
+            _pressed = false;
         }
     }
 }

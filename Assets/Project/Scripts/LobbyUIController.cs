@@ -146,13 +146,13 @@ namespace Railbound.UI
         // ------------------------------------------------------------------  runtime state
 
         private int _activeTabIndex;
-        private int _currency = 613;
+        private int _currency = 1250;
         private int _friendsOnline = 5;
-        private int _level = 2;
+        private int _level = 12;
         private string _username = "EstheAda5813";
-        private int _xpCurrent = 255;
-        private int _xpTarget = 400;
-        private ChallengerEntry _challenger = new ChallengerEntry { name = "SF - RANKED" };
+        private int _xpCurrent = 1450;
+        private int _xpTarget = 2000;
+        private ChallengerEntry _challenger = new ChallengerEntry { name = "APEX EXPRESS" };
 
         // ------------------------------------------------------------------  lifecycle
 
@@ -214,7 +214,7 @@ namespace Railbound.UI
 
         public void RefreshTopBar()
         {
-            if (logoText != null) logoText.text = "RAILBOUND";
+            if (logoText != null) logoText.text = "RAILBOUND // v0.4.2";
             if (friendsCountText != null) friendsCountText.text = _friendsOnline.ToString();
             if (currencyText != null) currencyText.text = _currency.ToString("N0");
             SetActiveTab(_activeTabIndex);
@@ -224,14 +224,14 @@ namespace Railbound.UI
         {
             if (levelText != null) levelText.text = $"Lv.{Mathf.Max(1, _level)}";
             if (usernameText != null) usernameText.text = _username;
-            if (statsSubtitleText != null) statsSubtitleText.text = "New Invitation Code";
+            if (statsSubtitleText != null) statsSubtitleText.text = "SQUAD BOUNTY";
         }
 
         public void RefreshSeasonPanel()
         {
-            if (seasonTitleText != null) seasonTitleText.text = "STRIKE PASS";
-            if (weekSubtitleText != null) weekSubtitleText.text = "Bronze III";
-            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent}/{_xpTarget}";
+            if (seasonTitleText != null) seasonTitleText.text = "RAIL PASS";
+            if (weekSubtitleText != null) weekSubtitleText.text = "GOLD II";
+            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent:N0} / {_xpTarget:N0} RP";
             if (xpFillImage != null) xpFillImage.fillAmount = Mathf.Clamp01((float)_xpCurrent / Mathf.Max(1, _xpTarget));
         }
 
@@ -261,7 +261,7 @@ namespace Railbound.UI
 
         public void RefreshChallengerCard()
         {
-            if (challengerTitleText != null) challengerTitleText.text = "NEW SEASON";
+            if (challengerTitleText != null) challengerTitleText.text = "SEASON 01";
             if (challengerNameText != null) challengerNameText.text = _challenger.name;
             if (challengerPortrait != null && _challenger.portrait != null)
                 challengerPortrait.sprite = _challenger.portrait;
@@ -269,8 +269,8 @@ namespace Railbound.UI
 
         public void RefreshReadyButton()
         {
-            if (readyText != null) readyText.text = "PLAY";
-            if (gameModeText != null) gameModeText.text = "BR - Ranked";
+            if (readyText != null) readyText.text = "DEPLOY";
+            if (gameModeText != null) gameModeText.text = "CONVOY RAID";
         }
 
         // ------------------------------------------------------------------  interactions
