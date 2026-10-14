@@ -10,7 +10,7 @@ using Nakama;
 /// Replaces the placeholder with device + email/password + restore + socket.
 /// Keeps the same public API that LoginUI already calls: LoginAsync, LoginWithGoogleAsync.
 /// Persists as DontDestroyOnLoad singleton. On success fires OnLoginSuccess and can auto-load lobby.
-/// Uses PlayerPrefs for session persistence (AuthToken).
+/// Persists the Nakama session token only through the OS-protected secure store.
 /// </summary>
 public class AuthenticationService : MonoBehaviour
 {
@@ -46,6 +46,7 @@ public class AuthenticationService : MonoBehaviour
     public event Action<string> OnLoginFailed;
 
     public bool IsAuthenticated => isAuthenticated && _session != null && !_session.IsExpired;
+    public bool IsAuthenticationReady { get; private set; }
     public string CurrentUserId => currentUserId;
     public string ApiBaseUrl => $"{scheme}://{host}:{port}";
     public string GoogleClientId => googleClientId;
@@ -59,9 +60,6 @@ public class AuthenticationService : MonoBehaviour
     private ISession _session;
     private ISocket _socket;
 
-    private const string SessionTokenKey = "nakama.session.token";
-    private const string UserIdKey = "nakama.user.id";
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -73,6 +71,7 @@ public class AuthenticationService : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         InitClient();
         if (autoRestoreSession) _ = TryRestoreSessionAsync();
+        else IsAuthenticationReady = true;
     }
 
     private void InitClient()
@@ -84,8 +83,11 @@ public class AuthenticationService : MonoBehaviour
 
     private async Task TryRestoreSessionAsync()
     {
-        var token = PlayerPrefs.GetString(SessionTokenKey, "");
-        if (string.IsNullOrEmpty(token)) return;
+        if (!SecureSessionStore.TryLoad(out var token))
+        {
+            IsAuthenticationReady = true;
+            return;
+        }
         try
         {
             InitClient();
@@ -93,7 +95,8 @@ public class AuthenticationService : MonoBehaviour
             if (restored.IsExpired)
             {
                 Debug.Log("[Auth] Saved session expired");
-                PlayerPrefs.DeleteKey(SessionTokenKey);
+                SecureSessionStore.Delete();
+                IsAuthenticationReady = true;
                 return;
             }
             _session = restored;
@@ -101,13 +104,15 @@ public class AuthenticationService : MonoBehaviour
             isAuthenticated = true;
             Debug.Log($"[Auth] Session restored user={_session.UserId} username={_session.Username}");
             await EnsureSocketAsync();
+            IsAuthenticationReady = true;
             OnLoginSuccess?.Invoke(AuthResult.Success(currentUserId));
             if (autoLoadLobbyOnSuccess && !string.IsNullOrEmpty(lobbySceneName)) LoadLobby();
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"[Auth] Restore failed: {ex.Message}");
-            PlayerPrefs.DeleteKey(SessionTokenKey);
+            SecureSessionStore.Delete();
+            IsAuthenticationReady = true;
         }
     }
 
@@ -427,9 +432,7 @@ public class AuthenticationService : MonoBehaviour
         _session = null;
         try { _socket?.CloseAsync(); } catch { }
         _socket = null;
-        PlayerPrefs.DeleteKey(SessionTokenKey);
-        PlayerPrefs.DeleteKey(UserIdKey);
-        PlayerPrefs.Save();
+        SecureSessionStore.Delete();
         Debug.Log("[Auth] Logged out");
     }
 
@@ -440,30 +443,35 @@ public class AuthenticationService : MonoBehaviour
         _session = session;
         isAuthenticated = true;
         currentUserId = session.UserId;
-        PlayerPrefs.SetString(SessionTokenKey, session.AuthToken);
-        PlayerPrefs.SetString(UserIdKey, session.UserId);
-        PlayerPrefs.Save();
+        if (!SecureSessionStore.TrySave(session.AuthToken))
+            Debug.LogWarning("[Auth] Secure session storage is unavailable. The user must log in again next launch.");
         Debug.Log($"[Auth] Success user={session.UserId} username={session.Username} tokenLen={session.AuthToken?.Length}");
         await EnsureSocketAsync();
+        IsAuthenticationReady = true;
         var result = AuthResult.Success(currentUserId);
         OnLoginSuccess?.Invoke(result);
         if (autoLoadLobbyOnSuccess && !string.IsNullOrEmpty(lobbySceneName)) LoadLobby();
         return result;
     }
 
-    private async Task EnsureSocketAsync()
+    public async Task<ISocket> EnsureSocketAsync()
     {
-        if (_session == null || _session.IsExpired) return;
+        if (_session == null || _session.IsExpired) return null;
         try
         {
-            if (_socket != null) { try { await _socket.CloseAsync(); } catch { } }
-            _socket = _client.NewSocket();
-            await _socket.ConnectAsync(_session, true);
-            Debug.Log("[Auth] Socket connected");
+            if (_socket == null || !_socket.IsConnected)
+            {
+                if (_socket != null) { try { await _socket.CloseAsync(); } catch { } }
+                _socket = _client.NewSocket();
+                await _socket.ConnectAsync(_session, true);
+                Debug.Log("[Auth] Socket connected");
+            }
+            return _socket;
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"[Auth] Socket connect failed: {ex.Message} (auth still valid)");
+            return null;
         }
     }
 

@@ -4,13 +4,16 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using Railbound.UI.Anim;
 
 namespace Railbound.UI
 {
     /// <summary>
-    /// Cyberpunk multiplayer lobby controller.
+    /// Battle-royale multiplayer lobby controller.
     /// Wires every UI element of the Lobby scene (see LobbyUIHierarchy.md for the
     /// recommended RectTransform layout) and exposes data-driven refresh methods.
+    /// Interactive elements animate through Railbound.UI.Anim (AnimatedButton,
+    /// IconAnimator, Notifications).
     ///
     /// Scene: Assets/Project/GameLobby.unity
     /// Canvas: 1920x1080 reference, Scale With Screen Size, Match Width Or Height (0.5)
@@ -115,7 +118,7 @@ namespace Railbound.UI
         [SerializeField] private TextMeshProUGUI challengerNameText;  // "Luna"
         [SerializeField] private Image challengerPortrait;
 
-        [SerializeField] private Button readyButton;                  // big magenta READY
+        [SerializeField] private Button readyButton;                  // big gold READY
         [SerializeField] private Image readyGlow;
         [SerializeField] private TextMeshProUGUI readyText;
 
@@ -124,9 +127,9 @@ namespace Railbound.UI
 
         // ------------------------------------------------------------------  5. Cyberpunk palette
 
-        [Header("5. Cyberpunk Palette")]
-        [SerializeField] private Color neonPink   = new Color(1.00f, 0.11f, 0.55f);  // READY / accents
-        [SerializeField] private Color neonRed    = new Color(1.00f, 0.10f, 0.15f);  // active tab / WEEK 3
+        [Header("5. Battle Royale Palette")]
+        [SerializeField] private Color goldAccent  = new Color(1.00f, 0.75f, 0.20f);  // READY / active tab / progress
+        [SerializeField] private Color neonRed    = new Color(1.00f, 0.10f, 0.15f);  // WEEK 3 / alerts
         [SerializeField] private Color neonGreen  = new Color(0.10f, 1.00f, 0.45f);  // currency gem
         [SerializeField] private Color neonCyan   = new Color(0.00f, 0.90f, 1.00f);  // secondary glow
         [SerializeField] private Color darkPanel  = new Color(0.04f, 0.05f, 0.09f, 0.85f);
@@ -143,13 +146,13 @@ namespace Railbound.UI
         // ------------------------------------------------------------------  runtime state
 
         private int _activeTabIndex;
-        private int _currency = 2350;
+        private int _currency = 1250;
         private int _friendsOnline = 5;
-        private int _level = 32;
-        private string _username = "wtxinc";
-        private int _xpCurrent = 600;
-        private int _xpTarget = 1000;
-        private ChallengerEntry _challenger = new ChallengerEntry { name = "Luna" };
+        private int _level = 12;
+        private string _username = "EstheAda5813";
+        private int _xpCurrent = 1450;
+        private int _xpTarget = 2000;
+        private ChallengerEntry _challenger = new ChallengerEntry { name = "APEX EXPRESS" };
 
         // ------------------------------------------------------------------  lifecycle
 
@@ -171,7 +174,7 @@ namespace Railbound.UI
             if (readyButton != null)
                 readyButton.onClick.AddListener(HandleReadyClicked);
             if (checkAwardsButton != null)
-                checkAwardsButton.onClick.AddListener(() => onCheckAwardsClicked?.Invoke());
+                checkAwardsButton.onClick.AddListener(HandleTaskClicked);
             if (partySlotLeft != null)
                 partySlotLeft.onClick.AddListener(() => HandlePartyInvite(-1));
             if (partySlotRight != null)
@@ -211,7 +214,7 @@ namespace Railbound.UI
 
         public void RefreshTopBar()
         {
-            if (logoText != null) logoText.text = "BASIN";
+            if (logoText != null) logoText.text = "RAILBOUND // v0.4.2";
             if (friendsCountText != null) friendsCountText.text = _friendsOnline.ToString();
             if (currencyText != null) currencyText.text = _currency.ToString("N0");
             SetActiveTab(_activeTabIndex);
@@ -219,16 +222,16 @@ namespace Railbound.UI
 
         public void RefreshPlayerTag()
         {
-            if (levelText != null) levelText.text = _level.ToString();
+            if (levelText != null) levelText.text = $"Lv.{Mathf.Max(1, _level)}";
             if (usernameText != null) usernameText.text = _username;
-            if (statsSubtitleText != null) statsSubtitleText.text = "Show statistics";
+            if (statsSubtitleText != null) statsSubtitleText.text = "SQUAD BOUNTY";
         }
 
         public void RefreshSeasonPanel()
         {
-            if (seasonTitleText != null) seasonTitleText.text = "SEASON 2";
-            if (weekSubtitleText != null) weekSubtitleText.text = "WEEK 3";
-            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent} / {_xpTarget}";
+            if (seasonTitleText != null) seasonTitleText.text = "RAIL PASS";
+            if (weekSubtitleText != null) weekSubtitleText.text = "GOLD II";
+            if (xpCounterText != null) xpCounterText.text = $"{_xpCurrent:N0} / {_xpTarget:N0} RP";
             if (xpFillImage != null) xpFillImage.fillAmount = Mathf.Clamp01((float)_xpCurrent / Mathf.Max(1, _xpTarget));
         }
 
@@ -258,7 +261,7 @@ namespace Railbound.UI
 
         public void RefreshChallengerCard()
         {
-            if (challengerTitleText != null) challengerTitleText.text = "New Challenger";
+            if (challengerTitleText != null) challengerTitleText.text = "SEASON 01";
             if (challengerNameText != null) challengerNameText.text = _challenger.name;
             if (challengerPortrait != null && _challenger.portrait != null)
                 challengerPortrait.sprite = _challenger.portrait;
@@ -266,22 +269,34 @@ namespace Railbound.UI
 
         public void RefreshReadyButton()
         {
-            if (readyText != null) readyText.text = "READY";
-            if (gameModeText != null) gameModeText.text = "Game Mode : Solo";
+            if (readyText != null) readyText.text = "DEPLOY";
+            if (gameModeText != null) gameModeText.text = "CONVOY RAID";
         }
 
         // ------------------------------------------------------------------  interactions
 
         public void SetActiveTab(int index)
         {
+            if (navTabs == null || navTabs.Length == 0) return;
             _activeTabIndex = Mathf.Clamp(index, 0, navTabs.Length - 1);
             for (int i = 0; i < navTabs.Length; i++)
             {
                 bool active = i == _activeTabIndex;
                 if (navTabs[i].activeIndicator != null)
                     navTabs[i].activeIndicator.gameObject.SetActive(active);
+                if (navTabs[i].hoverGlow != null)
+                    navTabs[i].hoverGlow.gameObject.SetActive(false);
                 if (navTabs[i].labelText != null)
-                    navTabs[i].labelText.color = active ? neonPink : Color.white;
+                    navTabs[i].labelText.color = active ? Color.white : new Color(0.84f, 0.88f, 0.92f, 0.88f);
+                if (navTabs[i].button != null)
+                {
+                    var bg = navTabs[i].button.GetComponent<Image>();
+                    if (bg != null)
+                        bg.color = active ? new Color(0.14f, 0.16f, 0.21f, 0.72f) : new Color(0.08f, 0.10f, 0.14f, 0.45f);
+                    var animated = navTabs[i].button.GetComponent<AnimatedButton>();
+                    if (animated != null)
+                        animated.SetSelected(false);
+                }
             }
             onNavTabClicked?.Invoke(navTabs[_activeTabIndex].label);
         }
@@ -289,8 +304,18 @@ namespace Railbound.UI
         private void HandleReadyClicked()
         {
             // TODO: call match-orchestrator ticket API via game-api BFF
-            Debug.Log("[LobbyUI] READY clicked - request match ticket");
+            Debug.Log("[LobbyUI] PLAY clicked - request match ticket");
             onReadyClicked?.Invoke();
+        }
+
+        private void HandleTaskClicked()
+        {
+            if (questScrollView != null)
+            {
+                bool next = !questScrollView.gameObject.activeSelf;
+                questScrollView.gameObject.SetActive(next);
+            }
+            onCheckAwardsClicked?.Invoke();
         }
 
         private void HandlePartyInvite(int side)
@@ -304,24 +329,29 @@ namespace Railbound.UI
         private void HandlePower() => Debug.Log("[LobbyUI] Power / exit");
         private void HandleSettings() => Debug.Log("[LobbyUI] Settings");
         private void HandleMail() => Debug.Log("[LobbyUI] Mail");
-        private void HandleNotifications() => Debug.Log("[LobbyUI] Notifications");
+        private void HandleNotifications()
+        {
+            Debug.Log("[LobbyUI] Notifications");
+            // Demo toast for the spec example: slides in, warning icon pulses,
+            // progress bar depletes, auto-dismisses when the countdown hits zero.
+            var canvas = topBar != null ? topBar.GetComponentInParent<Canvas>() : GetComponentInParent<Canvas>();
+            Notifications.ShowCountdown(canvas, "TRAIN CAR DESTROYING", 10);
+        }
         private void HandleFriends() => Debug.Log("[LobbyUI] Friends");
 
         // ------------------------------------------------------------------  palette
 
         private void ApplyPalette()
         {
-            if (currencyIcon != null) currencyIcon.color = neonGreen;
-            if (readyGlow != null) readyGlow.color = neonPink;
-            if (weekSubtitleText != null) weekSubtitleText.color = neonRed;
-            if (xpFillImage != null) xpFillImage.color = neonPink;
+            if (readyGlow != null) readyGlow.color = new Color(goldAccent.r, goldAccent.g, goldAccent.b, 0.35f);
+            if (xpFillImage != null) xpFillImage.color = goldAccent;
         }
 
         // ------------------------------------------------------------------  public API for backend binding
 
         public void SetCurrency(int value) { _currency = value; RefreshTopBar(); }
         public void SetFriendsOnline(int count) { _friendsOnline = count; RefreshTopBar(); }
-        public void SetPlayerInfo(int level, string username) { _level = level; _username = username; RefreshPlayerTag(); }
+        public void SetPlayerInfo(int level, string username) { if (level > 0) _level = level; if (!string.IsNullOrEmpty(username)) _username = username; RefreshPlayerTag(); }
         public void SetXp(int current, int target) { _xpCurrent = current; _xpTarget = target; RefreshSeasonPanel(); }
         public void SetQuests(IList<QuestEntry> entries) { quests.Clear(); quests.AddRange(entries); RefreshQuests(); }
         public void SetChallenger(ChallengerEntry entry) { _challenger = entry; RefreshChallengerCard(); }

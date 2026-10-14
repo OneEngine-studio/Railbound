@@ -59,7 +59,7 @@ Canvas (Screen Space - Overlay)
     │   ├── ChallengerTitleText ("New Challenger")
     │   ├── ChallengerNameText ("Luna")
     │   └── ChallengerPortrait
-    ├── ReadyButton (large, magenta)
+    ├── ReadyButton (large, gold)
     │   ├── ReadyGlow
     │   └── ReadyText ("READY")
     └── GameModeRow
@@ -104,7 +104,7 @@ Canvas (Screen Space - Overlay)
 **NavTab item structure:**
 ```
 Tab_Lobby (Button)
-├── LabelText (TMP) ─────────── "Lobby", white → neonPink when active
+├── LabelText (TMP) ─────────── "Lobby", white → goldAccent when active
 ├── ActiveIndicator (Image) ─── red bottom border, 4×2px, visible only when active
 └── HoverGlow (Image) ───────── subtle cyan glow on hover
 ```
@@ -184,7 +184,7 @@ QuestRow (HorizontalLayoutGroup, Spacing=12)
 | Element | Size | Notes |
 |---|---|---|
 | ChallengerCard | (480 × 160) | HorizontalLayoutGroup: portrait (120×120) + text column |
-| ReadyButton | (480 × 72) | Full width, magenta gradient, glow effect |
+| ReadyButton | (480 × 72) | Full width, gold fill with dark label, glow effect |
 | GameModeRow | (auto × 32) | HorizontalLayoutGroup: GameModeText + gear button (32×32) |
 
 ---
@@ -214,7 +214,7 @@ QuestRow (HorizontalLayoutGroup, Spacing=12)
 ## Styling notes
 
 - **Fonts:** Use a cyberpunk-style font (e.g., "Rajdhani", "Orbitron", or "Chakra Petch") for headers; "Inter" or "Roboto" for body text.
-- **Colors:** neonPink `#FF1C8C`, neonRed `#FF1A26`, neonGreen `#1AFF73`, neonCyan `#00E5FF`, darkPanel `#0A0A14` (85% opacity).
+- **Colors:** goldAccent `#FFC033`, neonRed `#FF1A26`, neonGreen `#1AFF73`, neonCyan `#00E5FF`, darkPanel `#0A0A14` (85% opacity).
 - **Glow:** Use Unity's built-in URP Bloom post-processing or a simple UI glow via duplicated text/images with blur.
 - **Borders:** 1px neon-colored borders on panels/badges via Image components with sprite borders.
 - **Animations:** Use DOTween or Unity's Animation system for tab hover glow, READY button pulse, and quest progress fill tweening.
