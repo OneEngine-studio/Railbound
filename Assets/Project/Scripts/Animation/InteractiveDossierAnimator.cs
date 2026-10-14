@@ -59,8 +59,8 @@ namespace Railbound.UI.Anim
         {
             if (_baseCaptured || cardRect == null) return;
             _baseCaptured = true;
-            _basePos = cardRect.anchoredPosition;
-            _baseScale = cardRect.localScale;
+            _basePos = Vector2.zero; // Anchored rect base position is always stable zero offset
+            _baseScale = cardRect.localScale == Vector3.zero ? Vector3.one : cardRect.localScale;
         }
 
         public void SetCallsign(string callsign)
@@ -120,16 +120,6 @@ namespace Railbound.UI.Anim
         {
             UISfx.PlayClick();
             _onClickAction?.Invoke();
-
-            // Tactile feedback punch on card
-            if (cardRect != null)
-            {
-                UITween.Kill(_scaleToken);
-                var punch = _baseScale * 0.985f;
-                UITween.ScaleTo(cardRect, punch, 0.08f, Ease.OutQuad,
-                    () => UITween.ScaleTo(cardRect, _hovered ? _baseScale * 1.015f : _baseScale, 0.2f, Ease.OutCubic, null, _scaleToken),
-                    _scaleToken);
-            }
         }
 
         private void Refresh(float duration, Ease ease)

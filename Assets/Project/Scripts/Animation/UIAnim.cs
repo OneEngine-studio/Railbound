@@ -33,9 +33,9 @@ namespace Railbound.UI.Anim
 
         // ---------------------------------------------------------------- scales / distances
 
-        public const float HoverScale = 1.04f;       // full-size buttons
-        public const float HoverScaleLight = 1.03f;  // light style (small icon tiles)
-        public const float PressScale = 0.96f;
+        public const float HoverScale = 1.025f;      // sleek tactical hover elevation (1.02-1.03)
+        public const float HoverScaleLight = 1.02f;  // light style (small icon tiles)
+        public const float PressScale = 0.975f;      // tactile micro-compression depth (no rubbery sag)
         public const float CardHoverScale = 1.02f;   // experience level cards
         public const float CardSelectedScale = 1.03f;
         public const float CardHoverLift = 8f;       // cards rise 5-10px on hover

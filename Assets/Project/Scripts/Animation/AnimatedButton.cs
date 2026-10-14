@@ -403,21 +403,25 @@ namespace Railbound.UI.Anim
             State = ButtonAnimState.Click;
             UISfx.PlayClick();
 
-            // 1.04 -> 0.96 -> 1.00 within 0.08-0.15s, plus a short glow flash.
-            var pressScale = _baseScale * UIAnim.PressScale;
-            var restScale = _hovered ? _baseScale * HoverScaleValue : _baseScale;
-            var start = _rt != null ? _rt.localScale : _baseScale;
-            UITween.Kill(_scaleToken);
-            if (_rt != null)
+            // Tactical brightness micro-flash across button graphics (0.10s)
+            FlashGroup(new Color(1.22f, 1.22f, 1.22f, 1f), 0.10f, () => State = RestState());
+
+            // If the click was triggered via keyboard, gamepad, or code (without pointer press),
+            // provide a single crisp micro-compression punch.
+            // When clicked via mouse, OnPointerDown and OnPointerUp have already cleanly handled
+            // the press down and smooth spring release — no redundant double-bounce is triggered!
+            if (_rt != null && !_pressed && Mathf.Abs(_rt.localScale.x - _baseScale.x) < 0.005f)
             {
+                var punchScale = _baseScale * UIAnim.PressScale;
+                var restScale = _hovered ? _baseScale * HoverScaleValue : _baseScale;
+                UITween.Kill(_scaleToken);
                 UITween.To(0f, 1f, UIAnim.ClickDown, Ease.OutQuad,
-                    p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(start, pressScale, p); },
+                    p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(_baseScale, punchScale, p); },
                     () =>
                     {
-                        var mid = pressScale;
                         UITween.To(0f, 1f, UIAnim.ClickUp, Ease.OutCubic,
-                            p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(mid, restScale, p); },
-                            () => State = RestState(), 0f, _scaleToken);
+                            p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(punchScale, restScale, p); },
+                            null, 0f, _scaleToken);
                     }, 0f, _scaleToken);
             }
 
@@ -434,8 +438,7 @@ namespace Railbound.UI.Anim
                     }, 0f, _glowToken);
             }
 
-            if (rotateIconOnHover && icon != null)
-                IconAnimator.Bounce(icon, 4f, 0.22f, _fxToken);
+            // Icons remain stable and centered — no vertical jumping or hopping.
         }
 
         // ------------------------------------------------------------------ visual refresh

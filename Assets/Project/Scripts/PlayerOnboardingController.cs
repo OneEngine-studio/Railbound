@@ -25,8 +25,8 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     private static readonly Color ErrorColor = new Color(1f, 0.35f, 0.4f, 1f);
     private static readonly Color UnselectedDim = new Color(0.6f, 0.65f, 0.72f, 1f);
 
-    private const float UsernameCardWidth = 980f;
-    private const float UsernameCardHeight = 600f;
+    private const float UsernameCardWidth = 1100f;
+    private const float UsernameCardHeight = 720f;
     private const float LevelCardWidth = 1100f;
     private const float LevelCardHeight = 720f;
     private const float LevelStepHeight = 510f;
@@ -206,18 +206,9 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         // Step 1: Nickname Input Step (2-Column Interactive Dossier + Form)
         _usernameStep = new GameObject("UsernameStep", typeof(RectTransform));
         _usernameStep.transform.SetParent(card.transform, false);
-        var usernameLayout = _usernameStep.AddComponent<HorizontalLayoutGroup>();
-        usernameLayout.spacing = 24f;
-        usernameLayout.padding = new RectOffset(16, 16, 10, 4);
-        usernameLayout.childControlWidth = true;
-        usernameLayout.childControlHeight = true;
-        usernameLayout.childForceExpandWidth = false;
-        usernameLayout.childForceExpandHeight = true;
-        {
-            var usernameStepLayout = _usernameStep.AddComponent<LayoutElement>();
-            usernameStepLayout.minHeight = 360f;
-            usernameStepLayout.preferredHeight = 360f;
-        }
+        var usernameStepLayout = _usernameStep.AddComponent<LayoutElement>();
+        usernameStepLayout.minHeight = LevelStepHeight;
+        usernameStepLayout.preferredHeight = LevelStepHeight;
 
         CreateOperatorDossierCard(_usernameStep.transform);
         CreateRegistrationForm(_usernameStep.transform);
@@ -266,7 +257,10 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _usernameStep.SetActive(true);
         _levelStep.SetActive(false);
         if (_cardRect != null)
+        {
             _cardRect.sizeDelta = new Vector2(UsernameCardWidth, UsernameCardHeight);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_cardRect);
+        }
 
         _stepLabel.gameObject.SetActive(true);
         _title.gameObject.SetActive(true);
@@ -289,7 +283,10 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         _usernameStep.SetActive(false);
         _levelStep.SetActive(true);
         if (_cardRect != null)
+        {
             _cardRect.sizeDelta = new Vector2(LevelCardWidth, LevelCardHeight);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_cardRect);
+        }
 
         _stepLabel.gameObject.SetActive(true);
         _title.gameObject.SetActive(true);
@@ -869,9 +866,8 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         {
             UITween.Kill(_diceSpinToken);
             _randomizeIconRect.localEulerAngles = Vector3.zero;
-            _randomizeIconRect.localScale = Vector3.one * 1.25f;
-            UITween.ScaleTo(_randomizeIconRect, Vector3.one, 0.35f, Ease.OutCubic, null, _diceSpinToken);
-            UITween.To(0f, 1f, 0.4f, Ease.OutCubic,
+            // Clean 360 degree spin roll without awkward scale distortion
+            UITween.To(0f, 1f, 0.35f, Ease.OutCubic,
                 p =>
                 {
                     if (_randomizeIconRect != null)
@@ -888,15 +884,13 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
     private void CreateOperatorDossierCard(Transform parent)
     {
-        var root = new GameObject("OperatorDossierCard", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+        var root = new GameObject("OperatorDossierCard", typeof(RectTransform), typeof(Image));
         root.transform.SetParent(parent, false);
-        var layout = root.GetComponent<LayoutElement>();
-        layout.minWidth = 340f;
-        layout.preferredWidth = 340f;
-        layout.flexibleWidth = 0f;
-        layout.minHeight = 350f;
-        layout.preferredHeight = 350f;
-        layout.flexibleHeight = 1f;
+        var rect = root.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.015f, 0.02f);
+        rect.anchorMax = new Vector2(0.425f, 0.98f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
 
         var bg = root.GetComponent<Image>();
         bg.color = new Color(0.03f, 0.04f, 0.07f, 0.98f);
@@ -944,14 +938,14 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         slRect.offsetMin = new Vector2(20f, 0f);
         slRect.offsetMax = Vector2.zero;
 
-        // Artwork Clipping Mask
+        // Artwork Clipping Mask (Chamfered)
         var clip = new GameObject("ArtClip", typeof(RectTransform), typeof(Image), typeof(Mask));
         clip.transform.SetParent(root.transform, false);
         var clipRect = clip.GetComponent<RectTransform>();
-        clipRect.anchorMin = Vector2.zero;
-        clipRect.anchorMax = Vector2.one;
-        clipRect.offsetMin = new Vector2(10f, 74f);
-        clipRect.offsetMax = new Vector2(-10f, -32f);
+        clipRect.anchorMin = new Vector2(0.04f, 0.17f);
+        clipRect.anchorMax = new Vector2(0.96f, 0.92f);
+        clipRect.offsetMin = Vector2.zero;
+        clipRect.offsetMax = Vector2.zero;
         var clipImg = clip.GetComponent<Image>();
         clipImg.sprite = ResolveChamferSprite();
         clipImg.type = Image.Type.Sliced;
@@ -961,24 +955,23 @@ public sealed class PlayerOnboardingController : MonoBehaviour
         var artObj = new GameObject("Art", typeof(RectTransform), typeof(Image));
         artObj.transform.SetParent(clip.transform, false);
         var artRect = artObj.GetComponent<RectTransform>();
-        artRect.anchorMin = new Vector2(0.5f, 0.5f);
-        artRect.anchorMax = new Vector2(0.5f, 0.5f);
-        artRect.pivot = new Vector2(0.5f, 0.5f);
-        artRect.anchoredPosition = new Vector2(0f, -8f);
-        artRect.sizeDelta = new Vector2(320f, 428f);
+        artRect.anchorMin = Vector2.zero;
+        artRect.anchorMax = Vector2.one;
+        artRect.offsetMin = Vector2.zero;
+        artRect.offsetMax = Vector2.zero;
         var artImg = artObj.GetComponent<Image>();
         artImg.sprite = ResolveOperatorSprite();
+        artImg.preserveAspect = true;
         artImg.raycastTarget = false;
 
         // Bottom Tactical Dogtag / Callsign Plate
         var badge = new GameObject("CallsignBadge", typeof(RectTransform), typeof(Image));
         badge.transform.SetParent(root.transform, false);
         var badgeRect = badge.GetComponent<RectTransform>();
-        badgeRect.anchorMin = new Vector2(0f, 0f);
-        badgeRect.anchorMax = new Vector2(1f, 0f);
-        badgeRect.pivot = new Vector2(0.5f, 0f);
-        badgeRect.anchoredPosition = new Vector2(0f, 6f);
-        badgeRect.sizeDelta = new Vector2(-16f, 64f);
+        badgeRect.anchorMin = new Vector2(0.04f, 0.025f);
+        badgeRect.anchorMax = new Vector2(0.96f, 0.155f);
+        badgeRect.offsetMin = Vector2.zero;
+        badgeRect.offsetMax = Vector2.zero;
         var badgeImg = badge.GetComponent<Image>();
         badgeImg.sprite = ResolveChamferSprite();
         badgeImg.type = Image.Type.Sliced;
@@ -1024,24 +1017,26 @@ public sealed class PlayerOnboardingController : MonoBehaviour
     {
         var formObj = new GameObject("RegistrationForm", typeof(RectTransform));
         formObj.transform.SetParent(parent, false);
+        var formRect = formObj.GetComponent<RectTransform>();
+        formRect.anchorMin = new Vector2(0.455f, 0.02f);
+        formRect.anchorMax = new Vector2(0.985f, 0.98f);
+        formRect.offsetMin = Vector2.zero;
+        formRect.offsetMax = Vector2.zero;
+
         var formLayout = formObj.AddComponent<VerticalLayoutGroup>();
         formLayout.spacing = 14f;
-        formLayout.padding = new RectOffset(12, 12, 6, 6);
+        formLayout.padding = new RectOffset(16, 16, 12, 12);
         formLayout.childControlWidth = true;
         formLayout.childControlHeight = true;
         formLayout.childForceExpandWidth = true;
         formLayout.childForceExpandHeight = false;
-        var flElem = formObj.AddComponent<LayoutElement>();
-        flElem.minWidth = 510f;
-        flElem.preferredWidth = 510f;
-        flElem.flexibleWidth = 1f;
 
-        var formTitle = CreateText(formObj.transform, "FormHeader", "CALLSIGN REGISTRATION", 13f, TextAlignmentOptions.Left, GoldColor, isBold: true);
+        var formTitle = CreateText(formObj.transform, "FormHeader", "CALLSIGN REGISTRATION", 13.5f, TextAlignmentOptions.Left, GoldColor, isBold: true);
         formTitle.characterSpacing = 3f;
-        SetPreferredHeight(formTitle.gameObject, 20f);
+        SetPreferredHeight(formTitle.gameObject, 22f);
 
-        var formDesc = CreateText(formObj.transform, "FormDesc", "Assign your tactical codename for convoy operations, leaderboards, and squad comms.", 13.5f, TextAlignmentOptions.Left, MutedTextColor, isBold: false);
-        SetPreferredHeight(formDesc.gameObject, 40f);
+        var formDesc = CreateText(formObj.transform, "FormDesc", "Assign your tactical codename for convoy operations, squad comms, and global rankings.", 14f, TextAlignmentOptions.Left, MutedTextColor, isBold: false);
+        SetPreferredHeight(formDesc.gameObject, 38f);
 
         _usernameInput = CreateInputField(formObj.transform);
         _usernameInput.characterLimit = 16;
@@ -1054,13 +1049,42 @@ public sealed class PlayerOnboardingController : MonoBehaviour
 
         var hintText = CreateText(formObj.transform, "Hint", "3–16 CHARACTERS • LETTERS, NUMBERS & UNDERSCORES", 11.5f, TextAlignmentOptions.Left, new Color(0.45f, 0.52f, 0.62f, 0.85f), isBold: true);
         hintText.characterSpacing = 2f;
-        SetPreferredHeight(hintText.gameObject, 18f);
+        SetPreferredHeight(hintText.gameObject, 20f);
 
-        var spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
-        spacer.transform.SetParent(formObj.transform, false);
-        var spLayout = spacer.GetComponent<LayoutElement>();
-        spLayout.minHeight = 14f;
-        spLayout.preferredHeight = 14f;
+        // Tactical Identity Protocol Callout Panel
+        var callout = new GameObject("ProtocolCallout", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+        callout.transform.SetParent(formObj.transform, false);
+        SetPreferredHeight(callout, 74f);
+        var calloutImg = callout.GetComponent<Image>();
+        calloutImg.sprite = ResolveChamferSprite();
+        calloutImg.type = Image.Type.Sliced;
+        calloutImg.color = new Color(0.02f, 0.03f, 0.06f, 0.92f);
+
+        var calloutBorder = new GameObject("Border", typeof(RectTransform), typeof(Image));
+        calloutBorder.transform.SetParent(callout.transform, false);
+        Stretch(calloutBorder.GetComponent<RectTransform>());
+        var cbImg = calloutBorder.GetComponent<Image>();
+        cbImg.sprite = ResolveRingSprite();
+        cbImg.type = Image.Type.Sliced;
+        cbImg.color = new Color(0.2f, 0.28f, 0.38f, 0.4f);
+        cbImg.raycastTarget = false;
+
+        var calloutHeader = CreateText(callout.transform, "CalloutHeader", "// IDENTITY PROTOCOL", 10.5f, TextAlignmentOptions.Left, GoldColor, isBold: true);
+        calloutHeader.characterSpacing = 2.5f;
+        var chRt = calloutHeader.rectTransform;
+        chRt.anchorMin = new Vector2(0f, 1f);
+        chRt.anchorMax = new Vector2(1f, 1f);
+        chRt.pivot = new Vector2(0f, 1f);
+        chRt.anchoredPosition = new Vector2(16f, -10f);
+        chRt.sizeDelta = new Vector2(-32f, 18f);
+
+        var calloutBody = CreateText(callout.transform, "CalloutBody", "Callsign is broadcasted to squad mates during convoy operations and leaderboards. Can be modified later in settings.", 12f, TextAlignmentOptions.Left, MutedTextColor, isBold: false);
+        var cbyRt = calloutBody.rectTransform;
+        cbyRt.anchorMin = new Vector2(0f, 0f);
+        cbyRt.anchorMax = new Vector2(1f, 0f);
+        cbyRt.pivot = new Vector2(0f, 0f);
+        cbyRt.anchoredPosition = new Vector2(16f, 8f);
+        cbyRt.sizeDelta = new Vector2(-32f, 32f);
 
         _saveUsernameButton = CreateStyledButton(formObj.transform, "SaveNicknameButton", "CONFIRM CALLSIGN  ►►", GoldColor, Color.clear, OnGoldTextColor, isPrimary: true);
         _saveUsernameButton.onClick.AddListener(SaveUsername);
