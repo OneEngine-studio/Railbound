@@ -1,8 +1,1 @@
-{
-  "mcpServers": {
-    "kitwright": {
-      "url": "http://127.0.0.1:9285/p/2d134c5c/t/92023d1a44efcc017ce53ab4a8bf3409/",
-      "type": "http"
-    }
-  }
-}
+{"mcpServers":{"kitwright":{"url":"http://127.0.0.1:9285/p/0c5f74cb/t/b2ef602f73e51c6657329a4cdc060bee/","type":"http"}}}
