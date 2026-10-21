@@ -336,7 +336,6 @@
     <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoInstantiate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerSplashScreen.cs" />
-    <Compile Include="Assets\Project\test-new.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Vehicle System Libs\JUVehicleEngine.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UISettingsManager.cs" />
     <Compile Include="Assets\SandBox\Networking\Nakama\LoginManager.cs" />
