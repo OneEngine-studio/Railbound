@@ -49,6 +49,9 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Project/LoadingScreen.unity
     guid: 58ad195ff9d6dbd68bf1008fba96fdff
+  - enabled: 1
+    path: Assets/Project/MAP-1.unity
+    guid: e5e72d7d82e47024484ba96b2c8f7fa1
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 2c7d6f626e5ec2aadbeb242b1269001f,
       type: 2}

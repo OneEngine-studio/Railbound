@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.45128495, g: 0.5001255, b: 0.5688386, a: 1}
+  m_IndirectSpecularColor: {r: 0.4512856, g: 0.50012624, b: 0.5688393, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -4579,6 +4579,7 @@ GameObject:
   - component: {fileID: 445947507}
   - component: {fileID: 445947512}
   - component: {fileID: 445947513}
+  - component: {fileID: 445947514}
   m_Layer: 0
   m_Name: Canvas_Lobby
   m_TagString: Untagged
@@ -4829,6 +4830,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   loginSceneName: LoginMenu
   authenticationWaitSeconds: 8
+--- !u!114 &445947514
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445947506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dde805a3e80dacf49bc6ee0cdda811c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetGameplayScene: MAP-1
+  netcodePort: 7777
+  playerPrefab: {fileID: 4372868026506870464, guid: 4047b1611e0254ae3b02b69d1395979b,
+    type: 3}
+  statusText: {fileID: 1325207871}
 --- !u!1 &448366815
 GameObject:
   m_ObjectHideFlags: 0

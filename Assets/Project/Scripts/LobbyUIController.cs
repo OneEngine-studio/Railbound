@@ -303,9 +303,18 @@ namespace Railbound.UI
 
         private void HandleReadyClicked()
         {
-            // TODO: call match-orchestrator ticket API via game-api BFF
-            Debug.Log("[LobbyUI] PLAY clicked - request match ticket");
+            Debug.Log("[LobbyUI] DEPLOY clicked - initiating match and scene transition to MAP-1");
+            if (readyText != null) readyText.text = "DEPLOYING...";
             onReadyClicked?.Invoke();
+
+            var matchmaker = FindFirstObjectByType<Railbound.Networking.LobbyMatchmakingController>();
+            if (matchmaker == null)
+            {
+                var go = new GameObject("LobbyMatchmakingController");
+                matchmaker = go.AddComponent<Railbound.Networking.LobbyMatchmakingController>();
+            }
+
+            matchmaker.Deploy();
         }
 
         private void HandleTaskClicked()

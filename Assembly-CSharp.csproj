@@ -370,6 +370,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\LobbyPlayerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsManager.cs" />
+    <Compile Include="Assets\Project\Scripts\LobbyMatchmakingController.cs" />
     <Compile Include="Assets\Project\Scripts\NetworkSessionBootstrap.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\ChapterManager.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\JUNetworkPlayer.cs" />
