@@ -54,10 +54,13 @@ namespace JUTPS.ArmorSystem
         }
         public void UnprotectParts(DamageableBodyPart[] parts, List<float> defaultValues)
         {
-            if (!EnableArmorProtection) return;
-            for (int i = 0; i < parts.Length; i++)
+            if (!EnableArmorProtection || parts == null || defaultValues == null) return;
+            for (int i = 0; i < parts.Length && i < defaultValues.Count; i++)
             {
-                parts[i].DamageMultiplier = defaultValues[i];
+                if (parts[i] != null)
+                {
+                    parts[i].DamageMultiplier = defaultValues[i];
+                }
             }
         }
         public void DisableAllParts()
