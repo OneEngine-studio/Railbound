@@ -2579,6 +2579,21 @@ PrefabInstance:
       propertyPath: TextToShow
       value: Armor/Clothing system included
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -6458,6 +6473,21 @@ PrefabInstance:
       propertyPath: TextToShow
       value: You can easily create Melee Weapons
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -8935,6 +8965,21 @@ PrefabInstance:
       value: It is possible to create Throwable Items such as stones, grenades, knives
         e etc
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -10428,6 +10473,21 @@ PrefabInstance:
         Integrated JU Foot Placement system). If you look at the character's feet,
         they adapt perfectly to the terrain on which they are stepping.
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -10626,6 +10686,21 @@ PrefabInstance:
         Sight, Procedural Recoil Animation, PickUp/Drop Item System, Dual Wielding
         and etc.
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -10741,6 +10816,21 @@ PrefabInstance:
       propertyPath: TextToShow
       value: JU TPS has a vehicle system, with Car and Motorcycle physics
       objectReference: {fileID: 0}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder
@@ -14150,6 +14240,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1746983654}
     m_Modifications:
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713762998472215, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
+    - target: {fileID: 7068713763124943318, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 84a3eea9e5689684897184bf2f8fbb00, type: 2}
     - target: {fileID: 7319375007709701852, guid: bc0f9dfb0499fa944ad4c75a58b1e8bf,
         type: 3}
       propertyPath: m_RootOrder

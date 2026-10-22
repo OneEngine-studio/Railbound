@@ -6218,7 +6218,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10308, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: eacaa34757b62b3499c0418eea382546, type: 2}
   - {fileID: 2100000, guid: 107792f089d4b9b42805ed1b46d6e054, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -9111,7 +9111,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2351533809
+  GlobalObjectIdHash: 2794509248
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
