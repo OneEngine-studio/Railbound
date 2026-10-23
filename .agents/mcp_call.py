@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 import sys, json, urllib.request
 
-URL = "http://127.0.0.1:9285/p/2d134c5c/t/92023d1a44efcc017ce53ab4a8bf3409/mcp"
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
+URL = "http://127.0.0.1:9205/p/96653078/t/9da859468c1299c36d08b15694e93e46/mcp"
 
 def call_tool(name, arguments={}):
     payload = json.dumps({
@@ -36,7 +42,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         arg_str = sys.argv[2]
         if arg_str.startswith("@"):
-            with open(arg_str[1:], "r") as f:
+            with open(arg_str[1:], "r", encoding="utf-8") as f:
                 args = json.load(f)
         else:
             args = json.loads(arg_str)

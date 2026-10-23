@@ -1,0 +1,4 @@
+{
+  "code": "var ctrl = GameObject.Find(\"Canvas_Lobby\").GetComponent<Railbound.UI.LobbyUIController>();\nvar so = new UnityEditor.SerializedObject(ctrl);\nvar sb = new System.Text.StringBuilder();\nvar sp = so.GetIterator();\nwhile (sp.NextVisible(true)) {\n    if (sp.propertyType == UnityEditor.SerializedPropertyType.ObjectReference) {\n        sb.AppendLine($\"{sp.propertyPath}: {(sp.objectReferenceValue != null ? sp.objectReferenceValue.name : \"null\")}\");\n    } else if (sp.propertyType == UnityEditor.SerializedPropertyType.ArraySize) {\n        sb.AppendLine($\"{sp.propertyPath} (size: {sp.intValue})\");\n    }\n}\nreturn sb.ToString();",
+  "skip_refresh": true
+}

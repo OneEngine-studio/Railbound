@@ -1,0 +1,4 @@
+{
+  "code": "Railbound.Editor.UIManagerBuilder.CreateUIManagerPrefab(); return \"UIManager.prefab updated\";",
+  "skip_refresh": true
+}

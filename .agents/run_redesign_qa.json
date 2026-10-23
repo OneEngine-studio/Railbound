@@ -1,0 +1,4 @@
+{
+  "code": "return Railbound.Editor.PrefabRedesignQASuite.RunAllTests();",
+  "skip_refresh": true
+}

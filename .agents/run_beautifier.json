@@ -1,0 +1,4 @@
+{
+  "code": "return Railbound.Editor.TacticalUIBeautifier.BeautifyAllPrefabs();",
+  "skip_refresh": true
+}

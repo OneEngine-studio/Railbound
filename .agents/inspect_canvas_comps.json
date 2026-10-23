@@ -1,0 +1,4 @@
+{
+  "code": "var canvas = GameObject.Find(\"Canvas_Lobby\");\nvar sb = new System.Text.StringBuilder();\nforeach (var comp in canvas.GetComponents<MonoBehaviour>()) {\n    if (comp != null) sb.AppendLine($\"Canvas comp: {comp.GetType().FullName}\");\n}\nvar lobbyCtrls = canvas.GetComponentsInChildren<MonoBehaviour>(true);\nforeach (var c in lobbyCtrls) {\n    if (c != null && c.GetType().Namespace != null && c.GetType().Namespace.Contains(\"Railbound\")) {\n        sb.AppendLine($\"{c.gameObject.name} -> {c.GetType().FullName}\");\n    }\n}\nreturn sb.ToString();",
+  "skip_refresh": true
+}

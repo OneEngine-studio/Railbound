@@ -1,0 +1,4 @@
+{
+  "code": "var canvas = GameObject.Find(\"Canvas_Lobby\");\nvar graphics = canvas.GetComponentsInChildren<UnityEngine.UI.Graphic>(true);\nvar sb = new System.Text.StringBuilder();\nsb.AppendLine($\"Total Graphics in Canvas_Lobby: {graphics.Length}\");\nint blockingCount = 0;\nforeach (var g in graphics) {\n    if (g.raycastTarget) {\n        var rt = g.rectTransform;\n        // Check if it's large / full screen and not a button\n        var btn = g.GetComponentInParent<UnityEngine.UI.Button>();\n        if (btn == null && rt.rect.width > 800 && rt.rect.height > 600) {\n            sb.AppendLine($\"Potential blocking graphic: {g.gameObject.name} (type: {g.GetType().Name}, size: {rt.rect.width}x{rt.rect.height}, color: {g.color})\");\n            blockingCount++;\n        }\n    }\n}\nsb.AppendLine($\"Total potential blocking full-screen graphics: {blockingCount}\");\nreturn sb.ToString();",
+  "skip_refresh": true
+}

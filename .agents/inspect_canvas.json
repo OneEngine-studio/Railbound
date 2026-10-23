@@ -1,0 +1,4 @@
+{
+  "code": "var canvas = GameObject.Find(\"Canvas_Lobby\");\nvar sb = new System.Text.StringBuilder();\nvoid Dump(Transform t, int indent) {\n    var btn = t.GetComponent<UnityEngine.UI.Button>();\n    var tmp = t.GetComponent<TMPro.TextMeshProUGUI>();\n    string info = \"\";\n    if (btn != null) info += \" [BTN]\";\n    if (tmp != null) info += $\" [TMP: '{tmp.text}']\";\n    sb.AppendLine(new string(' ', indent * 2) + t.name + info);\n    foreach (Transform c in t) Dump(c, indent + 1);\n}\nDump(canvas.transform, 0);\nreturn sb.ToString();",
+  "skip_refresh": true
+}

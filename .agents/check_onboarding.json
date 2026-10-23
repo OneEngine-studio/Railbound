@@ -1,0 +1,4 @@
+{
+  "code": "var overlay = GameObject.Find(\"Canvas_Lobby/PlayerOnboardingOverlay\");\nvar ctrl = GameObject.Find(\"Canvas_Lobby\").GetComponent<PlayerOnboardingController>();\nvar sb = new System.Text.StringBuilder();\nsb.AppendLine($\"overlay activeSelf: {(overlay != null ? overlay.activeSelf.ToString() : \"null\")}\");\nif (ctrl != null) {\n    var so = new UnityEditor.SerializedObject(ctrl);\n    var showIncomplete = so.FindProperty(\"showForIncompleteProfiles\");\n    sb.AppendLine($\"showForIncompleteProfiles: {(showIncomplete != null ? showIncomplete.boolValue.ToString() : \"null\")}\");\n}\nreturn sb.ToString();",
+  "skip_refresh": true
+}

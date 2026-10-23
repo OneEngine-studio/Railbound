@@ -1,0 +1,4 @@
+{
+  "code": "return Railbound.Editor.LoginMenuQASuite.RunAllTests();",
+  "skip_refresh": true
+}

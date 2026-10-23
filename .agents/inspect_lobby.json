@@ -1,0 +1,4 @@
+{
+  "code": "var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(\"Assets/Project/GameLobby.unity\", UnityEditor.SceneManagement.OpenSceneMode.Single);\nvar roots = scene.GetRootGameObjects();\nvar sb = new System.Text.StringBuilder();\nsb.AppendLine($\"Scene: {scene.name}\");\nforeach (var root in roots) {\n    sb.AppendLine($\"- {root.name} ({root.GetComponents<Component>().Length} comps)\");\n    foreach (Transform child in root.transform) {\n        sb.AppendLine($\"  -- {child.name} ({child.GetComponents<Component>().Length} comps)\");\n        foreach (Transform grand in child) {\n            sb.AppendLine($\"    --- {grand.name} ({grand.GetComponents<Component>().Length} comps)\");\n        }\n    }\n}\nreturn sb.ToString();",
+  "skip_refresh": true
+}

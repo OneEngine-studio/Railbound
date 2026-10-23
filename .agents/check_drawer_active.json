@@ -1,0 +1,4 @@
+{
+  "code": "var drawer = GameObject.Find(\"Canvas_Lobby/Panel_BottomLeftNav/Panel_GlobalChatDrawer\");\nreturn $\"drawer activeSelf: {drawer.activeSelf}\";",
+  "skip_refresh": true
+}

@@ -24,6 +24,12 @@ public sealed class LobbyAccessGuard : MonoBehaviour
             yield return null;
         }
 
+        // Allow guest / local testing
+        if (!string.IsNullOrEmpty(PlayerPrefs.GetString("PlayerName", string.Empty)))
+        {
+            yield break;
+        }
+
         if (AuthenticationService.Instance == null ||
             !AuthenticationService.Instance.IsAuthenticationReady ||
             !AuthenticationService.Instance.IsAuthenticated)

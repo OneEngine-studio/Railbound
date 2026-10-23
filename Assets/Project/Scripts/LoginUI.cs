@@ -424,7 +424,10 @@ public class LoginUI : MonoBehaviour
     // ------------------------------------------------------------------ Terms validation
     private bool CheckTermsAccepted(string action = "continue")
     {
-        if (!ageConfirmed || !termsAccepted)
+        bool ageNeeded = ageCheckboxButton != null && ageCheckboxButton.gameObject.activeInHierarchy;
+        bool termsNeeded = termsCheckboxButton != null && termsCheckboxButton.gameObject.activeInHierarchy;
+
+        if ((ageNeeded && !ageConfirmed) || (termsNeeded && !termsAccepted))
         {
             string missing = !ageConfirmed && !termsAccepted ? "confirm your age and accept the Terms of Service"
                 : !ageConfirmed ? "confirm your age" : "accept the Terms of Service";

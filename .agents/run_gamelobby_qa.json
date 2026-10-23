@@ -1,0 +1,4 @@
+{
+  "code": "return Railbound.Editor.GameLobbyQASuite.RunAllTests();",
+  "skip_refresh": true
+}

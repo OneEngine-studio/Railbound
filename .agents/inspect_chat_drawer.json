@@ -1,0 +1,4 @@
+{
+  "code": "var ticker = GameObject.Find(\"Panel_ChatTicker\");\nvar chatCtrl = ticker != null ? ticker.GetComponent<Railbound.UI.LobbyGlobalChatController>() : null;\nvar so = chatCtrl != null ? new UnityEditor.SerializedObject(chatCtrl) : null;\nvar drawerProp = so != null ? so.FindProperty(\"chatDrawer\") : null;\nreturn $\"chatCtrl found: {chatCtrl != null}, chatDrawer serialized: {(drawerProp != null && drawerProp.objectReferenceValue != null ? drawerProp.objectReferenceValue.name : \"null\")}\";",
+  "skip_refresh": true
+}

@@ -1,0 +1,4 @@
+{
+  "code": "var canvas = GameObject.Find(\"Canvas_Lobby\");\nvar ctrl = canvas.GetComponent<Railbound.UI.LobbyUIController>();\nvar ticker = GameObject.Find(\"Panel_ChatTicker\");\nvar chat = ticker.GetComponent<Railbound.UI.LobbyGlobalChatController>();\nvar drawer = canvas.transform.Find(\"Panel_BottomLeftNav/Panel_GlobalChatDrawer\").gameObject;\nvar sb = new System.Text.StringBuilder();\nsb.AppendLine($\"Initial drawer.activeSelf: {drawer.activeSelf}\");\nctrl.ToggleGlobalChat();\nsb.AppendLine($\"After ToggleGlobalChat: drawer.activeSelf: {drawer.activeSelf}\");\nctrl.CloseGlobalChat();\nsb.AppendLine($\"After CloseGlobalChat: drawer.activeSelf: {drawer.activeSelf}\");\nreturn sb.ToString();",
+  "skip_refresh": true
+}

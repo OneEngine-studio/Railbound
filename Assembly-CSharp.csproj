@@ -1,21 +1,26 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project ToolsVersion="Current">
   <!-- Generated file, do not modify, your changes will be overwritten (use AssetPostprocessor.OnGeneratedCSProject) -->
   <PropertyGroup>
-    <LangVersion>9.0</LangVersion>
+    <BaseIntermediateOutputPath>Temp\obj\$(Configuration)\$(MSBuildProjectName)</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
   </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <ItemGroup>
+    <ProjectCapability Include="Unity" />
+  </ItemGroup>
   <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <LangVersion>9.0</LangVersion>
+    <Configurations>Debug;Release</Configurations>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>10.0.20506</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{8B8AAEDB-76B2-8225-2560-87A4998C785B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Assembly-CSharp</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <BaseDirectory>.</BaseDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -23,7 +28,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>Temp\bin\Debug\</OutputPath>
-    <DefineConstants>UNITY_2023_1_22;UNITY_2023_1;UNITY_2023;UNITY_5_3_OR_NEWER;UNITY_5_4_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER;UNITY_2017_1_OR_NEWER;UNITY_2017_2_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2017_4_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2018_3_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_2019_1_OR_NEWER;UNITY_2019_2_OR_NEWER;UNITY_2019_3_OR_NEWER;UNITY_2019_4_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_1_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_2022_1_OR_NEWER;UNITY_2022_2_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2023_1_OR_NEWER;PLATFORM_ARCH_64;UNITY_64;UNITY_INCLUDE_TESTS;UNITY_ANALYTICS;ENABLE_AUDIO;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_TEXTURE_STREAMING;ENABLE_VIRTUALTEXTURING;ENABLE_LZMA;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_UNITYWEBREQUEST;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_SERVICES_USE_WEBREQUEST;ENABLE_CLOUD_SERVICES_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_EDITOR_GAME_SERVICES;ENABLE_UNITY_GAME_SERVICES_ANALYTICS_SUPPORT;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_HUB_LICENSE;ENABLE_WEBSOCKET_CLIENT;ENABLE_GENERATE_NATIVE_PLUGINS_FOR_ASSEMBLIES_API;ENABLE_DIRECTOR_AUDIO;ENABLE_DIRECTOR_TEXTURE;ENABLE_MANAGED_JOBS;ENABLE_MANAGED_TRANSFORM_JOBS;ENABLE_MANAGED_ANIMATION_JOBS;ENABLE_MANAGED_AUDIO_JOBS;ENABLE_MANAGED_UNITYTLS;INCLUDE_DYNAMIC_GI;ENABLE_SCRIPTING_GC_WBARRIERS;PLATFORM_SUPPORTS_MONO;RENDER_SOFTWARE_CURSOR;ENABLE_MARSHALLING_TESTS;ENABLE_VIDEO;ENABLE_ACCELERATOR_CLIENT_DEBUGGING;ENABLE_NAVIGATION_PACKAGE_DEBUG_VISUALIZATION;ENABLE_NAVIGATION_HEIGHTMESH_RUNTIME_SUPPORT;ENABLE_NAVIGATION_UI_REQUIRES_PACKAGE;PLATFORM_STANDALONE;TEXTCORE_1_0_OR_NEWER;PLATFORM_STANDALONE_LINUX;UNITY_STANDALONE_LINUX;UNITY_STANDALONE;UNITY_STANDALONE_LINUX_API;ENABLE_RUNTIME_GI;ENABLE_MOVIES;ENABLE_NETWORK;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_CLUSTER_SYNC;ENABLE_CLUSTERINPUT;ENABLE_SPATIALTRACKING;ENABLE_MODULAR_UNITYENGINE_ASSEMBLIES;ENABLE_MONO;NET_4_6;NET_UNITY_4_8;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS;UNITY_EDITOR;UNITY_EDITOR_64;UNITY_EDITOR_WIN;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_BURST_AOT;UNITY_TEAM_LICENSE;ENABLE_CUSTOM_RENDER_TEXTURE;ENABLE_DIRECTOR;ENABLE_LOCALIZATION;ENABLE_SPRITES;ENABLE_TERRAIN;ENABLE_TILEMAP;ENABLE_TIMELINE;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;TEXTCORE_FONT_ENGINE_1_5_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2;DOTWEEN;LETAI_TRUESHADOW;CSHARP_7_OR_LATER;CSHARP_7_3_OR_NEWER</DefineConstants>
+    <DefineConstants>UNITY_2023_1_22;UNITY_2023_1;UNITY_2023;UNITY_5_3_OR_NEWER;UNITY_5_4_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER;UNITY_2017_1_OR_NEWER;UNITY_2017_2_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2017_4_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2018_3_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_2019_1_OR_NEWER;UNITY_2019_2_OR_NEWER;UNITY_2019_3_OR_NEWER;UNITY_2019_4_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_1_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_2022_1_OR_NEWER;UNITY_2022_2_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2023_1_OR_NEWER;PLATFORM_ARCH_64;UNITY_64;UNITY_INCLUDE_TESTS;UNITY_ANALYTICS;ENABLE_AR;ENABLE_AUDIO;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_EVENT_QUEUE;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_TEXTURE_STREAMING;ENABLE_VIRTUALTEXTURING;ENABLE_LZMA;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_UNITYWEBREQUEST;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_SERVICES_USE_WEBREQUEST;ENABLE_CLOUD_SERVICES_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_EDITOR_GAME_SERVICES;ENABLE_UNITY_GAME_SERVICES_ANALYTICS_SUPPORT;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_HUB_LICENSE;ENABLE_WEBSOCKET_CLIENT;ENABLE_GENERATE_NATIVE_PLUGINS_FOR_ASSEMBLIES_API;ENABLE_DIRECTOR_AUDIO;ENABLE_DIRECTOR_TEXTURE;ENABLE_MANAGED_JOBS;ENABLE_MANAGED_TRANSFORM_JOBS;ENABLE_MANAGED_ANIMATION_JOBS;ENABLE_MANAGED_AUDIO_JOBS;ENABLE_MANAGED_UNITYTLS;INCLUDE_DYNAMIC_GI;ENABLE_SCRIPTING_GC_WBARRIERS;PLATFORM_SUPPORTS_MONO;RENDER_SOFTWARE_CURSOR;ENABLE_MARSHALLING_TESTS;ENABLE_VIDEO;ENABLE_ACCELERATOR_CLIENT_DEBUGGING;ENABLE_NAVIGATION_PACKAGE_DEBUG_VISUALIZATION;ENABLE_NAVIGATION_HEIGHTMESH_RUNTIME_SUPPORT;ENABLE_NAVIGATION_UI_REQUIRES_PACKAGE;PLATFORM_STANDALONE;TEXTCORE_1_0_OR_NEWER;PLATFORM_STANDALONE_WIN;UNITY_STANDALONE_WIN;UNITY_STANDALONE;ENABLE_RUNTIME_GI;ENABLE_MOVIES;ENABLE_NETWORK;ENABLE_NVIDIA;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_OUT_OF_PROCESS_CRASH_HANDLER;ENABLE_CLUSTER_SYNC;ENABLE_CLUSTERINPUT;PLATFORM_UPDATES_TIME_OUTSIDE_OF_PLAYER_LOOP;GFXDEVICE_WAITFOREVENT_MESSAGEPUMP;PLATFORM_INITIALIZES_MEMORY_MANAGER_EXPLICITLY;PLATFORM_SUPPORTS_WAIT_FOR_PRESENTATION;ENABLE_MONO;NET_4_6;NET_UNITY_4_8;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS;UNITY_EDITOR;UNITY_EDITOR_64;UNITY_EDITOR_WIN;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_BURST_AOT;UNITY_TEAM_LICENSE;ENABLE_CUSTOM_RENDER_TEXTURE;ENABLE_DIRECTOR;ENABLE_LOCALIZATION;ENABLE_SPRITES;ENABLE_TERRAIN;ENABLE_TILEMAP;ENABLE_TIMELINE;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;TEXTCORE_FONT_ENGINE_1_5_OR_NEWER;UNITY_POST_PROCESSING_STACK_V2;DOTWEEN;LETAI_TRUESHADOW;CSHARP_7_OR_LATER;CSHARP_7_3_OR_NEWER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>0169;USG0001</NoWarn>
@@ -39,23 +44,21 @@
     <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <NoConfig>true</NoConfig>
+    <NoStandardLibraries>true</NoStandardLibraries>
     <NoStdLib>true</NoStdLib>
-    <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
-    <ImplicitlyExpandNETStandardFacades>false</ImplicitlyExpandNETStandardFacades>
-    <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
+    <NoConfig>true</NoConfig>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
   </PropertyGroup>
   <PropertyGroup>
-    <ProjectTypeGuids>{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <UnityProjectGenerator>Package</UnityProjectGenerator>
     <UnityProjectGeneratorVersion>2.0.22</UnityProjectGeneratorVersion>
-    <UnityProjectGeneratorStyle>Legacy</UnityProjectGeneratorStyle>
+    <UnityProjectGeneratorStyle>SDK</UnityProjectGeneratorStyle>
     <UnityProjectType>Game:1</UnityProjectType>
-    <UnityBuildTarget>StandaloneLinux64:24</UnityBuildTarget>
+    <UnityBuildTarget>StandaloneWindows64:19</UnityBuildTarget>
     <UnityVersion>2023.1.22f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Analyzer Include="C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\Microsoft\Visual Studio Tools for Unity\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
@@ -79,21 +82,25 @@
     <Compile Include="Assets\all_Projects\Scripts\UI\JU_UIPause.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelectorEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LevelUpUnlockModal.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\CustomInputEvents.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualTouchZone.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManagerEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehiclePhysicsEnhancer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\Bumper.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravitySphere.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SettingsElement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\RectDepth.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManager.cs" />
+    <Compile Include="Assets\Project\Scripts\BR\BRZoneManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\BikePedal.cs" />
     <Compile Include="Assets\Project\Scripts\AuthenticationService.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUIconGenerator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\FractureTool.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerColorChanger.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTable.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\AmbientVFXController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SocialsWidgetEditor.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Audio\CheckSFXVolume.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\UIGradientEditor.cs" />
@@ -105,6 +112,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguage.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Gravity Switching System Libs\JUTPSGravitySwitchingLibrary.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIInteractMessages.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\GuestNameModalController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\JUInputManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationSettings.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualJoystick.cs" />
@@ -210,6 +218,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SocialsWidget.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\PanelManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUApplyAudioVolumeSettings.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\GameLobbyController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\TimerBar.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\NotificationPresenter.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletProjectile.cs" />
@@ -218,6 +227,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Editor Handlers\ReachUIEditorHandler.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\Touchfield.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\JUSlowmotion.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleDamageController.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\ThirdPersonController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManager.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\InteractiveDossierAnimator.cs" />
@@ -230,6 +240,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Effects\BodyLeanInert.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\VehicleAI.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\AnimatedButton.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\SettingsView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\JUVehicleCharacterIK.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\UITween.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon Switch\ItemSwitchManager.cs" />
@@ -271,18 +282,22 @@
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\MeshColliderCorrect.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\UIEmberOverlay.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUGizmoDrawer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ProgressBarEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIMenssengerTrigger.cs" />
     <Compile Include="Assets\SandBox\Networking\Nakama\NewNakamaConnection.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Scene Management\SceneController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\PauseMenuManagerEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleRacingAudio.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButtonEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\UIScreenTransition.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\FPSCameraController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Granade.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JUGameManager.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletTarget.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\InventoryUIManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LoadoutView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Explosion.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\UnlockMouse.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\ButtonVirtual.cs" />
@@ -301,6 +316,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\SettingsDescription.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Scope System\JUScopeSystemUI.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButton.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\PauseMenuModal.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModeSelector.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\JUCameraSystemLib.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Damager.cs" />
@@ -310,6 +326,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Effects\ShakeOneTime.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\AmmoBox.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\CanvasInputs\UICanvasControllerInput.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\RailboundButtonEffects.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerImageEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUCharacterSettingsDrawer.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UIMenuManager.cs" />
@@ -317,9 +334,11 @@
     <Compile Include="Assets\all_Projects\Scripts\Additionals\ShootTargetMovement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotificationEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUGameSettings.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\ScoreboardOverlay.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\SettingsDescriptionManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\NewsSliderEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\UIManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\TargetFrameRate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObjectEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\SpotButtonImage.cs" />
@@ -334,11 +353,14 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\HotkeyEvent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverTrigger.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\GameOverView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoInstantiate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerSplashScreen.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Vehicle System Libs\JUVehicleEngine.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UISettingsManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\GlobalChatDrawer.cs" />
     <Compile Include="Assets\SandBox\Networking\Nakama\LoginManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\HUDView.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManager.cs" />
     <Compile Include="Assets\Project\Scripts\PlayerOnboardingController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverController.cs" />
@@ -356,6 +378,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Artificial Inteligence Lib\WaypointUtilitiesLib.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkAnimator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\JUAnimationEvent.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\MatchmakingView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIHealhBar.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\ReachUIInternalTools.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\ExitGame.cs" />
@@ -364,6 +387,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\Item System Libs\ItemSystemLib.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerAudioEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\CanvasManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\ConfirmationModal.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ScrollbarInputHandler.cs" />
     <Compile Include="Assets\Project\Scripts\BattleRoyaleLoadingScreen.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelector.cs" />
@@ -422,6 +446,10 @@
     </Reference>
     <Reference Include="UnityEngine.AIModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Managed\UnityEngine\UnityEngine.AIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ARModule">
+      <HintPath>C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Managed\UnityEngine\UnityEngine.ARModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AccessibilityModule">
@@ -1794,34 +1822,22 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="LeTai.TrueShadow.Editor.csproj">
-      <Project>{FFA9A24F-2C7B-DB37-7524-8C1B9C044C77}</Project>
-      <Name>LeTai.TrueShadow.Editor</Name>
-    </ProjectReference>
-    <ProjectReference Include="LeTai.TrueShadow.csproj">
-      <Project>{25D7DE78-B1F9-C43E-46F2-1CAD1318FB40}</Project>
-      <Name>LeTai.TrueShadow</Name>
-    </ProjectReference>
-    <ProjectReference Include="DOTweenPro.Scripts.csproj">
-      <Project>{0A71E5B9-4E41-92A2-A9CF-9AE713B0D4F0}</Project>
-      <Name>DOTweenPro.Scripts</Name>
-    </ProjectReference>
-    <ProjectReference Include="LeTai.TrueShadow.Demo.csproj">
-      <Project>{A6602609-707C-926F-3C96-1A42958C23DD}</Project>
-      <Name>LeTai.TrueShadow.Demo</Name>
-    </ProjectReference>
-    <ProjectReference Include="DOTween.Modules.csproj">
-      <Project>{BE296962-9C39-7370-2049-7A9F7EF58C59}</Project>
-      <Name>DOTween.Modules</Name>
-    </ProjectReference>
+    <ProjectReference Include="LeTai.TrueShadow.Editor.csproj" />
+    <ProjectReference Include="LeTai.TrueShadow.csproj" />
+    <ProjectReference Include="DOTweenPro.Scripts.csproj" />
+    <ProjectReference Include="LeTai.TrueShadow.Demo.csproj" />
+    <ProjectReference Include="DOTween.Modules.csproj" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Target Name="GenerateTargetFrameworkMonikerAttribute" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <ItemGroup>
+    <ProjectCapability Remove="LaunchProfiles" />
+    <ProjectCapability Remove="SharedProjectReferences" />
+    <ProjectCapability Remove="ReferenceManagerSharedProjects" />
+    <ProjectCapability Remove="ProjectReferences" />
+    <ProjectCapability Remove="ReferenceManagerProjects" />
+    <ProjectCapability Remove="COMReferences" />
+    <ProjectCapability Remove="ReferenceManagerCOM" />
+    <ProjectCapability Remove="AssemblyReferences" />
+    <ProjectCapability Remove="ReferenceManagerAssemblies" />
+  </ItemGroup>
 </Project>
