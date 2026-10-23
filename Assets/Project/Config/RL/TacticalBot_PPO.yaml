@@ -1,0 +1,57 @@
+behaviors:
+  TacticalBot_PPO:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 10240
+      learning_rate: 0.0003
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 3
+      vis_encode_type: simple
+      memory:
+        sequence_length: 64
+        memory_size: 128
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    keep_checkpoints: 5
+    max_steps: 5000000
+    time_horizon: 128
+    summary_freq: 10000
+    self_play:
+      save_steps: 50000
+      team_change: 200000
+      swap_steps: 10000
+      window: 10
+      play_against_latest_model_ratio: 0.5
+      initial_elo: 1200.0
+
+environment_parameters:
+  curriculum_stage:
+    curriculum:
+      - name: Stage1_TargetPractice
+        completion_criteria:
+          measure: reward
+          behavior: TacticalBot_PPO
+          signal_smoothing: true
+          min_lesson_length: 100
+          threshold: 0.5
+        value: 0.0
+      - name: Stage2_TacticalDuels
+        completion_criteria:
+          measure: reward
+          behavior: TacticalBot_PPO
+          signal_smoothing: true
+          min_lesson_length: 200
+          threshold: 1.2
+        value: 1.0
+      - name: Stage3_BattleRoyaleSquads
+        value: 2.0
