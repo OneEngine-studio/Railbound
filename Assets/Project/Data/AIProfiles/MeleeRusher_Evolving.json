@@ -1,13 +1,13 @@
 {
     "ProfileId": "MeleeRusher_Evolving",
-    "EvolutionGeneration": 1,
-    "TotalMatchesPlayed": 0,
-    "AimAccuracy": 0.44999998807907107,
+    "EvolutionGeneration": 26,
+    "TotalMatchesPlayed": 25,
+    "AimAccuracy": 0.5099999904632568,
     "FlankAwareness": 0.6499999761581421,
-    "CoverPriority": 0.3499999940395355,
-    "Aggression": 0.8500000238418579,
-    "HearingSensitivity": 1.25,
-    "ReactionTime": 0.18000000715255738,
-    "OptimalRange": 2.0,
-    "UnlockedSkills": 0
+    "CoverPriority": 1.0,
+    "Aggression": 0.10000000149011612,
+    "HearingSensitivity": 1.9099993705749512,
+    "ReactionTime": 0.05999999865889549,
+    "OptimalRange": 6.0,
+    "UnlockedSkills": 2
 }

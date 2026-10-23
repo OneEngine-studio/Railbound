@@ -75,6 +75,7 @@
     <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileProgressBarUI.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\MovingPlataform.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\MeleeAttack.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Learning\AIProfileEvolutionSystem.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceRootMotion.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\JU_UIPause.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelectorEditor.cs" />
@@ -82,12 +83,14 @@
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\CustomInputEvents.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualTouchZone.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManagerEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehiclePhysicsEnhancer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\Bumper.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravitySphere.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SettingsElement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\RectDepth.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManager.cs" />
+    <Compile Include="Assets\Project\Scripts\BR\BRZoneManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\BikePedal.cs" />
     <Compile Include="Assets\Project\Scripts\AuthenticationService.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUIconGenerator.cs" />
@@ -99,6 +102,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\UIGradientEditor.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\ThemeEditor\ThemedUI.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\OnScreenGameobjectDetector.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\RLTrainingManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\Spinner.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\ResizableCapsuleCollider.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\PopupAnimator.cs" />
@@ -118,6 +122,7 @@
     <Compile Include="Assets\Project\Scripts\Animation\UIAnim.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Abilities\SimplePlayMotion.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\PatrolAI.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileAsset.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\AIRandomDestination.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Editor Libs\JUHeaderPropertyDecorator.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkTransform.cs" />
@@ -131,6 +136,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravityBox.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\UISway.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnRightJoystickDirection.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileData.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\JUCharacterController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerText.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsSectionItem.cs" />
@@ -199,6 +205,7 @@
     <Compile Include="Assets\Project\Scripts\LobbyUIController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\SurfaceInteraction.cs" />
     <Compile Include="Assets\Nokobot\Modern Guns - Handgun\_Demo Assets\SimpleShoot.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Sensory\AISoundSensorySystem.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoMove.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Scene Management\LevelLoader.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\JU_UISettings.cs" />
@@ -216,8 +223,10 @@
     <Compile Include="Assets\all_Projects\Scripts\Physics\AddForceAndAngularVelocity.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scenes\Scripts\ThirdPersonShooterController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Editor Handlers\ReachUIEditorHandler.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\JUCharacterRLAgent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\Touchfield.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\JUSlowmotion.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleDamageController.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\ThirdPersonController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManager.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\InteractiveDossierAnimator.cs" />
@@ -226,10 +235,12 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManager.cs" />
     <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIDragDropPanel.cs" />
     <Compile Include="Assets\all_Projects\Inputs\JUTPSInputControlls.cs" />
+    <Compile Include="Assets\Project\Scripts\Character\CharacterSkinRetargeter.cs" />
     <Compile Include="Assets\Project\Scripts\GameManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\BodyLeanInert.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\VehicleAI.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\AnimatedButton.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Sensory\SoundStimulus.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\JUVehicleCharacterIK.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\UITween.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon Switch\ItemSwitchManager.cs" />
@@ -270,6 +281,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Additionals\HideUI.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\MeshColliderCorrect.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManager.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Learning\AIMatchTracker.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUGizmoDrawer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ProgressBarEditor.cs" />
@@ -277,6 +289,7 @@
     <Compile Include="Assets\SandBox\Networking\Nakama\NewNakamaConnection.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Scene Management\SceneController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\PauseMenuManagerEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleRacingAudio.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButtonEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\FPSCameraController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Granade.cs" />
@@ -305,6 +318,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Libraries\JUCameraSystemLib.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Damager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Gravity Switching\JUGravitySwitcher.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Skills\AISkill.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\LobbyPlayer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\ShinyImage.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\ShakeOneTime.cs" />
@@ -342,6 +356,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManager.cs" />
     <Compile Include="Assets\Project\Scripts\PlayerOnboardingController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverController.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\SentisTacticalEvaluator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\JUInverseKinematicExtension.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\TPSCameraController.cs" />
@@ -352,8 +367,10 @@
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\JoystickVirtual.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\DestructibleObject.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementManager.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Sensory\AIPredictiveTracker.cs" />
     <Compile Include="Assets\Project\Scripts\SceneIndexes.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Artificial Inteligence Lib\WaypointUtilitiesLib.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\PlayerTargetIndicatorsController.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkAnimator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\JUAnimationEvent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIHealhBar.cs" />
@@ -361,6 +378,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\ExitGame.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BasicRigidBodyPush.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderInput.cs" />
+    <Compile Include="Assets\Day &amp; Night Cycle\Scripts\cyclemanager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\Item System Libs\ItemSystemLib.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerAudioEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\CanvasManager.cs" />
@@ -822,6 +840,26 @@
     </Reference>
     <Reference Include="Unity.Analytics.StandardEvents">
       <HintPath>Library\PackageCache\com.unity.analytics@3.8.1\AnalyticsStandardEvents\Unity.Analytics.StandardEvents.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Google.Protobuf">
+      <HintPath>Library\PackageCache\com.unity.barracuda@3.0.0\Barracuda\Runtime\Plugins\ProtoBuffer\Google.Protobuf.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Interactive.Async">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\ProtoBuffer\System.Interactive.Async.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.IO.Abstractions.TestingHelpers">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\System.IO.Abstractions.TestingHelpers.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.IO.Abstractions">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\System.IO.Abstractions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Grpc.Core">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\ProtoBuffer\Grpc.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="mscorlib">
@@ -1328,6 +1366,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.AI.Navigation.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Barracuda.iOSBLAS">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.iOSBLAS.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Networking.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Networking.Editor.dll</HintPath>
       <Private>False</Private>
@@ -1350,6 +1392,10 @@
     </Reference>
     <Reference Include="Purchasing.Common">
       <HintPath>Library\ScriptAssemblies\Purchasing.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Barracuda.BurstBLAS">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.BurstBLAS.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Timeline">
@@ -1484,12 +1530,20 @@
       <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Barracuda.ONNX">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.ONNX.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.State">
       <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.State.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.2D.Sprite.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.2D.Sprite.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.ML-Agents.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.ML-Agents.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.AI.Navigation.Editor.ConversionSystem">
@@ -1554,6 +1608,10 @@
     </Reference>
     <Reference Include="Unity.Searcher.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Searcher.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.ML-Agents.CommunicatorObjects">
+      <HintPath>Library\ScriptAssemblies\Unity.ML-Agents.CommunicatorObjects.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Rider.Editor">
@@ -1640,6 +1698,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Mathematics.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.ML-Agents">
+      <HintPath>Library\ScriptAssemblies\Unity.ML-Agents.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEditor.XR.LegacyInputHelpers">
       <HintPath>Library\ScriptAssemblies\UnityEditor.XR.LegacyInputHelpers.dll</HintPath>
       <Private>False</Private>
@@ -1674,6 +1736,10 @@
     </Reference>
     <Reference Include="Unity.Multiplayer.Tools.NetworkProfiler.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.NetworkProfiler.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Barracuda">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Multiplayer.Tools.NetStatsMonitor.Configuration">
@@ -1744,6 +1810,10 @@
       <HintPath>Library\ScriptAssemblies\Analytics.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Barracuda.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Services.Core.Environments">
       <HintPath>Library\ScriptAssemblies\Unity.Services.Core.Environments.dll</HintPath>
       <Private>False</Private>
@@ -1788,6 +1858,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.MetricTypes.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Barracuda.MacBLAS">
+      <HintPath>Library\ScriptAssemblies\Unity.Barracuda.MacBLAS.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.InputSystem">
       <HintPath>Library\ScriptAssemblies\Unity.InputSystem.dll</HintPath>
       <Private>False</Private>
@@ -1810,9 +1884,21 @@
       <Project>{A6602609-707C-926F-3C96-1A42958C23DD}</Project>
       <Name>LeTai.TrueShadow.Demo</Name>
     </ProjectReference>
+    <ProjectReference Include="TargetIndicators.Editor.csproj">
+      <Project>{C5111535-0089-984C-1DE8-9B71DEF1F2A3}</Project>
+      <Name>TargetIndicators.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="TargetIndicators.Samples.csproj">
+      <Project>{6AA350E8-208F-B70B-131E-BC051ACF181A}</Project>
+      <Name>TargetIndicators.Samples</Name>
+    </ProjectReference>
     <ProjectReference Include="DOTween.Modules.csproj">
       <Project>{BE296962-9C39-7370-2049-7A9F7EF58C59}</Project>
       <Name>DOTween.Modules</Name>
+    </ProjectReference>
+    <ProjectReference Include="TargetIndicators.csproj">
+      <Project>{302420BC-8789-67E7-F879-0CA5DB5ED336}</Project>
+      <Name>TargetIndicators</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
