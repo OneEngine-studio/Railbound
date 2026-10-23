@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05181654efbad8a439d70e3e9969b61c, type: 3}
+  m_Name: Railroad Builder (Spline Based)
+  m_EditorClassIdentifier: 
+  cullingRatio: 0.05
+  baseMeshLODS:
+  - {fileID: 4300000, guid: e7517c6ae006e034e8f1ea9c22d70d94, type: 3}
+  - {fileID: 4300000, guid: cdc3ba334b9ee3148944b88d482edacf, type: 3}
+  - {fileID: 4300000, guid: 1b3a17b5bbda5384ab7e0d999efcf835, type: 3}
+  materials:
+  - {fileID: 2100000, guid: c8c1f5645d0f6564ea8b06d548757a4a, type: 2}
+  meshColliders: []
+  physicMaterials: []
+  startCap: {fileID: 9011821741233126366, guid: 4b4d6c4522f08d54b8217b93e020b85f,
+    type: 3}
+  endCap: {fileID: 5505777321082821240, guid: 14502d41460528c488b6d54dca7d5fb8, type: 3}

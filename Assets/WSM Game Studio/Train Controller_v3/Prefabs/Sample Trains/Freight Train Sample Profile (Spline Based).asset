@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6c4fb5b2bbf8b649a669ad1efe3668d, type: 3}
+  m_Name: Freight Train Sample Profile (Spline Based)
+  m_EditorClassIdentifier: 
+  locomotivePrefab: {fileID: 1986653463405642459, guid: 1f729781cfc73a545ad09ffc59c808b9,
+    type: 3}
+  wagonsPrefabs:
+  - {fileID: 3019433301049949684, guid: b8b0df0b154cb4a4c812a77b88285cf7, type: 3}
+  - {fileID: 8428090409562611217, guid: 9e976a1ed73789f45a01aa66529a90b6, type: 3}
+  - {fileID: 6801340047717678296, guid: de8060b03332a4f4a85aef57012bd0ec, type: 3}
+  - {fileID: 2301505187614596838, guid: 44e497c780cbb514789692ca2228edfc, type: 3}
+  - {fileID: 3222063381499204755, guid: d1c993df82b62274c9b56c475b31b997, type: 3}
+  - {fileID: 2508851798698638019, guid: 34b32d6e7742f6549bea651967794f25, type: 3}
+  - {fileID: 7239015546164957493, guid: 4f87dc0eff330c447b7dd199c015d070, type: 3}
+  - {fileID: 4924949342494088339, guid: 5e994bd6e03070b40b1dae579114ad95, type: 3}
