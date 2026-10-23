@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 537cd0363c90ae14f82388654f00d27e, type: 3}
+  m_Name: MeleeRusher_Baseline
+  m_EditorClassIdentifier: 
+  DefaultProfile:
+    ProfileId: MeleeRusher_Evolving
+    EvolutionGeneration: 1
+    TotalMatchesPlayed: 0
+    AimAccuracy: 0.45
+    FlankAwareness: 0.65
+    CoverPriority: 0.35
+    Aggression: 0.85
+    HearingSensitivity: 1.25
+    ReactionTime: 0.18
+    OptimalRange: 2
+    UnlockedSkills: 0

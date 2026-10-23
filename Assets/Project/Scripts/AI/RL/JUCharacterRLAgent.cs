@@ -8,21 +8,23 @@ using Unity.MLAgents.Policies;
 using JUTPS;
 using JUTPS.CharacterBrain;
 using JUTPS.AI;
+using Project.AI.Sensory;
+using Project.AI.Skills;
+using Project.AI.Learning;
 
 namespace Project.AI.RL
 {
     /// <summary>
-    /// Reinforcement Learning Agent for JU TPS Characters using Unity ML-Agents (PPO / MA-POCA)
-    /// and Barracuda/Sentis tactical utility evaluation.
-    /// Replaces static FSM logic (PatrolAI / ZombieAI) with continuous + discrete policy control,
-    /// 3D RayPerception sensors, recurrent target memory, cover seeking, and dense combat reward shaping.
+    /// Reinforcement Learning Agent for JU TPS Characters using Unity ML-Agents (PPO / MA-POCA),
+    /// Barracuda/Sentis tactical utility evaluation, 3D Sound Sensory perception,
+    /// Kinematic Predictive Tracking (lead aiming), and Post-Match Evolutionary Learning.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(JUCharacterBrain))]
     [RequireComponent(typeof(BehaviorParameters))]
     [RequireComponent(typeof(DecisionRequester))]
     [AddComponentMenu("Project/AI/RL/JU Character RL Agent")]
-    public class JUCharacterRLAgent : Agent
+    public class JUCharacterRLAgent : Agent, IAISoundListener
     {
         public const int VECTOR_OBSERVATION_SIZE = 24;
         public const int CONTINUOUS_ACTION_COUNT = 4;
@@ -39,6 +41,17 @@ namespace Project.AI.RL
         public int TeamId = 1;
         public string[] TargetTags = new string[] { "Player" };
         public LayerMask VisibilityLayerMask = ~0;
+
+        [Header("Dynamic Weights & Evolved Profile")]
+        public AIProfileAsset ProfileTemplate;
+        public string CustomProfileId;
+        [SerializeField] private AIProfileData runtimeProfile;
+
+        [Header("Predictive Kinematic Tracking")]
+        [SerializeField] private AIPredictiveTracker predictiveTracker = new AIPredictiveTracker();
+
+        [Header("Match Performance Tracker")]
+        [SerializeField] private AIMatchTracker matchTracker;
 
         [Header("Combat & Sensor Parameters")]
         public float DetectionRadius = 120f;
@@ -57,6 +70,14 @@ namespace Project.AI.RL
         [SerializeField] private Vector3 lastKnownTargetVel;
         [SerializeField] private float timeSinceTargetSeen = 0f;
         [SerializeField] private bool hasTargetLineOfSight;
+
+        [Header("Acoustic Threat Memory")]
+        [SerializeField] private Vector3 threatLocation;
+        [SerializeField] private Vector3 threatDirection;
+        [SerializeField] private float threatMemoryTimer;
+        [SerializeField] private bool hasAcousticThreat;
+        private float soundReactionCooldown;
+        private float suppressingFireTimer;
 
         [Header("Live Telemetry (Read-Only)")]
         public float CurrentEpisodeReward;
@@ -84,6 +105,7 @@ namespace Project.AI.RL
         private float navPathRefreshTimer;
         private Vector3 roamDestination;
         private float roamRefreshTimer;
+        private bool hasEvolvedThisDeath;
 
         // Cached actions from the latest ML-Agents step so JUCharacterController
         // receives smooth per-frame locomotion, rotation, and item inputs in Update().
@@ -103,6 +125,14 @@ namespace Project.AI.RL
         public JUHealth SelfHealth => selfHealth;
         public Transform CurrentTarget => currentTarget;
         public bool HasLineOfSight => hasTargetLineOfSight;
+        public AIProfileData RuntimeProfile => runtimeProfile;
+        public AIPredictiveTracker PredictiveTracker => predictiveTracker;
+        public AIMatchTracker MatchTracker => matchTracker;
+
+        // IAISoundListener implementation
+        Vector3 IAISoundListener.ListenerPosition => transform.position;
+        GameObject IAISoundListener.ListenerGameObject => gameObject;
+        float IAISoundListener.HearingSensitivityMultiplier => runtimeProfile != null ? runtimeProfile.HearingSensitivity : 1.0f;
 
         private void Awake()
         {
@@ -119,6 +149,31 @@ namespace Project.AI.RL
             }
 
             ConfigureCharacterAsAI();
+            EnsureMatchTrackerAttached();
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            AISoundSensorySystem.RegisterListener(this);
+        }
+
+        protected override void OnDisable()
+        {
+            AISoundSensorySystem.UnregisterListener(this);
+            base.OnDisable();
+        }
+
+        private void EnsureMatchTrackerAttached()
+        {
+            if (matchTracker == null)
+            {
+                matchTracker = GetComponent<AIMatchTracker>();
+                if (matchTracker == null)
+                {
+                    matchTracker = gameObject.AddComponent<AIMatchTracker>();
+                }
+            }
         }
 
         private void ConfigureCharacterAsAI()
@@ -172,12 +227,29 @@ namespace Project.AI.RL
         public override void Initialize()
         {
             ConfigureCharacterAsAI();
+            EnsureMatchTrackerAttached();
+
+            // Load evolved profile or create from template
+            string profileId = !string.IsNullOrEmpty(CustomProfileId)
+                ? CustomProfileId
+                : (Role == CombatRole.RangedTactical ? "RangedTactical_Evolving" : "MeleeRusher_Evolving");
+
+            runtimeProfile = AIProfileEvolutionSystem.LoadOrCreateProfile(profileId, ProfileTemplate);
+            if (runtimeProfile != null)
+            {
+                OptimalCombatRange = runtimeProfile.OptimalRange;
+                if (matchTracker != null)
+                {
+                    matchTracker.Initialize(runtimeProfile.ProfileId, runtimeProfile.TotalMatchesPlayed + 1);
+                }
+            }
 
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
             smoothedAimPosition = transform.position + transform.forward * 10f + Vector3.up * AimUpOffset;
             strafePhase = Random.Range(0f, Mathf.PI * 2f);
             roamDestination = transform.position + transform.forward * 15f;
+            hasEvolvedThisDeath = false;
 
             AcquireBestTarget();
             UpdateLineOfSightMemory();
@@ -194,6 +266,9 @@ namespace Project.AI.RL
             LastDamageTaken = 0f;
             timeSinceTargetSeen = 0f;
             strafePhase = Random.Range(0f, Mathf.PI * 2f);
+            hasEvolvedThisDeath = false;
+
+            predictiveTracker.Reset();
 
             AcquireBestTarget();
             UpdateLineOfSightMemory();
@@ -239,6 +314,82 @@ namespace Project.AI.RL
             }
         }
 
+        /// <summary>
+        /// IAISoundListener implementation:
+        /// Reacts to 3D audio stimuli (gunfire, explosions) emitted by players or enemies.
+        /// Calculates directional vector, assigns threat location, and triggers tactical investigation or cover.
+        /// </summary>
+        public void OnSoundHeard(SoundStimulus stimulus, Vector3 perceivedDirection, float perceivedDistance)
+        {
+            if (stimulus.Instigator == gameObject || (selfHealth != null && selfHealth.IsDead))
+            {
+                return;
+            }
+
+            // Only react to non-allied tags (e.g. Player)
+            bool isEnemy = false;
+            if (stimulus.Instigator != null)
+            {
+                foreach (string tag in TargetTags)
+                {
+                    if (stimulus.Instigator.CompareTag(tag))
+                    {
+                        isEnemy = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                isEnemy = true;
+            }
+
+            if (!isEnemy) return;
+
+            // Reaction time cooldown based on evolved profile
+            if (soundReactionCooldown > 0f) return;
+            soundReactionCooldown = runtimeProfile != null ? runtimeProfile.ReactionTime : 0.25f;
+
+            if (matchTracker != null)
+            {
+                matchTracker.RecordSoundHeard(soundReactionCooldown);
+            }
+
+            // Calculate perceived threat location:
+            // SoundTriangulation skill yields exact coordinates; otherwise add small realistic distance error
+            Vector3 soundPos = stimulus.Position;
+            if (runtimeProfile != null && !runtimeProfile.HasSkill(AISkill.SoundTriangulation))
+            {
+                float noise = (1f / Mathf.Max(0.5f, runtimeProfile.HearingSensitivity)) * (perceivedDistance * 0.08f);
+                soundPos += Random.insideUnitSphere * noise;
+                soundPos.y = stimulus.Position.y;
+            }
+
+            threatLocation = soundPos;
+            threatDirection = perceivedDirection;
+            threatMemoryTimer = 14f;
+            hasAcousticThreat = true;
+
+            // Decision: Evaluate Aggression vs CoverPriority
+            float coverPrio = runtimeProfile != null ? runtimeProfile.CoverPriority : 0.5f;
+            float aggression = runtimeProfile != null ? runtimeProfile.Aggression : 0.5f;
+
+            if (coverPrio > aggression || (selfHealth != null && selfHealth.Health < 40f))
+            {
+                // Take defensive cover relative to threat vector
+                if (matchTracker != null) matchTracker.RecordCoverEntered();
+            }
+            else if (runtimeProfile != null && runtimeProfile.HasSkill(AISkill.SuppressingFire) && Role == CombatRole.RangedTactical)
+            {
+                // Trigger suppressing fire burst towards sound origin
+                suppressingFireTimer = 1.6f;
+            }
+            else if (matchTracker != null)
+            {
+                matchTracker.RecordThreatInvestigated();
+            }
+        }
+
         private void Update()
         {
             if (characterBrain == null)
@@ -250,7 +401,20 @@ namespace Project.AI.RL
             if (selfHealth != null && selfHealth.IsDead)
             {
                 characterBrain._Move(0f, 0f, false);
+                TriggerEvolutionOnDeath();
                 return;
+            }
+
+            // Timers
+            soundReactionCooldown -= Time.deltaTime;
+            suppressingFireTimer -= Time.deltaTime;
+            if (hasAcousticThreat)
+            {
+                threatMemoryTimer -= Time.deltaTime;
+                if (threatMemoryTimer <= 0f)
+                {
+                    hasAcousticThreat = false;
+                }
             }
 
             // Guarantee AI input flags stay locked so player input never overrides this agent
@@ -280,6 +444,12 @@ namespace Project.AI.RL
                 lastKnownTargetPos = currentTarget.position;
             }
 
+            // Update predictive kinematic tracker with current target position
+            if (currentTarget != null)
+            {
+                predictiveTracker.UpdateTargetKinematics(currentTarget.position, Time.deltaTime);
+            }
+
             // If DecisionRequester hasn't triggered yet or got bound to a removed component, request a decision
             if (!hasReceivedAction)
             {
@@ -293,10 +463,21 @@ namespace Project.AI.RL
             EvaluateStepRewards();
         }
 
+        private void TriggerEvolutionOnDeath()
+        {
+            if (hasEvolvedThisDeath) return;
+            hasEvolvedThisDeath = true;
+
+            if (matchTracker != null && runtimeProfile != null)
+            {
+                var metrics = matchTracker.EndMatch();
+                runtimeProfile = AIProfileEvolutionSystem.EvolveProfile(runtimeProfile, metrics);
+            }
+        }
+
         /// <summary>
         /// Collects 24 normalized vector observations representing self status, weapon state,
-        /// target relative kinematics, line-of-sight memory, and safe-zone awareness.
-        /// Combined with RayPerceptionSensorComponent3D for 3D obstacle/enemy vision.
+        /// target relative kinematics, line-of-sight memory, sound threat awareness, and safe-zone awareness.
         /// </summary>
         public override void CollectObservations(VectorSensor sensor)
         {
@@ -345,7 +526,8 @@ namespace Project.AI.RL
             // 4. Target Relative Position, Distance, Bearing & Memory (9 floats)
             Vector3 targetPos = currentTarget != null
                 ? currentTarget.position
-                : lastKnownTargetPos;
+                : (hasAcousticThreat ? threatLocation : lastKnownTargetPos);
+
             Vector3 toTargetWorld = targetPos - transform.position;
             float distToTarget = toTargetWorld.magnitude;
             Vector3 localDirToTarget = distToTarget > 0.01f
@@ -364,11 +546,11 @@ namespace Project.AI.RL
                 : 0f;
             sensor.AddObservation(targetNormHealth);
 
-            Vector3 localTargetVel = transform.InverseTransformDirection(lastKnownTargetVel) / 10f;
+            Vector3 localTargetVel = transform.InverseTransformDirection(predictiveTracker.SmoothedVelocity) / 10f;
             sensor.AddObservation(Mathf.Clamp(localTargetVel.x, -1f, 1f));
             sensor.AddObservation(Mathf.Clamp(localTargetVel.z, -1f, 1f));
 
-            // 5. Safe Zone / Tactical Arena Awareness (3 floats)
+            // 5. Safe Zone & Acoustic Threat Awareness (3 floats)
             Vector3 toSafeCenter = SafeZoneCenter - transform.position;
             toSafeCenter.y = 0f;
             float distToCenter = toSafeCenter.magnitude;
@@ -377,14 +559,9 @@ namespace Project.AI.RL
                 : Vector3.forward;
             sensor.AddObservation(localSafeDir.x);
             sensor.AddObservation(localSafeDir.z);
-            sensor.AddObservation(Mathf.Clamp01(distToCenter / Mathf.Max(1f, SafeZoneRadius)));
+            sensor.AddObservation(hasAcousticThreat ? 1f : 0f);
         }
 
-        /// <summary>
-        /// Receives continuous locomotion/aiming actions and discrete combat actions from ML-Agents.
-        /// Continuous[4]: [0]=MoveX, [1]=MoveZ, [2]=AimYawOffset, [3]=AimPitchOffset
-        /// Discrete[6]: [0]=Fire(2), [1]=AimMode(2), [2]=Stance(3), [3]=Mobility(3), [4]=Reload(2), [5]=SwitchWeapon(2)
-        /// </summary>
         public override void OnActionReceived(ActionBuffers actions)
         {
             if (characterBrain == null || (selfHealth != null && selfHealth.IsDead))
@@ -427,6 +604,7 @@ namespace Project.AI.RL
             if (cachedStanceAction == 1 && !characterBrain.IsCrouched)
             {
                 characterBrain._Crouch();
+                if (matchTracker != null) matchTracker.RecordCoverEntered();
             }
             else if (cachedStanceAction == 0 && characterBrain.IsCrouched)
             {
@@ -438,7 +616,7 @@ namespace Project.AI.RL
                 characterBrain._Roll();
             }
 
-            // 3. Compute Target Aim Position (using HumanoidSpine if available, matching PatrolAI/ZombieAI)
+            // 3. Compute Target Aim Position with Predictive Kinematic Lead Aiming
             Vector3 rawTargetPoint;
             if (currentTarget != null)
             {
@@ -450,6 +628,25 @@ namespace Project.AI.RL
                 {
                     rawTargetPoint = currentTarget.position + Vector3.up * AimUpOffset;
                 }
+
+                // Apply Predictive Lead Aiming using AIPredictiveTracker and evolved AimAccuracy
+                float bulletSpeed = 120f;
+                if (characterBrain.WeaponInUseRightHand != null && characterBrain.WeaponInUseRightHand.BulletPrefab != null)
+                {
+                    var b = characterBrain.WeaponInUseRightHand.BulletPrefab.GetComponent<JUTPS.WeaponSystem.Bullet>();
+                    if (b != null && b.BulletVelocity > 10f) bulletSpeed = b.BulletVelocity;
+                }
+
+                float accuracy = runtimeProfile != null ? runtimeProfile.AimAccuracy : 0.65f;
+                bool useAcceleration = runtimeProfile != null && runtimeProfile.HasSkill(AISkill.PredictiveLeadShot);
+
+                Vector3 shooterPos = transform.position + Vector3.up * AimUpOffset;
+                rawTargetPoint = predictiveTracker.CalculateLeadAimPoint(shooterPos, bulletSpeed, accuracy, useAcceleration);
+            }
+            else if (hasAcousticThreat)
+            {
+                // Aim towards acoustic gunshot source
+                rawTargetPoint = threatLocation + Vector3.up * AimUpOffset;
             }
             else
             {
@@ -484,8 +681,8 @@ namespace Project.AI.RL
 
                 if (cachedFireAction)
                 {
-                    // Matches ZombieAI.EnterAttackModeState: triggers melee punch/weapon attack
                     characterBrain.DefaultUseOfAllItems(true, true, false, false, false, true);
+                    if (matchTracker != null) matchTracker.RecordShotFired();
                 }
                 else
                 {
@@ -509,10 +706,10 @@ namespace Project.AI.RL
                 {
                     characterBrain.DefaultUseOfAllItems(false, false, true, false, false, false);
                 }
-                else if (cachedFireAction && hasTargetLineOfSight)
+                else if (cachedFireAction && (hasTargetLineOfSight || suppressingFireTimer > 0f))
                 {
-                    // Matches PatrolAI.EnterAttackModeState: fires equipped weapon or punches if unarmed
                     characterBrain.DefaultUseOfAllItems(true, true, false, false, cachedSwitchAction, true);
+                    if (matchTracker != null) matchTracker.RecordShotFired();
 
                     Vector3 toTargetNorm = (rawTargetPoint - transform.position).normalized;
                     Vector3 aimDirNorm = (smoothedAimPosition - transform.position).normalized;
@@ -529,9 +726,9 @@ namespace Project.AI.RL
         }
 
         /// <summary>
-        /// Embedded Tactical RL Policy (used when BehaviorType is HeuristicOnly or Default without an external Python trainer).
-        /// Combines NavMesh pathfinding + local obstacle raycast steering, POMDP target memory,
-        /// tactical strafing, cover-seeking when reloading or low HP, and Barracuda/Sentis threat evaluation.
+        /// Embedded Tactical Policy: Combines NavMesh navigation + local raycast steering,
+        /// dynamic profile weights (Aggression, CoverPriority, FlankAwareness),
+        /// unlocked skills (FlankScouting, SuppressingFire, TacticalRetreat), and acoustic threat investigation.
         /// </summary>
         public override void Heuristic(in ActionBuffers actionsOut)
         {
@@ -554,8 +751,10 @@ namespace Project.AI.RL
                 return;
             }
 
-            // Evaluate neural tactical utility score (0 = defensive/cover, 1 = aggressive push)
-            float aggressiveness = SentisTacticalEvaluator.EvaluateAggressiveness(this);
+            // Dynamic weights from evolved profile
+            float aggressionWeight = runtimeProfile != null ? runtimeProfile.Aggression : 0.6f;
+            float coverWeight = runtimeProfile != null ? runtimeProfile.CoverPriority : 0.55f;
+            float aggressiveness = SentisTacticalEvaluator.EvaluateAggressiveness(this) * (0.5f + aggressionWeight * 0.5f);
 
             if (currentTarget == null || (currentTargetHealth != null && currentTargetHealth.IsDead))
             {
@@ -586,7 +785,6 @@ namespace Project.AI.RL
                     Vector3 moveDir = ComputeSteeredDirectionTo(targetPos);
                     if (dist <= 1.6f)
                     {
-                        // Close enough to strike without pushing rigidbody away
                         cont[0] = moveDir.x * 0.25f;
                         cont[1] = moveDir.z * 0.25f;
                         disc[3] = 0;
@@ -617,13 +815,18 @@ namespace Project.AI.RL
                         disc[1] = 1; // Aim Mode ON
 
                         Vector3 desiredWorldMove;
-                        if (needsReload || aggressiveness < 0.38f)
+                        bool shouldTakeCover = needsReload || (coverWeight > 0.6f && aggressiveness < 0.42f) || (selfHealth != null && selfHealth.Health < 35f);
+
+                        if (shouldTakeCover)
                         {
                             // Seek cover or retreat while strafing & crouching
                             Vector3 coverDir = FindCoverDirection(targetPos, dirToTargetFlat, rightPerp * strafeSign);
                             desiredWorldMove = SteerAroundObstacles(coverDir);
                             disc[2] = 1; // Crouch in cover / while reloading
-                            disc[3] = 1; // Move quickly to cover
+
+                            // TacticalRetreat skill grants sprint velocity when breaking contact
+                            bool hasTacticalRetreat = runtimeProfile != null && runtimeProfile.HasSkill(AISkill.TacticalRetreat);
+                            disc[3] = hasTacticalRetreat ? 1 : 0;
                         }
                         else if (dist > OptimalCombatRange * 1.2f)
                         {
@@ -642,7 +845,7 @@ namespace Project.AI.RL
                         {
                             // Optimal combat distance: tactical lateral strafing
                             desiredWorldMove = SteerAroundObstacles(rightPerp * strafeSign * 0.85f);
-                            disc[2] = aggressiveness < 0.52f ? 1 : 0; // Crouch-strafe if moderately pressured
+                            disc[2] = aggressiveness < 0.52f ? 1 : 0;
                         }
 
                         cont[0] = Mathf.Clamp(desiredWorldMove.x, -1f, 1f);
@@ -655,13 +858,39 @@ namespace Project.AI.RL
                             disc[0] = burstWindow ? 1 : 0;
                         }
                     }
+                    else if (hasAcousticThreat)
+                    {
+                        // Tactical acoustic response: Flank or investigate gunshot origin
+                        Vector3 acousticMove;
+                        if (runtimeProfile != null && runtimeProfile.HasSkill(AISkill.FlankScouting))
+                        {
+                            // Approach threat from a perpendicular flank angle
+                            Vector3 flankOffset = Vector3.Cross(Vector3.up, threatDirection) * 8f;
+                            acousticMove = ComputeSteeredDirectionTo(threatLocation + flankOffset);
+                        }
+                        else
+                        {
+                            acousticMove = ComputeSteeredDirectionTo(threatLocation);
+                        }
+
+                        cont[0] = Mathf.Clamp(acousticMove.x, -1f, 1f);
+                        cont[1] = Mathf.Clamp(acousticMove.z, -1f, 1f);
+                        disc[3] = 1; // Sprint to investigate threat
+
+                        // Suppressing fire skill: lay down bursts towards threat location
+                        if (suppressingFireTimer > 0f && runtimeProfile != null && runtimeProfile.HasSkill(AISkill.SuppressingFire))
+                        {
+                            disc[0] = 1;
+                            disc[1] = 1;
+                        }
+                    }
                     else if (PatrolWaypointPath != null && PatrolWaypointPath.WaypointPathPositions != null && PatrolWaypointPath.WaypointPathPositions.Length > 0 && dist > DetectionRadius)
                     {
                         // Follow assigned WaypointPath when player is outside detection radius
                         Vector3 wpDir = GetWaypointPatrolDirection();
                         cont[0] = Mathf.Clamp(wpDir.x, -1f, 1f);
                         cont[1] = Mathf.Clamp(wpDir.z, -1f, 1f);
-                        disc[3] = 0; // Patrol walk/jog
+                        disc[3] = 0;
                     }
                     else
                     {
@@ -669,13 +898,27 @@ namespace Project.AI.RL
                         Vector3 huntDir = ComputeSteeredDirectionTo(targetPos);
                         cont[0] = Mathf.Clamp(huntDir.x, -1f, 1f);
                         cont[1] = Mathf.Clamp(huntDir.z, -1f, 1f);
-                        disc[3] = 1; // Sprint while hunting
+                        disc[3] = 1;
                     }
+                }
+            }
+            else if (hasAcousticThreat)
+            {
+                // Investigate acoustic threat location
+                Vector3 toThreat = ComputeSteeredDirectionTo(threatLocation);
+                cont[0] = Mathf.Clamp(toThreat.x, -1f, 1f);
+                cont[1] = Mathf.Clamp(toThreat.z, -1f, 1f);
+                disc[3] = 1;
+
+                if (suppressingFireTimer > 0f && runtimeProfile != null && runtimeProfile.HasSkill(AISkill.SuppressingFire))
+                {
+                    disc[0] = 1;
+                    disc[1] = 1;
                 }
             }
             else
             {
-                // No target found: follow WaypointPath or roam
+                // No target or sound cue: follow WaypointPath or roam
                 Vector3 patrolDir = GetWaypointPatrolDirection();
                 cont[0] = Mathf.Clamp(patrolDir.x, -1f, 1f);
                 cont[1] = Mathf.Clamp(patrolDir.z, -1f, 1f);
@@ -685,8 +928,7 @@ namespace Project.AI.RL
 
         private Vector3 FindCoverDirection(Vector3 threatPos, Vector3 dirToThreatFlat, Vector3 fallbackStrafe)
         {
-            // Sample nearby colliders within 10m to find an obstacle that can block line of sight from threatPos
-            Collider[] nearby = Physics.OverlapSphere(transform.position, 10f, VisibilityLayerMask, QueryTriggerInteraction.Ignore);
+            Collider[] nearby = Physics.OverlapSphere(transform.position, 12f, VisibilityLayerMask, QueryTriggerInteraction.Ignore);
             float bestScore = float.MaxValue;
             Vector3 bestCoverSpot = Vector3.zero;
             bool foundCover = false;
@@ -696,9 +938,8 @@ namespace Project.AI.RL
                 Collider col = nearby[i];
                 if (col == null || col.transform == transform || col.transform.IsChildOf(transform)) continue;
                 if (currentTarget != null && (col.transform == currentTarget || col.transform.IsChildOf(currentTarget))) continue;
-                if (col.bounds.size.y < 1.0f || col.bounds.size.x > 40f) continue; // Ignore tiny props or terrain floor
+                if (col.bounds.size.y < 1.0f || col.bounds.size.x > 40f) continue;
 
-                // Point behind the obstacle relative to threat
                 Vector3 awayFromThreat = (col.bounds.center - threatPos);
                 awayFromThreat.y = 0f;
                 if (awayFromThreat.sqrMagnitude < 0.1f) continue;
@@ -1000,6 +1241,7 @@ namespace Project.AI.RL
                 {
                     ProvideReward(-3.0f);
                     CompletedEpisodesCount++;
+                    TriggerEvolutionOnDeath();
                     EndEpisode();
                     return;
                 }
@@ -1014,12 +1256,14 @@ namespace Project.AI.RL
                     float dmgDealt = prevTargetHealth - targetHp;
                     LastDamageDealt += dmgDealt;
                     ProvideReward(0.05f * dmgDealt);
+                    if (matchTracker != null) matchTracker.RecordShotHit(dmgDealt);
                 }
                 prevTargetHealth = targetHp;
 
                 if (currentTargetHealth.IsDead)
                 {
                     ProvideReward(2.0f);
+                    if (matchTracker != null) matchTracker.RecordKill();
                     AcquireBestTarget();
                 }
             }

@@ -1,0 +1,13 @@
+{
+    "ProfileId": "RangedTactical_Evolving",
+    "EvolutionGeneration": 1,
+    "TotalMatchesPlayed": 0,
+    "AimAccuracy": 0.6800000071525574,
+    "FlankAwareness": 0.550000011920929,
+    "CoverPriority": 0.6000000238418579,
+    "Aggression": 0.5799999833106995,
+    "HearingSensitivity": 1.149999976158142,
+    "ReactionTime": 0.2199999988079071,
+    "OptimalRange": 14.0,
+    "UnlockedSkills": 0
+}

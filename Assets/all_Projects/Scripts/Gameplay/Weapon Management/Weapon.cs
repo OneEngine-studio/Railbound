@@ -449,6 +449,9 @@ namespace JUTPS.WeaponSystem
 			CurrentFireRateToShoot = 0;
 			CanUseItem = false;
 
+			//Broadcast Gunshot to AI Sound Sensory System
+			Project.AI.Sensory.AISoundSensorySystem.RegisterGunshot(Shoot_Position != null ? Shoot_Position.position : transform.position, TPSControllerUser != null ? TPSControllerUser.gameObject : gameObject);
+
 			//Subtracts Ammunition
 			if (!InfiniteAmmo) BulletsAmounts -= 1;
 

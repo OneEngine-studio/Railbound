@@ -2122,6 +2122,7 @@ GameObject:
   - component: {fileID: 542766892703930207}
   - component: {fileID: 7266593619015511479}
   - component: {fileID: 4114985013949348418}
+  - component: {fileID: 4948564058772963794}
   m_Layer: 9
   m_Name: Patrol AI Sample
   m_TagString: Enemy
@@ -3237,6 +3238,28 @@ MonoBehaviour:
   VisibilityLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ProfileTemplate: {fileID: 11400000, guid: 5477826a4d0699c4cb978c3e6ce3ea26, type: 2}
+  CustomProfileId: RangedTactical_Evolving
+  runtimeProfile:
+    ProfileId: DefaultTacticalProfile
+    EvolutionGeneration: 1
+    TotalMatchesPlayed: 0
+    AimAccuracy: 0.65
+    FlankAwareness: 0.5
+    CoverPriority: 0.55
+    Aggression: 0.6
+    HearingSensitivity: 1
+    ReactionTime: 0.25
+    OptimalRange: 14
+    UnlockedSkills: 0
+  predictiveTracker:
+    CurrentPosition: {x: 0, y: 0, z: 0}
+    SmoothedVelocity: {x: 0, y: 0, z: 0}
+    SmoothedAcceleration: {x: 0, y: 0, z: 0}
+    VelocitySmoothing: 12
+    AccelerationSmoothing: 8
+    MaxLeadTime: 1.25
+  matchTracker: {fileID: 0}
   DetectionRadius: 120
   OptimalCombatRange: 15
   AimUpOffset: 1.05
@@ -3251,10 +3274,44 @@ MonoBehaviour:
   lastKnownTargetVel: {x: 0, y: 0, z: 0}
   timeSinceTargetSeen: 99
   hasTargetLineOfSight: 0
+  threatLocation: {x: 0, y: 0, z: 0}
+  threatDirection: {x: 0, y: 0, z: 0}
+  threatMemoryTimer: 0
+  hasAcousticThreat: 0
   CurrentEpisodeReward: 0
   CompletedEpisodesCount: 0
   LastDamageDealt: 0
   LastDamageTaken: 0
+--- !u!114 &4948564058772963794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4698248226047294672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa1954601bfd1e94ea43374d6ff7b685, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentMetrics:
+    ProfileId: 
+    MatchNumber: 0
+    MatchDurationSeconds: 0
+    SurvivedMatch: 0
+    ShotsFired: 0
+    ShotsHit: 0
+    DamageDealt: 0
+    DamageTaken: 0
+    Kills: 0
+    TimesKilledByFlank: 0
+    HitsReceivedFromBehindOrSide: 0
+    TimesEnteredCover: 0
+    DamageTakenWhileInCover: 0
+    DamageTakenWhileExposed: 0
+    GunshotsHeard: 0
+    SoundThreatsInvestigated: 0
+    AverageReactionTimeSeconds: 0
 --- !u!1 &4729937517147445236
 GameObject:
   m_ObjectHideFlags: 0
