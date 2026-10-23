@@ -2119,7 +2119,6 @@ GameObject:
   - component: {fileID: 4836184821207931912}
   - component: {fileID: 5789790664911481938}
   - component: {fileID: 3314761933800662447}
-  - component: {fileID: 1072465901600000914}
   - component: {fileID: 542766892703930207}
   - component: {fileID: 7266593619015511479}
   - component: {fileID: 4114985013949348418}
@@ -2586,7 +2585,7 @@ MonoBehaviour:
   IsWeaponSwitching: 0
   InverseKinematics: 1
   IsArtificialIntelligence: 1
-  UseDefaultControllerInput: 1
+  UseDefaultControllerInput: 0
   AutoRun: 1
   WalkOnRunButton: 1
   DecreaseSpeedOnJump: 0
@@ -3172,22 +3171,6 @@ MonoBehaviour:
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_ObservableAttributeHandling: 0
---- !u!114 &1072465901600000914
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4698248226047294672}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b6042bc9a5d4aa58d931eae49442e5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  agentParameters:
-    maxStep: 0
-  hasUpgradedFromAgentParameters: 1
-  MaxStep: 0
 --- !u!114 &542766892703930207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3254,12 +3237,15 @@ MonoBehaviour:
   VisibilityLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  DetectionRadius: 75
+  DetectionRadius: 120
   OptimalCombatRange: 15
   AimUpOffset: 1.05
+  LookTargetSpeed: 8
   SafeZoneRadius: 250
   SafeZoneCenter: {x: 0, y: 0, z: 0}
+  PatrolWaypointPath: {fileID: 0}
   currentTarget: {fileID: 0}
+  currentTargetBrain: {fileID: 0}
   currentTargetHealth: {fileID: 0}
   lastKnownTargetPos: {x: 0, y: 0, z: 0}
   lastKnownTargetVel: {x: 0, y: 0, z: 0}

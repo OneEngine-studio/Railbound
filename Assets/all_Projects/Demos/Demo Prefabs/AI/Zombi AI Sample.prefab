@@ -3382,7 +3382,6 @@ GameObject:
   - component: {fileID: 738644636073086872}
   - component: {fileID: 88834050123692478}
   - component: {fileID: 7082829813249362175}
-  - component: {fileID: 5796264625612767177}
   - component: {fileID: 2998556246184929144}
   - component: {fileID: 539796284750457613}
   - component: {fileID: 3054777961307142157}
@@ -3847,7 +3846,7 @@ MonoBehaviour:
   IsWeaponSwitching: 0
   InverseKinematics: 1
   IsArtificialIntelligence: 1
-  UseDefaultControllerInput: 1
+  UseDefaultControllerInput: 0
   AutoRun: 1
   WalkOnRunButton: 1
   DecreaseSpeedOnJump: 0
@@ -4183,7 +4182,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7915502660780657785}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc2edb3e78117b64fa3c915e784eb273, type: 3}
   m_Name: 
@@ -4258,22 +4257,6 @@ MonoBehaviour:
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_ObservableAttributeHandling: 0
---- !u!114 &5796264625612767177
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7915502660780657785}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88b6042bc9a5d4aa58d931eae49442e5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  agentParameters:
-    maxStep: 0
-  hasUpgradedFromAgentParameters: 1
-  MaxStep: 0
 --- !u!114 &2998556246184929144
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4340,12 +4323,15 @@ MonoBehaviour:
   VisibilityLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  DetectionRadius: 55
+  DetectionRadius: 120
   OptimalCombatRange: 1.8
   AimUpOffset: 1.05
+  LookTargetSpeed: 8
   SafeZoneRadius: 250
   SafeZoneCenter: {x: 0, y: 0, z: 0}
+  PatrolWaypointPath: {fileID: 0}
   currentTarget: {fileID: 0}
+  currentTargetBrain: {fileID: 0}
   currentTargetHealth: {fileID: 0}
   lastKnownTargetPos: {x: 0, y: 0, z: 0}
   lastKnownTargetVel: {x: 0, y: 0, z: 0}
