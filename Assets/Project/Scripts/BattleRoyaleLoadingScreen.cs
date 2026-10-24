@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -16,16 +15,41 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
     public Canvas loadingCanvas;
     public Button retryButton;
 
+    [Header("Micro-Interactions & Tactical Polish")]
+    public CanvasGroup canvasGroup;
+    public Graphic progressGlow;
+    public TextMeshProUGUI tipTitleText;
+    public TextMeshProUGUI tipDescriptionText;
+    public float fadeInDuration = 0.4f;
+    public float fadeOutDuration = 0.35f;
+
     [Header("Network")]
     public NetworkManager networkManager;
 
     [Header("Battle Royale Settings")]
-    public string gameScene = "Lobby";
-    public float minLoadTime = 4f;
+    public string gameScene = "GameLobby";
+    public float minLoadTime = 3f;
     public float connectionCheckTimeout = 10f;
+
+    private static readonly (string title, string tip)[] TacticalTips = new[]
+    {
+        ("// MISSION INTEL // CONVOY DEFENSE", "Railbound convoys transport critical munitions across disputed sectors. Hold perimeter high ground during transit."),
+        ("// TACTICAL DOCTRINE // RECON SQUAD", "Coordinate squad loadouts with thermal optics and suppression fire before breaching contested depot sectors."),
+        ("// LOGISTICS PROTOCOL // SUPPLY CRATES", "Rare weapon attachments and tactical gear drop at high-tier extraction checkpoints throughout Iron Valley."),
+        ("// SECTOR DIRECTIVE // EXTRACTION", "Extraction relays broadcast localized signals for 30 seconds. Prepare defensive perimeters before activating beacon.")
+    };
 
     private float loadTimer;
     private AsyncOperation loadOp;
+    private Coroutine glowPulseRoutine;
+
+    void Awake()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 0f;
+        }
+    }
 
     void Start()
     {
@@ -36,17 +60,57 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
             retryButton.gameObject.SetActive(false);
 
         if (progressBar != null)
-            progressBar.gameObject.SetActive(false);
+            progressBar.gameObject.SetActive(true);
 
         if (progressPercent != null)
-            progressPercent.gameObject.SetActive(false);
+            progressPercent.gameObject.SetActive(true);
+
+        // Display random tactical tip
+        int tipIdx = Random.Range(0, TacticalTips.Length);
+        if (tipTitleText != null) tipTitleText.text = TacticalTips[tipIdx].title;
+        if (tipDescriptionText != null) tipDescriptionText.text = TacticalTips[tipIdx].tip;
+
+        // Start glow pulsation
+        if (progressGlow != null)
+            glowPulseRoutine = StartCoroutine(GlowPulseRoutine());
+
+        // Fade in
+        StartCoroutine(FadeCanvasGroup(0f, 1f, fadeInDuration));
 
         StartCoroutine(CheckConnectionAndLoad());
     }
 
+    IEnumerator GlowPulseRoutine()
+    {
+        float timer = 0f;
+        Color baseCol = progressGlow.color;
+        while (true)
+        {
+            timer += Time.unscaledDeltaTime * 3f;
+            float alpha = Mathf.Lerp(0.35f, 0.95f, (Mathf.Sin(timer) + 1f) * 0.5f);
+            progressGlow.color = new Color(baseCol.r, baseCol.g, baseCol.b, alpha);
+            yield return null;
+        }
+    }
+
+    IEnumerator FadeCanvasGroup(float from, float to, float duration)
+    {
+        if (canvasGroup == null) yield break;
+        float elapsed = 0f;
+        canvasGroup.alpha = from;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            canvasGroup.alpha = Mathf.Lerp(from, to, elapsed / duration);
+            yield return null;
+        }
+        canvasGroup.alpha = to;
+    }
+
     IEnumerator CheckConnectionAndLoad()
     {
-        statusText.text = "Checking internet connection...";
+        if (statusText != null)
+            statusText.text = "INITIALIZING TACTICAL RELAY...";
 
         if (Application.internetReachability == NetworkReachability.NotReachable)
         {
@@ -90,13 +154,16 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
         if (retryButton != null)
             retryButton.gameObject.SetActive(false);
 
-        statusText.text = "Connected! Starting load...";
+        if (statusText != null)
+            statusText.text = "SYNCHRONIZING OPERATIONAL ASSETS...";
+
         StartCoroutine(LoadingRoutine());
     }
 
     void OnConnectionFailed(string error)
     {
-        statusText.text = error + ". Please check your connection.";
+        if (statusText != null)
+            statusText.text = error.ToUpper() + ". CHECK NETWORK LINK.";
 
         if (retryButton != null)
         {
@@ -120,7 +187,14 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
     {
         loadTimer = 0f;
 
-        loadOp = SceneManager.LoadSceneAsync(gameScene);
+        string targetScene = gameScene;
+        if (!Application.CanStreamedLevelBeLoaded(targetScene))
+        {
+            if (Application.CanStreamedLevelBeLoaded("GameLobby")) targetScene = "GameLobby";
+            else if (Application.CanStreamedLevelBeLoaded("MAP-1")) targetScene = "MAP-1";
+        }
+
+        loadOp = SceneManager.LoadSceneAsync(targetScene);
         loadOp.allowSceneActivation = false;
 
         while (!loadOp.isDone)
@@ -136,15 +210,15 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
                 progressPercent.text = Mathf.RoundToInt(raw * 100) + "%";
 
             if (raw < 0.25f && statusText != null)
-                statusText.text = "Connecting to servers.";
+                statusText.text = "ESTABLISHING SECURE PROTOCOL...";
             else if (raw < 0.5f && statusText != null)
-                statusText.text = "Connecting to servers..";
+                statusText.text = "SYNCHRONIZING TACTICAL ASSETS...";
             else if (raw < 0.75f && statusText != null)
-                statusText.text = "Connecting to servers...";
+                statusText.text = "STREAMING HIGH-RES SECTOR MESH...";
             else if (raw < 0.95f && statusText != null)
-                statusText.text = "Connecting to servers....";
+                statusText.text = "AUTHENTICATING SQUAD ROSTER...";
             else if (statusText != null)
-                statusText.text = "Connecting to servers ok";
+                statusText.text = "SECTOR VERIFIED // READY FOR DEPLOYMENT";
 
             if (loadOp.progress >= 0.9f && loadTimer >= minLoadTime)
             {
@@ -153,9 +227,10 @@ public class BattleRoyaleLoadingScreen : MonoBehaviour
                 if (progressPercent != null)
                     progressPercent.text = "100%";
                 if (statusText != null)
-                    statusText.text = "Connecting to servers ok";
+                    statusText.text = "MISSION LINK ACTIVE // INITIALIZING...";
 
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.2f);
+                yield return StartCoroutine(FadeCanvasGroup(1f, 0f, fadeOutDuration));
                 loadOp.allowSceneActivation = true;
             }
 

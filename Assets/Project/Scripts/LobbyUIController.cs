@@ -203,16 +203,24 @@ namespace Railbound.UI
         public string Username => _username;
         public int Currency => _currency;
 
+        public static LobbyUIController Instance { get; private set; }
+
         // ------------------------------------------------------------------  lifecycle
 
         private void Awake()
         {
+            if (Instance == null) Instance = this;
             EnsureAudioClips();
             AutoDiscoverReferences();
             WireEvents();
             ConfigureMicroInteractionsAndAudio();
             ApplyPalette();
             LoadPersistedPlayerState();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void Start()
@@ -531,22 +539,19 @@ namespace Railbound.UI
             switch (_activeTabIndex)
             {
                 case 0: // OPERATORS
-                    if (UIManager.Instance != null && UIManager.Instance.CurrentScreen != ScreenType.None)
-                    {
-                        UIManager.Instance.CloseCurrentScreen();
-                    }
+                    OpenOperators();
                     break;
                 case 1: // ARSENAL (LoadoutView)
                     OpenArsenal();
                     break;
                 case 2: // LOCKER
-                    ShowLockerOverview();
+                    OpenLocker();
                     break;
                 case 3: // RANKINGS
-                    ShowLeaderboardOverview();
+                    OpenRankings();
                     break;
                 case 4: // CAREER
-                    ShowCareerOverview();
+                    OpenCareer();
                     break;
             }
         }
@@ -575,6 +580,18 @@ namespace Railbound.UI
             }
         }
 
+        public void OpenOperators()
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.OpenScreen(ScreenType.Operators);
+            }
+            else
+            {
+                Debug.Log("[LobbyUI] Open Operators View");
+            }
+        }
+
         public void OpenArsenal()
         {
             if (UIManager.Instance != null)
@@ -585,6 +602,56 @@ namespace Railbound.UI
             {
                 Debug.Log("[LobbyUI] Open Arsenal (Loadout)");
             }
+        }
+
+        public void OpenLocker()
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.OpenScreen(ScreenType.Locker);
+            }
+            else
+            {
+                Debug.Log("[LobbyUI] Open Locker View");
+            }
+        }
+
+        public void OpenRankings()
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.OpenScreen(ScreenType.Rankings);
+            }
+            else
+            {
+                Debug.Log("[LobbyUI] Open Rankings View");
+            }
+        }
+
+        public void OpenCareer()
+        {
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.OpenScreen(ScreenType.Career);
+            }
+            else
+            {
+                Debug.Log("[LobbyUI] Open Career View");
+            }
+        }
+
+        public void ReturnToLobby()
+        {
+            if (UIManager.Instance != null)
+            {
+                if (UIManager.Instance.CurrentScreen != ScreenType.None)
+                {
+                    UIManager.Instance.CloseCurrentScreen();
+                }
+                UIManager.Instance.SetLobbyHUDVisible(true);
+            }
+            _activeTabIndex = 0;
+            SetActiveTabVisuals(0);
         }
 
         public void OpenMatchmaking()
@@ -834,10 +901,13 @@ namespace Railbound.UI
                 }
 
                 if (UIManager.Instance.CurrentScreen == ScreenType.Loadout ||
+                    UIManager.Instance.CurrentScreen == ScreenType.Operators ||
+                    UIManager.Instance.CurrentScreen == ScreenType.Locker ||
+                    UIManager.Instance.CurrentScreen == ScreenType.Rankings ||
+                    UIManager.Instance.CurrentScreen == ScreenType.Career ||
                     UIManager.Instance.CurrentScreen == ScreenType.Matchmaking)
                 {
-                    UIManager.Instance.GoBack();
-                    SetActiveTab(0); // return to Operators tab
+                    ReturnToLobby();
                     return;
                 }
             }

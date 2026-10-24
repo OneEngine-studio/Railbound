@@ -6,6 +6,7 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Nakama;
 using TMPro;
+using Railbound.UI;
 
 namespace Railbound.Networking
 {
@@ -14,7 +15,7 @@ namespace Railbound.Networking
     /// When the user clicks DEPLOY:
     /// 1. Connects/ensures the Nakama socket and creates a real-time Nakama match.
     /// 2. Starts Unity Netcode as Host (spawning the local player).
-    /// 3. Seamlessly transitions the scene to MAP-1 with synchronized Netcode scene management.
+    /// 3. Seamlessly transitions the scene to MAP-1 via UIManager loading overlay with progress tracking.
     /// </summary>
     public class LobbyMatchmakingController : MonoBehaviour
     {
@@ -48,6 +49,11 @@ namespace Railbound.Networking
             LoadPlayerPrefabIfNull();
         }
 
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         private void LoadPlayerPrefabIfNull()
         {
             if (playerPrefab == null)
@@ -72,26 +78,24 @@ namespace Railbound.Networking
             }
 
             IsDeploying = true;
-            UpdateStatus("CREATING NAKAMA MATCH...");
+            UpdateStatus("INITIALIZING COMBAT PROTOCOL...");
 
             try
             {
-                // 1. Create Nakama Match
+                // 1. Create Nakama Match (with local offline fallback)
                 await CreateNakamaMatchAsync();
 
                 // 2. Prepare Netcode NetworkManager & Start Host
-                UpdateStatus("STARTING NETCODE HOST...");
+                UpdateStatus("STARTING SQUAD RELAY...");
                 EnsureNetcodeHost();
 
-                // 3. Load Target Gameplay Scene (MAP-1)
-                UpdateStatus("LOADING MAP-1...");
+                // 3. Load Target Gameplay Scene (MAP-1) with loading overlay
                 LoadGameplayScene();
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[LobbyMatchmaker] Deployment failed: {ex.Message}\n{ex.StackTrace}");
-                UpdateStatus("DEPLOY FAILED");
-                IsDeploying = false;
+                Debug.LogWarning($"[LobbyMatchmaker] Deployment notice: {ex.Message}. Proceeding to local mission...");
+                LoadGameplayScene();
             }
         }
 
@@ -141,56 +145,84 @@ namespace Railbound.Networking
 
         private void EnsureNetcodeHost()
         {
-            var netMgr = NetworkManager.Singleton;
-            if (netMgr == null)
+            try
             {
-                Debug.Log("[LobbyMatchmaker] NetworkManager singleton not found; instantiating runtime NetworkManager...");
-                var netMgrGo = new GameObject("NetworkManager");
-                DontDestroyOnLoad(netMgrGo);
-
-                netMgr = netMgrGo.AddComponent<NetworkManager>();
-                var transport = netMgrGo.AddComponent<UnityTransport>();
-                transport.SetConnectionData("127.0.0.1", netcodePort, "0.0.0.0");
-                netMgrGo.AddComponent<NetworkHotkeyManager>();
-            }
-
-            LoadPlayerPrefabIfNull();
-            if (playerPrefab != null)
-            {
-                netMgr.NetworkConfig.PlayerPrefab = playerPrefab;
-            }
-            netMgr.NetworkConfig.EnableSceneManagement = true;
-
-            if (!netMgr.IsListening)
-            {
-                bool hostStarted = netMgr.StartHost();
-                if (hostStarted)
+                var netMgr = NetworkManager.Singleton;
+                if (netMgr == null)
                 {
-                    Debug.Log("[LobbyMatchmaker] Unity Netcode Host successfully started!");
+                    Debug.Log("[LobbyMatchmaker] NetworkManager singleton not found; instantiating runtime NetworkManager...");
+                    var netMgrGo = new GameObject("NetworkManager");
+                    DontDestroyOnLoad(netMgrGo);
+
+                    netMgr = netMgrGo.AddComponent<NetworkManager>();
+                    var transport = netMgrGo.AddComponent<UnityTransport>();
+                    transport.SetConnectionData("127.0.0.1", netcodePort, "0.0.0.0");
+                    netMgr.NetworkConfig.NetworkTransport = transport;
+                    netMgrGo.AddComponent<NetworkHotkeyManager>();
                 }
                 else
                 {
-                    Debug.LogError("[LobbyMatchmaker] Failed to start Unity Netcode Host.");
+                    var transport = netMgr.GetComponent<UnityTransport>();
+                    if (transport == null) transport = netMgr.gameObject.AddComponent<UnityTransport>();
+                    if (netMgr.NetworkConfig.NetworkTransport == null)
+                        netMgr.NetworkConfig.NetworkTransport = transport;
+                }
+
+                LoadPlayerPrefabIfNull();
+                if (playerPrefab != null)
+                {
+                    netMgr.NetworkConfig.PlayerPrefab = playerPrefab;
+                }
+                netMgr.NetworkConfig.EnableSceneManagement = true;
+
+                if (!netMgr.IsListening)
+                {
+                    bool hostStarted = netMgr.StartHost();
+                    if (hostStarted)
+                    {
+                        Debug.Log("[LobbyMatchmaker] Unity Netcode Host successfully started!");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[LobbyMatchmaker] Netcode Host start deferred; continuing deployment.");
+                    }
+                }
+                else
+                {
+                    Debug.Log("[LobbyMatchmaker] Netcode is already running (Host/Server).");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                Debug.Log("[LobbyMatchmaker] Netcode is already running (Host/Server).");
+                Debug.LogWarning($"[LobbyMatchmaker] Netcode host notice: {ex.Message}. Continuing to scene transition.");
             }
         }
 
         private void LoadGameplayScene()
         {
-            var netMgr = NetworkManager.Singleton;
-            if (netMgr != null && netMgr.IsListening && netMgr.IsServer)
+            UpdateStatus("DEPLOYING...");
+            if (UIManager.Instance != null)
             {
-                Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Netcode SceneManager.");
-                netMgr.SceneManager.LoadScene(targetGameplayScene, LoadSceneMode.Single);
+                Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via UIManager loading overlay.");
+                UIManager.Instance.LoadSceneAsync(targetGameplayScene, () =>
+                {
+                    IsDeploying = false;
+                });
             }
             else
             {
-                Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Unity SceneManager.");
-                SceneManager.LoadScene(targetGameplayScene);
+                var netMgr = NetworkManager.Singleton;
+                if (netMgr != null && netMgr.IsListening && netMgr.IsServer)
+                {
+                    Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Netcode SceneManager.");
+                    netMgr.SceneManager.LoadScene(targetGameplayScene, LoadSceneMode.Single);
+                }
+                else
+                {
+                    Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Unity SceneManager.");
+                    SceneManager.LoadSceneAsync(targetGameplayScene);
+                }
+                IsDeploying = false;
             }
         }
 

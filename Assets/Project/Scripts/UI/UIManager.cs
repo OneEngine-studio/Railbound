@@ -19,7 +19,11 @@ namespace Railbound.UI
         Matchmaking,
         Loadout,
         HUD,
-        GameOver
+        GameOver,
+        Operators,
+        Locker,
+        Rankings,
+        Career
     }
 
     public enum ModalType
@@ -90,6 +94,10 @@ namespace Railbound.UI
         [SerializeField] private GameObject matchmakingViewPrefab;
         [SerializeField] private GameObject hudViewPrefab;
         [SerializeField] private GameObject loadoutViewPrefab;
+        [SerializeField] private GameObject operatorSelectViewPrefab;
+        [SerializeField] private GameObject lockerViewPrefab;
+        [SerializeField] private GameObject rankingsViewPrefab;
+        [SerializeField] private GameObject careerStatsViewPrefab;
         [SerializeField] private GameObject gameOverViewPrefab;
         [SerializeField] private GameObject pauseMenuModalPrefab;
         [SerializeField] private GameObject scoreboardOverlayPrefab;
@@ -108,6 +116,10 @@ namespace Railbound.UI
         private MatchmakingView _matchmakingView;
         private HUDView _hudView;
         private LoadoutView _loadoutView;
+        private OperatorSelectView _operatorSelectView;
+        private LockerView _lockerView;
+        private RankingsView _rankingsView;
+        private CareerStatsView _careerStatsView;
         private GameOverView _gameOverView;
         private PauseMenuModal _pauseMenuModal;
         private ScoreboardOverlay _scoreboardOverlay;
@@ -191,8 +203,8 @@ namespace Railbound.UI
                 gameObject.AddComponent<GraphicRaycaster>();
 
             if (backgroundLayer == null) backgroundLayer = GetOrCreateLayer("BackgroundLayer", 0);
-            if (screenLayer == null) screenLayer = GetOrCreateLayer("ScreenLayer", 10);
-            if (hudLayer == null) hudLayer = GetOrCreateLayer("HUDLayer", 20);
+            if (hudLayer == null) hudLayer = GetOrCreateLayer("HUDLayer", 10);
+            if (screenLayer == null) screenLayer = GetOrCreateLayer("ScreenLayer", 20);
             if (modalLayer == null) modalLayer = GetOrCreateLayer("ModalLayer", 30);
             if (chatLayer == null) chatLayer = GetOrCreateLayer("ChatLayer", 40);
             if (loadingLayer == null) loadingLayer = GetOrCreateLayer("LoadingLayer", 50);
@@ -241,13 +253,24 @@ namespace Railbound.UI
                     rt.SetAsFirstSibling();
 
                     var img = backdropGo.GetComponent<Image>();
-                    img.color = new Color(0f, 0f, 0f, 0.65f);
+                    img.color = new Color(0f, 0f, 0f, 0.75f);
+                    img.raycastTarget = true;
 
                     var btn = backdropGo.GetComponent<Button>();
                     btn.transition = Selectable.Transition.None;
                     btn.onClick.AddListener(OnBackdropClicked);
 
                     modalBackdrop = backdropGo;
+                }
+            }
+
+            if (modalBackdrop != null)
+            {
+                var img = modalBackdrop.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = new Color(0f, 0f, 0f, 0.75f);
+                    img.raycastTarget = true;
                 }
             }
 
@@ -387,6 +410,8 @@ namespace Railbound.UI
             }
 
             _currentScreen = type;
+            bool isSubScreen = type != ScreenType.None && type != ScreenType.HUD;
+            SetLobbyHUDVisible(!isSubScreen);
             ShowScreenView(type);
             OnScreenChanged?.Invoke(type);
         }
@@ -397,6 +422,7 @@ namespace Railbound.UI
             {
                 HideScreenView(_currentScreen);
                 _currentScreen = ScreenType.None;
+                SetLobbyHUDVisible(true);
             }
         }
 
@@ -409,6 +435,36 @@ namespace Railbound.UI
             }
         }
 
+        public void HandleSubScreenBack()
+        {
+            CloseCurrentScreen();
+            SetLobbyHUDVisible(true);
+            var lobby = LobbyUIController.Instance ?? UnityEngine.Object.FindFirstObjectByType<LobbyUIController>();
+            lobby?.ReturnToLobby();
+        }
+
+        public void SetLobbyHUDVisible(bool visible)
+        {
+            var canvasLobby = GameObject.Find("Canvas_Lobby");
+            if (canvasLobby != null)
+            {
+                var cg = canvasLobby.GetComponent<CanvasGroup>();
+                if (cg == null) cg = canvasLobby.AddComponent<CanvasGroup>();
+                cg.alpha = visible ? 1f : 0f;
+                cg.blocksRaycasts = visible;
+                cg.interactable = visible;
+            }
+
+            if (hudLayer != null)
+            {
+                var cgHud = hudLayer.GetComponent<CanvasGroup>();
+                if (cgHud == null) cgHud = hudLayer.gameObject.AddComponent<CanvasGroup>();
+                cgHud.alpha = visible ? 1f : 0f;
+                cgHud.blocksRaycasts = visible;
+                cgHud.interactable = visible;
+            }
+        }
+
         private void ShowScreenView(ScreenType type)
         {
             switch (type)
@@ -417,8 +473,8 @@ namespace Railbound.UI
                     var mm = GetOrCreate(ref _matchmakingView, ref matchmakingViewPrefab, "Assets/Project/UI/MatchmakingView.prefab", screenLayer);
                     if (mm != null)
                     {
-                        mm.OnBackClicked -= GoBack;
-                        mm.OnBackClicked += GoBack;
+                        mm.OnBackClicked -= HandleSubScreenBack;
+                        mm.OnBackClicked += HandleSubScreenBack;
                         mm.Show();
                     }
                     break;
@@ -426,9 +482,45 @@ namespace Railbound.UI
                     var loadout = GetOrCreate(ref _loadoutView, ref loadoutViewPrefab, "Assets/Project/UI/LoadoutView.prefab", screenLayer);
                     if (loadout != null)
                     {
-                        loadout.OnBackClicked -= GoBack;
-                        loadout.OnBackClicked += GoBack;
+                        loadout.OnBackClicked -= HandleSubScreenBack;
+                        loadout.OnBackClicked += HandleSubScreenBack;
                         loadout.Show();
+                    }
+                    break;
+                case ScreenType.Operators:
+                    var ops = GetOrCreate(ref _operatorSelectView, ref operatorSelectViewPrefab, "Assets/Project/UI/OperatorSelectView.prefab", screenLayer);
+                    if (ops != null)
+                    {
+                        ops.OnBackClicked -= HandleSubScreenBack;
+                        ops.OnBackClicked += HandleSubScreenBack;
+                        ops.Show();
+                    }
+                    break;
+                case ScreenType.Locker:
+                    var locker = GetOrCreate(ref _lockerView, ref lockerViewPrefab, "Assets/Project/UI/LockerView.prefab", screenLayer);
+                    if (locker != null)
+                    {
+                        locker.OnBackClicked -= HandleSubScreenBack;
+                        locker.OnBackClicked += HandleSubScreenBack;
+                        locker.Show();
+                    }
+                    break;
+                case ScreenType.Rankings:
+                    var ranks = GetOrCreate(ref _rankingsView, ref rankingsViewPrefab, "Assets/Project/UI/RankingsView.prefab", screenLayer);
+                    if (ranks != null)
+                    {
+                        ranks.OnBackClicked -= HandleSubScreenBack;
+                        ranks.OnBackClicked += HandleSubScreenBack;
+                        ranks.Show();
+                    }
+                    break;
+                case ScreenType.Career:
+                    var career = GetOrCreate(ref _careerStatsView, ref careerStatsViewPrefab, "Assets/Project/UI/CareerStatsView.prefab", screenLayer);
+                    if (career != null)
+                    {
+                        career.OnBackClicked -= HandleSubScreenBack;
+                        career.OnBackClicked += HandleSubScreenBack;
+                        career.Show();
                     }
                     break;
                 case ScreenType.GameOver:
@@ -450,6 +542,18 @@ namespace Railbound.UI
                     break;
                 case ScreenType.Loadout:
                     if (_loadoutView != null) _loadoutView.Hide();
+                    break;
+                case ScreenType.Operators:
+                    if (_operatorSelectView != null) _operatorSelectView.Hide();
+                    break;
+                case ScreenType.Locker:
+                    if (_lockerView != null) _lockerView.Hide();
+                    break;
+                case ScreenType.Rankings:
+                    if (_rankingsView != null) _rankingsView.Hide();
+                    break;
+                case ScreenType.Career:
+                    if (_careerStatsView != null) _careerStatsView.Hide();
                     break;
                 case ScreenType.GameOver:
                     if (_gameOverView != null) _gameOverView.Hide();

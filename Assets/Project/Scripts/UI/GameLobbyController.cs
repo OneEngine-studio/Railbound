@@ -29,7 +29,12 @@ namespace Railbound.UI
             if (Instance == this) Instance = null;
         }
 
+        public void OpenOperators() => _lobbyUI?.OpenOperators();
         public void OpenArsenal() => _lobbyUI?.OpenArsenal();
+        public void OpenLocker() => _lobbyUI?.OpenLocker();
+        public void OpenRankings() => _lobbyUI?.OpenRankings();
+        public void OpenCareer() => _lobbyUI?.OpenCareer();
+        public void ReturnToLobby() => _lobbyUI?.ReturnToLobby();
         public void OpenMatchmaking() => _lobbyUI?.OpenMatchmaking();
         public void ToggleGlobalChat() => _lobbyUI?.ToggleGlobalChat();
         public void CloseGlobalChat() => _lobbyUI?.CloseGlobalChat();

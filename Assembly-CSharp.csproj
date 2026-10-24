@@ -1,4 +1,4 @@
-﻿<Project ToolsVersion="Current">
+<Project ToolsVersion="Current">
   <!-- Generated file, do not modify, your changes will be overwritten (use AssetPostprocessor.OnGeneratedCSProject) -->
   <PropertyGroup>
     <BaseIntermediateOutputPath>Temp\obj\$(Configuration)\$(MSBuildProjectName)</BaseIntermediateOutputPath>
@@ -79,6 +79,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\MovingPlataform.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\MeleeAttack.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceRootMotion.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LockerView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\JU_UIPause.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelectorEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderManager.cs" />
@@ -243,6 +244,7 @@
     <Compile Include="Assets\Project\Scripts\UI\SettingsView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\JUVehicleCharacterIK.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\UITween.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\RankingsView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon Switch\ItemSwitchManager.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\UISfx.cs" />
     <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Readme.cs" />
@@ -250,6 +252,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObject.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotification.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\Action System Libs\JUTPSCharacterActionLib.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LoadingScreenController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\AutoDestroy.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SwitchManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsPreset.cs" />
@@ -353,6 +356,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\HotkeyEvent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverTrigger.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\OperatorSelectView.cs" />
     <Compile Include="Assets\Project\Scripts\UI\GameOverView.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoInstantiate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerSplashScreen.cs" />
@@ -406,6 +410,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\HUDManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\MultipleInputEvent.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\CareerStatsView.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />

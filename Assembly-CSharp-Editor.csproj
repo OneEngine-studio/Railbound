@@ -74,7 +74,9 @@
     <Compile Include="Assets\Project\Editor\LoadingScreenSetupHelper.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Addon Installer\JUTPSAddonInstaller.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponAimCenterEditor.cs" />
+    <Compile Include="Assets\Project\Editor\LobbySubScreenBuilder.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Window\JUMessageEditorWindow.cs" />
+    <Compile Include="Assets\Project\Editor\TacticalUIUpgradeAutomation.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponComponentEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Editor\Scripts\ToolsMenu.cs" />
     <Compile Include="Assets\Project\Editor\RailboundUIBuilder.cs" />

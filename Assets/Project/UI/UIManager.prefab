@@ -136,6 +136,14 @@ MonoBehaviour:
     type: 3}
   loadoutViewPrefab: {fileID: 4000000000000001, guid: dd44ee55ff6600112233445566778899,
     type: 3}
+  operatorSelectViewPrefab: {fileID: 8041808785767898492, guid: 8c7fa82c0c3c7df428533fc5d10523d3,
+    type: 3}
+  lockerViewPrefab: {fileID: 8648808413985977626, guid: c9bdf53f93d8c1848bb6674227232d56,
+    type: 3}
+  rankingsViewPrefab: {fileID: 6714860799528273050, guid: 19895c49402ac114ea1ce3b17b0fa208,
+    type: 3}
+  careerStatsViewPrefab: {fileID: 3753812493933972355, guid: 2e88c00d0c79aa24f8474a37336e5f8e,
+    type: 3}
   gameOverViewPrefab: {fileID: 5000000000000001, guid: ee55ff6600112233445566778899aabb,
     type: 3}
   pauseMenuModalPrefab: {fileID: 300001, guid: b2c3d4e5f6a701234567890123cdef07, type: 3}
