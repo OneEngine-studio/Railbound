@@ -1,4 +1,4 @@
-﻿using WSMGameStudio.Splines;
+using WSMGameStudio.Splines;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Events;
@@ -171,7 +171,9 @@ namespace WSMGameStudio.RailroadSystem
         {
             _currentMaxSpeed = _maxSpeed;
 
-            _currentSpeed = 0f;
+            if ((splines == null || splines.Count == 0 || splines[0] == null) && transform.parent != null && transform.parent.parent != null) { splines = new List<Spline>(transform.parent.parent.GetComponentsInChildren<Spline>()); }
+            _currentSpeed = _enginesOn ? (_maxSpeed * _acceleration) : 0f;
+            _targetSpeed = _currentSpeed;
             base.speed = _currentSpeed;
             base.speedUnit = GetTargetSpeedUnit();
 
@@ -212,7 +214,9 @@ namespace WSMGameStudio.RailroadSystem
             //Dont simulate SFX, VFX and wheels if route is not applied
             if (base.splines == null || base.splines.Count == 0)
             {
-                _currentSpeed = 0f;
+                if ((splines == null || splines.Count == 0 || splines[0] == null) && transform.parent != null && transform.parent.parent != null) { splines = new List<Spline>(transform.parent.parent.GetComponentsInChildren<Spline>()); }
+            _currentSpeed = _enginesOn ? (_maxSpeed * _acceleration) : 0f;
+            _targetSpeed = _currentSpeed;
                 convertedSpeed = 0f;
             }
 

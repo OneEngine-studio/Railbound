@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using JUTPSEditor.JUHeader;
 
@@ -184,8 +184,8 @@ namespace JUTPS
                 RightFootHeightFromGround = Mathf.Lerp(RightFootHeightFromGround, anim.GetFloat(RightFootHeightCurveName) / 2, 20 * Time.deltaTime);
             }
             //>>> Raycasts
-            Physics.SphereCast(LeftFoot.position + transform.up * RaycastHeight + LeftFootBase_UP.forward * 0.12f, radius, -transform.up, out LeftHitPlaceBase, RaycastMaxDistance, GroundLayers);
-            Physics.SphereCast(RightFoot.position + transform.up * RaycastHeight + RightFootBase_UP.forward * 0.12f, radius, -transform.up, out RightHitPlaceBase, RaycastMaxDistance, GroundLayers);
+            Physics.SphereCast(LeftFoot.position + transform.up * RaycastHeight + LeftFootBase_UP.forward * 0.12f, radius, -transform.up, out LeftHitPlaceBase, RaycastMaxDistance, GroundLayers, QueryTriggerInteraction.Ignore);
+            Physics.SphereCast(RightFoot.position + transform.up * RaycastHeight + RightFootBase_UP.forward * 0.12f, radius, -transform.up, out RightHitPlaceBase, RaycastMaxDistance, GroundLayers, QueryTriggerInteraction.Ignore);
 
             //>>> Hits Checks
             if (LeftHitPlaceBase.point != Vector3.zero)
