@@ -1,1 +1,9 @@
-{"mcpServers":{"kitwright":{"serverUrl":"http://127.0.0.1:9285/p/0c5f74cb/t/b2ef602f73e51c6657329a4cdc060bee/","type":"http","disabled":false}}}
+{
+  "mcpServers": {
+    "kitwright": {
+      "serverUrl": "http://127.0.0.1:9285/p/0c5f74cb/t/b2ef602f73e51c6657329a4cdc060bee/",
+      "type": "http",
+      "disabled": false
+    }
+  }
+}

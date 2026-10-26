@@ -98,6 +98,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: Anim_Idle_MIL_R5
       objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 874c150bb34713e458c54858e38dbc59,
+        type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: f7e8c0709dfa69f49a4bf06fef31b9b0, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 874c150bb34713e458c54858e38dbc59,
+        type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

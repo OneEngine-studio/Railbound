@@ -49,10 +49,10 @@ public class LoginUI : MonoBehaviour
     private bool termsAccepted = false;
     private GameObject ageCheckmark;
     private GameObject termsCheckmark;
-    // Match the login UI: dark boxes like the buttons, orange accent when checked
-    private static readonly Color uncheckedColor = new Color(0.10f, 0.12f, 0.16f, 0.9f);
-    private static readonly Color checkedColor = new Color(1.0f, 0.67f, 0.20f, 1f);
-    private static readonly Color checkTickColor = new Color(0.08f, 0.09f, 0.12f, 1f);
+    // Warzone Yellow HUD palette: dark steel boxes, tactical yellow when checked
+    private static readonly Color uncheckedColor = new Color(0.095f, 0.133f, 0.176f, 0.9f);
+    private static readonly Color checkedColor = new Color(1.0f, 0.816f, 0.0f, 1f); // #FFD000
+    private static readonly Color checkTickColor = new Color(0.05f, 0.06f, 0.08f, 1f);
 
     [Header("Error Popup")]
     public CanvasGroup errorPopupCanvasGroup;
@@ -94,8 +94,8 @@ public class LoginUI : MonoBehaviour
 
     [Header("Behavior")]
     [SerializeField] private bool hidePasswordByDefault = true;
-    [SerializeField] private string defaultGameTitle = "MY GAME";
-    [SerializeField] private string defaultSubtitle = "Enter the battlefield";
+    [SerializeField] private string defaultGameTitle = "RAILBOUND";
+    [SerializeField] private string defaultSubtitle = "ENTER THE IRONLINE";
     [SerializeField] private string defaultErrorText = "Please enter a username and password.";
     [SerializeField] private string lobbySceneName = "GameLobby";
     [SerializeField] private bool autoGoToLobby = true;

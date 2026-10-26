@@ -143,6 +143,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\InputFieldManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceNOFiringMode.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravityBox.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LobbyCustomizationUI.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\UISway.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\StationStopTrigger.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnRightJoystickDirection.cs" />
@@ -194,6 +195,7 @@
     <Compile Include="Assets\SandBox\Networking\Prefabs\NetworkHotkeyManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_GeneratedCollider.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\SelectorInputHandler.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\TacticalUIHoverEffect.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ITrainDoorsController.cs" />
     <Compile Include="Assets\Project\Scripts\SecureSessionStore.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUPauseGame.cs" />
@@ -260,6 +262,7 @@
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Bezier.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\JUSlowmotion.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomEventZone.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\ReachLobbyBridge.cs" />
     <Compile Include="Assets\Project\Scripts\Vehicles\VehicleDamageController.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\ThirdPersonController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManager.cs" />
@@ -268,6 +271,7 @@
     <Compile Include="Assets\all_Projects\Scripts\UI\CurrentDeviceChangeVisibility.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomWagonComponent.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LobbyCharacterPreviewManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineMeshRenderer.cs" />
     <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIDragDropPanel.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainAudio.cs" />
@@ -286,6 +290,7 @@
     <Compile Include="Assets\Project\Scripts\Animation\UISfx.cs" />
     <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerPreset.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\RailboundYellowHUDController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ITrainCarCoupler.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObject.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotification.cs" />
@@ -409,6 +414,7 @@
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SplineBasedLocomotive.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\DirectionIndicator.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\RailboundLobbyUIDocController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SwitchTrigger.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoInstantiate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerSplashScreen.cs" />
@@ -483,6 +489,7 @@
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
     <None Include="Assets\Modern GDR - Free icons pack\01_Demo\Font\Ibarra_OFL.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Prefabs\Deprecated\READ ME.txt" />
+    <None Include="Assets\Project\UI\Lobby\TestLobby.uxml" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Mobile.cginc" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF SSD.shader" />
@@ -500,6 +507,7 @@
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Properties.cginc" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Surface.cginc" />
+    <None Include="Assets\Project\UI\Lobby\RailboundLobby.uss" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Demo\READ ME.txt" />
     <None Include="Assets\all_Projects\Third-Party Notices.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Documentation\Readme.txt" />
@@ -508,7 +516,9 @@
     <None Include="Assets\NewSurfaceShader.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />
+    <None Include="Assets\Project\UI\Lobby\TestStyle.uss" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Mobile.shader" />
+    <None Include="Assets\Project\UI\Lobby\RailboundLobby.uxml" />
     <None Include="Assets\Modern GDR - Free icons pack\01_Demo\Font\Jost_OFL.txt" />
     <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />

@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="TestStyle.uss" />
+    <ui:VisualElement name="Root" class="test-container">
+        <ui:Label text="RAILBOUND UI TOOLKIT" />
+    </ui:VisualElement>
+</ui:UXML>

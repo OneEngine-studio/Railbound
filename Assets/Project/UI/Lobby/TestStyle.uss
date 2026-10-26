@@ -1,0 +1,34 @@
+/* Railbound Tactical Yellow HUD - UI Toolkit Theme */
+:root {
+    --color-yellow-accent: #FFD000;
+    --color-yellow-bright: #FFE45C;
+    --color-dark-bg: rgba(7, 11, 16, 0.95);
+    --color-dark-steel: rgba(24, 34, 45, 0.90);
+    --color-text-primary: #F0F3F5;
+    --color-text-secondary: #93A2AF;
+
+    -unity-font-definition: url("project://database/Assets/Reach - Complete Sci-Fi UI/Fonts/Rajdhani-Bold SDF.asset");
+    color: var(--color-text-primary);
+}
+
+.test-chamfer-border {
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    -unity-slice-scale: 1px;
+}
+
+.test-btn {
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.test-btn:hover {
+    scale: 1.04;
+}
+
+.test-btn:active {
+    scale: 0.96;
+}

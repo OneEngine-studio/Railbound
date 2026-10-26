@@ -23,4 +23,4 @@ MonoBehaviour:
     HearingSensitivity: 1.15
     ReactionTime: 0.22
     OptimalRange: 14
-    UnlockedSkills: 0
+    UnlockedSkills: 32
