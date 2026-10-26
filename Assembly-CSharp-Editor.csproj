@@ -85,6 +85,7 @@
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Help Tab\ThankYouMessage.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineFollowerInspector.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\SplineBasedWagonInspector.cs" />
+    <Compile Include="Assets\Project\Scripts\Editor\LoginMenuRestyler.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\BakeMeshWindow.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TC_Links.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\AdvancedRagdollControllerEditor.cs" />

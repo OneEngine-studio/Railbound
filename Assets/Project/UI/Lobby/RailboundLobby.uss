@@ -1,0 +1,999 @@
+/* ====================================================================
+   RAILBOUND Tactical Yellow Line HUD - UI Toolkit Stylesheet (USS)
+   Modern AAA Warzone-Inspired Battle Royale Lobby Theme
+   ==================================================================== */
+
+:root {
+    --yellow-accent: #FFD000;
+    --yellow-bright: #FFE45C;
+    --yellow-dark: #C69500;
+    --dark-bg: rgba(7, 11, 16, 0.95);
+    --dark-panel: rgba(11, 19, 28, 0.94);
+    --dark-steel: rgba(24, 34, 45, 0.92);
+    --text-primary: #F0F3F5;
+    --text-secondary: #93A2AF;
+    --red-warning: #FF4545;
+    --green-success: #33D94D;
+
+    -unity-font-definition: url("project://database/Assets/Reach - Complete Sci-Fi UI/Fonts/Rajdhani-Bold SDF.asset");
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+/* ====================================================================
+   ROOT & CANVAS LAYOUT
+   ==================================================================== */
+.hud-root {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: space-between;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+}
+
+.hud-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.hud-col {
+    flex-direction: column;
+}
+
+/* ====================================================================
+   REGION A: TOP HEADER
+   ==================================================================== */
+.header-container {
+    width: 100%;
+    height: 62px;
+    background-color: var(--dark-bg);
+    border-bottom-width: 1.5px;
+    border-bottom-color: var(--yellow-accent);
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 36px;
+    padding-right: 36px;
+}
+
+.header-left {
+    flex-direction: row;
+    align-items: center;
+}
+
+.logo-image {
+    width: 180px;
+    height: 40px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Logo_Railbound_Yellow.png");
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 15px;
+}
+
+.season-badge {
+    width: 104px;
+    height: 26px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 12;
+    -unity-slice-top: 12;
+    -unity-slice-right: 12;
+    -unity-slice-bottom: 12;
+    -unity-slice-scale: 1px;
+    justify-content: center;
+    align-items: center;
+}
+
+.season-badge-label {
+    color: var(--yellow-accent);
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* Operator Switcher HUD Plate */
+.header-center {
+    flex-direction: row;
+    align-items: center;
+}
+
+.op-plate {
+    width: 300px;
+    height: 40px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Panel_Yellow.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    -unity-slice-scale: 1px;
+    justify-content: center;
+    align-items: center;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.op-plate-title {
+    color: var(--text-primary);
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.op-plate-subtitle {
+    color: var(--yellow-accent);
+    font-size: 10px;
+    -unity-text-align: middle-center;
+}
+
+.btn-arrow-op {
+    width: 32px;
+    height: 32px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    -unity-slice-scale: 1px;
+    background-color: transparent;
+    border-width: 0;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.btn-arrow-op:hover {
+    scale: 1.08;
+    background-color: rgba(255, 208, 0, 0.2);
+}
+
+.btn-arrow-op:active {
+    scale: 0.94;
+}
+
+.arrow-icon-left {
+    width: 16px;
+    height: 16px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Arrow Left (64x).png");
+    -unity-background-image-tint-color: var(--yellow-accent);
+}
+
+.arrow-icon-right {
+    width: 16px;
+    height: 16px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Arrow Right (64x).png");
+    -unity-background-image-tint-color: var(--yellow-accent);
+}
+
+/* Profile Right Section */
+.header-right {
+    flex-direction: row;
+    align-items: center;
+}
+
+.profile-avatar-box {
+    width: 44px;
+    height: 44px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    -unity-slice-scale: 1px;
+    justify-content: center;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.avatar-photo {
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Avatar_Squad_1.png");
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.profile-text-meta {
+    flex-direction: column;
+    margin-right: 14px;
+}
+
+.profile-name-text {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.profile-level-text {
+    font-size: 11px;
+    color: var(--yellow-accent);
+}
+
+.profile-xp-bar-bg {
+    width: 70px;
+    height: 5px;
+    background-color: var(--dark-steel);
+    margin-right: 20px;
+    overflow: hidden;
+    justify-content: center;
+}
+
+.profile-xp-bar-fill {
+    width: 65%;
+    height: 100%;
+    background-color: var(--yellow-accent);
+}
+
+.currency-group {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 15px;
+}
+
+.currency-icon-coin {
+    width: 20px;
+    height: 20px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Coin_Gold.png");
+    margin-right: 6px;
+}
+
+.currency-icon-star {
+    width: 20px;
+    height: 20px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Star_Blue.png");
+    margin-right: 6px;
+}
+
+.currency-text {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.btn-settings-gear {
+    width: 36px;
+    height: 36px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Dark_Border.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    -unity-slice-scale: 1px;
+    background-color: transparent;
+    border-width: 0;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.btn-settings-gear:hover {
+    scale: 1.08;
+    background-color: rgba(255, 208, 0, 0.2);
+}
+
+.gear-icon {
+    width: 20px;
+    height: 20px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Home Panel/Settings (64x).png");
+    -unity-background-image-tint-color: var(--text-primary);
+}
+
+/* ====================================================================
+   REGION B: LEFT NAVIGATION MENU
+   ==================================================================== */
+.left-nav-container {
+    position: absolute;
+    left: 36px;
+    top: 92px;
+    width: 280px;
+    flex-direction: column;
+}
+
+.nav-tab-button {
+    width: 280px;
+    height: 50px;
+    margin-bottom: 8px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_NavTab_Normal.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    -unity-slice-scale: 1px;
+    background-color: transparent;
+    border-width: 0;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    transition-property: scale, -unity-background-image-tint-color;
+    transition-duration: 0.12s;
+}
+
+.nav-tab-button:hover {
+    scale: 1.03;
+}
+
+.nav-tab-button:active {
+    scale: 0.97;
+}
+
+.nav-tab-selected {
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_NavTab_Selected.png");
+}
+
+.nav-indicator-bar {
+    width: 5px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background-color: var(--yellow-accent);
+}
+
+.nav-tab-icon {
+    width: 22px;
+    height: 22px;
+    margin-right: 14px;
+    -unity-background-image-tint-color: var(--text-primary);
+}
+
+.nav-tab-selected .nav-tab-icon {
+    -unity-background-image-tint-color: var(--yellow-accent);
+}
+
+.nav-tab-label {
+    flex-grow: 1;
+    font-size: 15px;
+    color: var(--text-primary);
+    -unity-text-align: middle-left;
+}
+
+.nav-tab-selected .nav-tab-label {
+    color: var(--yellow-accent);
+    -unity-font-style: bold;
+}
+
+.nav-tab-chevron {
+    font-size: 15px;
+    color: var(--text-secondary);
+    -unity-font-style: bold;
+}
+
+.nav-tab-selected .nav-tab-chevron {
+    color: var(--yellow-accent);
+}
+
+/* Navigation Icons */
+.icon-play { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Misc/Play (64x).png"); }
+.icon-operators { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Home Panel/Multiplayer (64x).png"); }
+.icon-loadout { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/HUD/Shield (64x).png"); }
+.icon-battlepass { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Misc/Achievements (64x).png"); }
+.icon-challenges { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Misc/Timer (64x).png"); }
+.icon-store { background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Home Panel/Shop (64x).png"); }
+
+/* ====================================================================
+   REGION C: FLOATING OPERATOR TAG
+   ==================================================================== */
+.floating-op-tag {
+    position: absolute;
+    left: 50%;
+    top: 145px;
+    translate: -50% 0;
+    width: 190px;
+    height: 32px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Panel_Yellow.png");
+    -unity-slice-left: 12;
+    -unity-slice-top: 12;
+    -unity-slice-right: 12;
+    -unity-slice-bottom: 12;
+    -unity-slice-scale: 1px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.tag-logo-r {
+    color: var(--yellow-accent);
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-right: 8px;
+}
+
+.tag-name {
+    color: var(--text-primary);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+/* ====================================================================
+   REGION D: LOWER-LEFT GAME MODE & DEPLOY PANEL
+   ==================================================================== */
+.gamemode-panel {
+    position: absolute;
+    left: 36px;
+    bottom: 68px;
+    width: 430px;
+    height: 395px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Panel_Yellow.png");
+    -unity-slice-left: 16;
+    -unity-slice-top: 16;
+    -unity-slice-right: 16;
+    -unity-slice-bottom: 16;
+    -unity-slice-scale: 1px;
+    padding: 14px;
+    flex-direction: column;
+}
+
+.corner-detail-tl {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    background-image: url("project://database/Assets/SlimUI/Modern Menu 1/Graphics/Misc/Corner Detail 256px.png");
+    -unity-background-image-tint-color: rgba(255, 208, 0, 0.5);
+}
+
+.corner-detail-tr {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    background-image: url("project://database/Assets/SlimUI/Modern Menu 1/Graphics/Misc/Corner Detail 256px.png");
+    -unity-background-image-tint-color: rgba(255, 208, 0, 0.5);
+    rotate: -90deg;
+}
+
+.train-banner-preview {
+    width: 402px;
+    height: 145px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Banner_Train_Royale.png");
+    -unity-background-scale-mode: scale-and-crop;
+    margin-bottom: 12px;
+}
+
+.live-badge {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 80px;
+    height: 22px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 8;
+    -unity-slice-top: 8;
+    -unity-slice-right: 8;
+    -unity-slice-bottom: 8;
+    justify-content: center;
+    align-items: center;
+}
+
+.live-badge-text {
+    font-size: 9px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+.mode-title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.mode-subtitle {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+    margin-bottom: 8px;
+}
+
+.metadata-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.tag-badge {
+    height: 22px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Dark_Border.png");
+    -unity-slice-left: 8;
+    -unity-slice-top: 8;
+    -unity-slice-right: 8;
+    -unity-slice-bottom: 8;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin-right: 8px;
+}
+
+.tag-badge-text {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--text-secondary);
+}
+
+.tag-pin-icon {
+    width: 12px;
+    height: 12px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Map_Pin.png");
+    margin-right: 4px;
+    -unity-background-image-tint-color: var(--yellow-accent);
+}
+
+/* Fill Squad Toggle */
+.fill-squad-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 28px;
+    margin-bottom: 12px;
+}
+
+.fill-squad-label {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.toggle-switch-btn {
+    width: 44px;
+    height: 22px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Dark_Border.png");
+    -unity-slice-left: 8;
+    -unity-slice-top: 8;
+    -unity-slice-right: 8;
+    -unity-slice-bottom: 8;
+    background-color: transparent;
+    border-width: 0;
+    justify-content: center;
+    padding: 2px;
+}
+
+.toggle-knob {
+    width: 16px;
+    height: 16px;
+    background-color: var(--yellow-accent);
+    align-self: flex-end;
+}
+
+.toggle-knob-off {
+    background-color: var(--text-secondary);
+    align-self: flex-start;
+}
+
+/* Deploy Button */
+.btn-deploy-tactical {
+    width: 402px;
+    height: 58px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Fill.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    -unity-slice-scale: 1px;
+    background-color: transparent;
+    border-width: 0;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale, -unity-background-image-tint-color;
+    transition-duration: 0.12s;
+}
+
+.btn-deploy-tactical:hover {
+    scale: 1.02;
+    -unity-background-image-tint-color: var(--yellow-bright);
+}
+
+.btn-deploy-tactical:active {
+    scale: 0.96;
+}
+
+.deploy-icon-triangle {
+    width: 26px;
+    height: 26px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Misc/Play (64x).png");
+    -unity-background-image-tint-color: rgba(7, 11, 16, 0.95);
+    margin-right: 12px;
+}
+
+.deploy-label-text {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgba(7, 11, 16, 0.95);
+}
+
+/* ====================================================================
+   REGION E: RIGHT-SIDE SQUAD PANEL
+   ==================================================================== */
+.squad-panel {
+    position: absolute;
+    right: 36px;
+    top: 92px;
+    width: 430px;
+    height: 410px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Panel_Yellow.png");
+    -unity-slice-left: 16;
+    -unity-slice-top: 16;
+    -unity-slice-right: 16;
+    -unity-slice-bottom: 16;
+    -unity-slice-scale: 1px;
+    padding: 14px;
+    flex-direction: column;
+}
+
+.squad-header-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.squad-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.squad-count {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+.squad-divider {
+    width: 100%;
+    height: 1.5px;
+    background-color: var(--yellow-accent);
+    margin-bottom: 10px;
+}
+
+/* Squad Rows */
+.squad-row-card {
+    width: 402px;
+    height: 78px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Dark_Border.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    -unity-slice-scale: 1px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 8px;
+}
+
+.squad-row-local {
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+}
+
+.squad-avatar-box {
+    width: 50px;
+    height: 50px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Dark_Border.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    justify-content: center;
+    align-items: center;
+    margin-right: 12px;
+}
+
+.squad-avatar-img {
+    width: 44px;
+    height: 44px;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.squad-player-meta {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.squad-nick-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.crown-icon {
+    width: 16px;
+    height: 16px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Crown_Leader.png");
+    margin-right: 6px;
+}
+
+.squad-nickname {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.squad-row-local .squad-nickname {
+    color: var(--yellow-accent);
+}
+
+.squad-sub-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.squad-level-text {
+    font-size: 12px;
+    color: var(--yellow-accent);
+    margin-right: 12px;
+}
+
+.squad-mic-icon {
+    width: 14px;
+    height: 14px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Mic_Voice.png");
+    -unity-background-image-tint-color: var(--text-secondary);
+}
+
+.mic-active {
+    -unity-background-image-tint-color: var(--green-success);
+}
+
+/* Status Badges */
+.status-badge-ready {
+    width: 84px;
+    height: 28px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Badge_Ready.png");
+    -unity-slice-left: 8;
+    -unity-slice-top: 8;
+    -unity-slice-right: 8;
+    -unity-slice-bottom: 8;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.status-badge-notready {
+    width: 84px;
+    height: 28px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Badge_NotReady.png");
+    -unity-slice-left: 8;
+    -unity-slice-top: 8;
+    -unity-slice-right: 8;
+    -unity-slice-bottom: 8;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.badge-icon-check {
+    width: 14px;
+    height: 14px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Checkmark (64x).png");
+    -unity-background-image-tint-color: rgba(7, 11, 16, 0.95);
+    margin-right: 4px;
+}
+
+.badge-icon-close {
+    width: 13px;
+    height: 13px;
+    background-image: url("project://database/Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Close (64x).png");
+    -unity-background-image-tint-color: var(--red-warning);
+    margin-right: 4px;
+}
+
+.badge-text-ready {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgba(7, 11, 16, 0.95);
+}
+
+.badge-text-notready {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--red-warning);
+}
+
+/* Invite Slot */
+.btn-invite-slot {
+    width: 402px;
+    height: 64px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 12;
+    -unity-slice-top: 12;
+    -unity-slice-right: 12;
+    -unity-slice-bottom: 12;
+    background-color: transparent;
+    border-width: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.btn-invite-slot:hover {
+    scale: 1.02;
+    background-color: rgba(255, 208, 0, 0.15);
+}
+
+.invite-plus-icon {
+    width: 26px;
+    height: 26px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Icon_Plus_Invite.png");
+    margin-right: 10px;
+}
+
+.invite-text {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+/* ====================================================================
+   REGION F: LOWER-RIGHT SEASON PROMO
+   ==================================================================== */
+.season-promo-panel {
+    position: absolute;
+    right: 36px;
+    bottom: 68px;
+    width: 430px;
+    height: 136px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Panel_Yellow.png");
+    -unity-slice-left: 14;
+    -unity-slice-top: 14;
+    -unity-slice-right: 14;
+    -unity-slice-bottom: 14;
+    padding: 12px;
+    flex-direction: column;
+    transition-property: scale;
+    transition-duration: 0.12s;
+}
+
+.season-promo-panel:hover {
+    scale: 1.02;
+}
+
+.season-promo-banner {
+    width: 402px;
+    height: 72px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/Banner_Train_Season.png");
+    -unity-background-scale-mode: scale-and-crop;
+    margin-bottom: 8px;
+}
+
+.promo-title-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.promo-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.promo-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.promo-arrow {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+/* ====================================================================
+   REGION G: BOTTOM EMOTES BAR
+   ==================================================================== */
+.bottom-emotes-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    translate: -50% 0;
+    width: 500px;
+    height: 36px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-emote {
+    width: 120px;
+    height: 32px;
+    background-image: url("project://database/Assets/Project/Resources/UI/YellowHUD/HUD_Chamfer_Yellow_Border.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    background-color: transparent;
+    border-width: 0;
+    justify-content: center;
+    align-items: center;
+    transition-property: scale, background-color;
+    transition-duration: 0.12s;
+}
+
+.btn-emote:hover {
+    scale: 1.05;
+    background-color: rgba(255, 208, 0, 0.2);
+}
+
+.btn-emote:active {
+    scale: 0.95;
+}
+
+.btn-emote-label {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+/* ====================================================================
+   REGION H: BOTTOM FOOTER
+   ==================================================================== */
+.bottom-footer {
+    width: 100%;
+    height: 24px;
+    border-top-width: 1.5px;
+    border-top-color: var(--yellow-accent);
+    background-color: var(--dark-bg);
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 36px;
+    padding-right: 36px;
+}
+
+.footer-keybinds {
+    flex-direction: row;
+    align-items: center;
+}
+
+.keybind-item {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 18px;
+}
+
+.keybind-box {
+    height: 16px;
+    padding-left: 6px;
+    padding-right: 6px;
+    background-color: rgba(15, 28, 40, 0.95);
+    border-width: 1px;
+    border-color: rgba(255, 208, 0, 0.3);
+    justify-content: center;
+    align-items: center;
+    margin-right: 5px;
+}
+
+.keybind-key-text {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--yellow-accent);
+}
+
+.keybind-action-text {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--text-primary);
+}
+
+.footer-telemetry {
+    font-size: 11px;
+    color: var(--text-secondary);
+}

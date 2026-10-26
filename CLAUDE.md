@@ -34,6 +34,6 @@ This section is managed by KitWright MCP for Unity for Claude Code. Everything b
 
 ## Project
 
-- Project root: `/home/kushan/wkspace/Railbound`
+- Project root: `C:\Users\kushan\Railbound`
 - Product name: `Railbound`
 <!-- /KitWright Unity managed project skills -->
