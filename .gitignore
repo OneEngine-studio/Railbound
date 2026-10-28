@@ -11,3 +11,6 @@
 # Never track OS specific metadata
 .DS_Store
 Thumbs.db
+
+# Visual Studio cache
+/.vs/

@@ -61,9 +61,29 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\TPSCameraControllerEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\StationStopTriggerInspector.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\SplineBasedLocomotiveInspector.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponAimCenterEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineMeshRendererInspector.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainSpawnerInspector.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponComponentEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TC_CreateObjectMenus.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineFollowerInspector.cs" />
+    <Compile Include="Assets\Project\Scripts\Editor\LoginMenuRestyler.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TC_Links.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\GranadeComponentEditor.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Create Functions\JUTPSQuickSetup.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Create Functions\JUTPSCreate.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineInspector.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplinePrefabSpawnerInspector.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\PixelQualityScaleEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\WagonsBuilderWindow.cs" />
+    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\InventoryEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\RailroadTurnoutCreatorWindow.cs" />
+    <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Editor\ReadmeEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\BakedSegmentInspector.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Editor\Scripts\InitReachUI.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\RouteEditingWindow.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\StationStopTriggerInspector.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Help Tab\HelpTabOptions.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\LinkedSplineFollowerInspector.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\MeleeWeaponComponentEditor.cs" />
@@ -73,38 +93,18 @@
     <Compile Include="Assets\WSM Game Studio\About\Editor\WSM_AboutWindow.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\RailroadSwitchInspector.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\SwitchTriggerInspector.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\SplineBasedLocomotiveInspector.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponAimCenterEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineMeshRendererInspector.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Window\JUMessageEditorWindow.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainSpawnerInspector.cs" />
     <Compile Include="Assets\WSM Game Studio\About\Editor\WSM_ExternalLinks.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\WeaponComponentEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TC_CreateObjectMenus.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Editor\Scripts\ToolsMenu.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Help Tab\ThankYouMessage.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineFollowerInspector.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\SplineBasedWagonInspector.cs" />
-    <Compile Include="Assets\Project\Scripts\Editor\LoginMenuRestyler.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\BakeMeshWindow.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TC_Links.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\AdvancedRagdollControllerEditor.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\GranadeComponentEditor.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Create Functions\JUTPSQuickSetup.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\TPSControllerEditor.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Create Functions\JUTPSCreate.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainDoorsControllerInspector.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplineInspector.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\SplinePrefabSpawnerInspector.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\PixelQualityScaleEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\WagonsBuilderWindow.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainControllerInspector.cs" />
-    <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\InventoryEditor.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\RouteManagerInspector.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\RailroadTurnoutCreatorWindow.cs" />
     <Compile Include="Assets\SlimUI\Editor\SlimUIWindow.cs" />
-    <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Editor\ReadmeEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Editor\BakedSegmentInspector.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\all_Projects\Editor\Editor Scripts\Addon Installer\Addons\Default\Dash Addon\Description.txt" />
@@ -501,7 +501,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">
@@ -1112,6 +1112,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.AI.Navigation.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.TerrainTools.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.TerrainTools.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Barracuda.iOSBLAS">
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.iOSBLAS.dll</HintPath>
       <Private>False</Private>
@@ -1184,6 +1188,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.ProBuilder.AddOns.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.Core">
       <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Core.dll</HintPath>
       <Private>False</Private>
@@ -1208,8 +1216,16 @@
       <HintPath>Library\ScriptAssemblies\UnityEngine.Purchasing.SecurityStub.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.VisualEffectGraph.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualEffectGraph.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="KitWright.Editor">
       <HintPath>Library\ScriptAssemblies\KitWright.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Collections.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.Collections.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Profiling.Core">
@@ -1384,6 +1400,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Services.Analytics.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Config.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Config.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.Purchasing">
       <HintPath>Library\ScriptAssemblies\UnityEngine.Purchasing.dll</HintPath>
       <Private>False</Private>
@@ -1414,6 +1434,10 @@
     </Reference>
     <Reference Include="Unity.Animation.Rigging.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Animation.Rigging.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.TerrainTools">
+      <HintPath>Library\ScriptAssemblies\Unity.TerrainTools.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Timeline.Editor">
@@ -1488,6 +1512,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.VisualEffectGraph.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualEffectGraph.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Multiplayer.Tools.NetStatsMonitor.Configuration">
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.NetStatsMonitor.Configuration.dll</HintPath>
       <Private>False</Private>
@@ -1512,12 +1540,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.EditorCoroutines.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.VisualScripting.State.Editor">
-      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.State.Editor.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.Multiplayer.Tools.Adapters">
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Adapters.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.State.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.State.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Cinemachine">
@@ -1544,6 +1572,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Mathematics.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.ProBuilder">
       <HintPath>Library\ScriptAssemblies\Unity.ProBuilder.dll</HintPath>
       <Private>False</Private>
@@ -1562,6 +1594,10 @@
     </Reference>
     <Reference Include="Unity.Services.Core.Environments">
       <HintPath>Library\ScriptAssemblies\Unity.Services.Core.Environments.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VSCode.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VSCode.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Postprocessing.Runtime">
@@ -1592,12 +1628,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.MacBLAS.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.Multiplayer.Tools.Initialization">
-      <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Initialization.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.VisualStudio.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.VisualStudio.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Multiplayer.Tools.Initialization">
+      <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Initialization.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Multiplayer.Tools.MetricTypes">

@@ -63,19 +63,19 @@
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\FpsCounter.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Symbols\OpenUrl.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\SwipeView\SwipeView.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\HotDogCard.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Inspiration\Scripts\ToggleSwitchAnimation.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\SwipeView\Swipable.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\HotDogSprite.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Symbols\SymbolsManager.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Neumorphism\Scripts\BarGraph.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\GradientSlider.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Neumorphism\Scripts\BarGraphBar.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Inspiration\Scripts\DirectionalKnob.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\HotDogSwipeView.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Neumorphism\Scripts\AdsrBarGraphSource.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Neumorphism\Scripts\AdsrEnvelop.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\SwipeView\LeftRightSwipeView.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\HotDogCard.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\SwipeView\Swipable.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\HotDogSprite.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Symbols\SymbolsManager.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Swipe\Scripts\GradientSlider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Le Tai&apos;s Asset\TrueShadow\Demo\Custom Shadow Material\Example Shaders\Grain.shader" />
@@ -471,7 +471,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">

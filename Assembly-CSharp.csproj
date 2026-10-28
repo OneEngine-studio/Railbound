@@ -60,239 +60,105 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SwitchManager.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\AI\JUCharacterArtificialInteligenceBrain.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguageEditor.cs" />
     <Compile Include="Assets\Project\Scripts\ClickEffect.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Armor System\Armor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIElementToWorldPosition.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\FPSCounter.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModeSelectorEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerTextEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\TimerBarEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Spline.cs" />
-    <Compile Include="Assets\Project\Scripts\LoginUI.cs" />
-    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileProgressBarUI.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainSpawner.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\MovingPlataform.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Speed.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\MeleeAttack.cs" />
     <Compile Include="Assets\Project\Scripts\AI\Learning\AIProfileEvolutionSystem.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_IgnoredObject.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceRootMotion.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\JU_UIPause.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelectorEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderManager.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelectorEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\CustomInputEvents.cs" />
-    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualTouchZone.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManagerEditor.cs" />
     <Compile Include="Assets\Project\Scripts\Vehicles\VehiclePhysicsEnhancer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementManagerEditor.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\Bumper.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravitySphere.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SettingsElement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\RectDepth.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainSuspension.cs" />
+    <Compile Include="Assets\Project\Scripts\InspectHUDInMap1.cs" />
     <Compile Include="Assets\Project\Scripts\BR\BRZoneManager.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\BikePedal.cs" />
-    <Compile Include="Assets\Project\Scripts\AuthenticationService.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUIconGenerator.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Tools Components\FractureTool.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerColorChanger.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTable.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomWagonCreator.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SocialsWidgetEditor.cs" />
-    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Audio\CheckSFXVolume.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\UIGradientEditor.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\ThemeEditor\ThemedUI.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\OnScreenGameobjectDetector.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\RL\RLTrainingManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\Spinner.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\ReverseDirectionZone.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\VFX.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\ResizableCapsuleCollider.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\PopupAnimator.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguage.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\Gravity Switching System Libs\JUTPSGravitySwitchingLibrary.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\UIInteractMessages.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\JUInputManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationSettings.cs" />
-    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualJoystick.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Scene Management\SimpleLevelTransition.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Tools Components\CommentTool.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\JUAnimationEventReceiver.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\BloodScreen.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\PreventGunClipping.cs" />
-    <Compile Include="Assets\SandBox\Networking\Prefabs\DisableServerUI.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnMousePosition.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\UIAnim.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Abilities\SimplePlayMotion.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\PatrolAI.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileAsset.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\AIRandomDestination.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\Editor Libs\JUHeaderPropertyDecorator.cs" />
-    <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkTransform.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\Dropdown.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Components\JUVehicleAnimatedSteerWheel.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Effects\ProceduralDrivingAnimation.cs" />
-    <Compile Include="Assets\Project\Scripts\PlayerProfileService.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Probability.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\InventorySlotUI.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\InputFieldManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceNOFiringMode.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravityBox.cs" />
+    <Compile Include="Assets\MadeByProfessorOakie\SimpleSonarShader\Example\SimpleSonarShader_ExampleCollision.cs" />
     <Compile Include="Assets\Project\Scripts\UI\LobbyCustomizationUI.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\UISway.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\StationStopTrigger.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnRightJoystickDirection.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileData.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainDoorsController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\JUCharacterController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\HonkZone_v3.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerText.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsSectionItem.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\CameraStateTrigger.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderManagerEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\WSM_TerrainBackup.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Abilities\FallDamage.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\DamageableBodyPart.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\SidescrollerLocomotion.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SettingsSubElement.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\JUCharacterControllerCore.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\RailSensor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Convert.cs" />
     <Compile Include="Assets\SandBox\Networking\DebugLog\DebugButton.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Character Physics\AdvancedRagdollController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Motorcycle Physics\MotorcycleController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\JU_UITabs.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\UIElementSound.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementLibrary.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Mobile\Optimization\PixelQualityScale.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\JUSlipCapsule.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\ThrowableItem.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManager.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTableWindow.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\ReachPauseBridge.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\MobileRig.cs" />
     <Compile Include="Assets\Project\Scripts\LobbyAccessGuard.cs" />
-    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\ThemeEditor\ThemedUIElement.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\JUHealth.cs" />
     <Compile Include="Assets\Project\Scripts\LoginMenuController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\TDCameraController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Bullet.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SplineBasedTrainCarCoupler.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementItem.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Examples\CustomVehicleExample.cs" />
     <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileUIPanel.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\DamageableBody.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ProgressBar.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\MenuAnimator.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\GeneralHoldableObject.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\HUDManagerEditor.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\NetworkHotkeyManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_GeneratedCollider.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\SelectorInputHandler.cs" />
-    <Compile Include="Assets\Project\Scripts\UI\TacticalUIHoverEffect.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ITrainDoorsController.cs" />
-    <Compile Include="Assets\Project\Scripts\SecureSessionStore.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUPauseGame.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManagerEditor.cs" />
     <Compile Include="Assets\TrueTrackSystem\TrackBuilderTools\SplineManager.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\Editor Libs\UnityEditorUtilities.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\GeneralSettings.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\RouteManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_MeshGenerationProfile.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\UIGradient.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainInputSettings.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Inventory System\JUInventory.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SmoothScrollbar.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\PanelManager.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\LevelCardAnimator.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\UIItemInformation.cs" />
-    <Compile Include="Assets\test.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Abilities\DriveVehicles.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainController_v3.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\Crosshair.cs" />
-    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UILoopFadeColor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\OrientedPoint.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUDamageTrigger.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerFontChanger.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\ThemeEditor\ThemedUIData.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoRotator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\Vehicle AI\VehicleAIRandomDestination.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\Utilities\MobileDisableAutoSwitchControls.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\ImagePulse.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomWagonProfile.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\UIFlareDissolve.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SplineBasedWagon.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTableEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_Enums.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\JUVehicleNitro.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\IconAnimator.cs" />
-    <Compile Include="Assets\Project\Scripts\LobbyUIController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\SurfaceInteraction.cs" />
-    <Compile Include="Assets\Nokobot\Modern Guns - Handgun\_Demo Assets\SimpleShoot.cs" />
     <Compile Include="Assets\Project\Scripts\AI\Sensory\AISoundSensorySystem.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainWheelsTruck.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoMove.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Scene Management\LevelLoader.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainSpeedMonitor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\JU_UISettings.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\NewsSlider.cs" />
-    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Audio\CheckMusicVolume.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\MeleeWeapon.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineFollower.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\PointerEvent.cs" />
+    <Compile Include="Assets\MadeByProfessorOakie\SimpleSonarShader\SimpleSonarShader_Parent.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerLogo.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SocialsWidget.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainPlayerInput.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\PanelManagerEditor.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUApplyAudioVolumeSettings.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\TimerBar.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\NotificationPresenter.cs" />
-    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletProjectile.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\AddForceAndAngularVelocity.cs" />
-    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scenes\Scripts\ThirdPersonShooterController.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Editor Handlers\ReachUIEditorHandler.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\RL\JUCharacterRLAgent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\Touchfield.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Bezier.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\JUSlowmotion.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomEventZone.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\ReachLobbyBridge.cs" />
-    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleDamageController.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\ThirdPersonController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManager.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\InteractiveDossierAnimator.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\VehicleAirRotation.cs" />
     <Compile Include="Assets\all_Projects\Scripts\UI\CurrentDeviceChangeVisibility.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomWagonComponent.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManager.cs" />
-    <Compile Include="Assets\Project\Scripts\UI\LobbyCharacterPreviewManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineMeshRenderer.cs" />
-    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIDragDropPanel.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainAudio.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Camera\CameraSettings.cs" />
     <Compile Include="Assets\all_Projects\Inputs\JUTPSInputControlls.cs" />
     <Compile Include="Assets\Project\Scripts\Character\CharacterSkinRetargeter.cs" />
-    <Compile Include="Assets\Project\Scripts\GameManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_Theme.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Effects\BodyLeanInert.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\AI\VehicleAI.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\AnimatedButton.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\Sensory\SoundStimulus.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\JUVehicleCharacterIK.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\UITween.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon Switch\ItemSwitchManager.cs" />
-    <Compile Include="Assets\Project\Scripts\Animation\UISfx.cs" />
-    <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerPreset.cs" />
     <Compile Include="Assets\Project\Scripts\UI\RailboundYellowHUDController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ITrainCarCoupler.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObject.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotification.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\Action System Libs\JUTPSCharacterActionLib.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\AutoDestroy.cs" />
@@ -303,90 +169,43 @@
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\Aim Assistant\CameraAimAssistent.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainCarCoupler.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\HotkeyEventEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_MeshCapTag.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Artificial Inteligence Lib\NavMeshPathfinderLib.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_GeneratedMesh.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\WeaponAimRotationCenter.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ILocomotive.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Sensors.cs" />
-    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Misc\ExtraLinks.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUApplyCameraSettings.cs" />
     <Compile Include="Assets\all_Projects\JU Foot Placement\Scripts\Foot Placement\JUFootPlacement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\ImageFading.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\LayoutGroupFix.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\SliderInputHandler.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\ChapterIdentifier.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Effects\JUFootstep.cs" />
-    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIPanelToggleAutoHide.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\VehicleJump.cs" />
-    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualButton.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\CutoutMask.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationSettingsEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\ChapterManagerEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\IGeneratedMesh.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\QuestItem.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\HomeButtonIconHandler.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Scene Management\QuitApplication.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplinePrefabSpawner.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\HitMarkerEffect.cs" />
     <Compile Include="Assets\Project\Scripts\LobbyGlobalChatController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Additionals\HideUI.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\MeshColliderCorrect.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManager.cs" />
     <Compile Include="Assets\Project\Scripts\AI\Learning\AIMatchTracker.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainStationController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUGizmoDrawer.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ProgressBarEditor.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\UIMenssengerTrigger.cs" />
-    <Compile Include="Assets\SandBox\Networking\Nakama\NewNakamaConnection.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Scene Management\SceneController.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\PauseMenuManagerEditor.cs" />
-    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleRacingAudio.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButtonEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\FPSCameraController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Granade.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Camera\FlyingCamera.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\JUGameManager.cs" />
-    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletTarget.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\InventoryUIManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_UISettings.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Explosion.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\UnlockMouse.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\ButtonVirtual.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\TextTimeCounter.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Car Physics\CarController.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\HealthPowerUp.cs" />
-    <Compile Include="Assets\Project\Scripts\LoginPolish.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Effects\Shaker.cs" />
     <Compile Include="Assets\SandBox\Networking\Nakama\NakamaConnection.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Utilities\AutoDisable.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\PassengerTags.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceNOFootPlacement.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineDefaultValues.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimControllSwitcher.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\PauseMenuManager.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Motorcycle Physics\MotorcycleSuspensionScaler.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerPresetManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SpawnPosition.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\SettingsDescription.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Scope System\JUScopeSystemUI.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Camera\CameraFollow.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButton.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SpeedChangeZone_v3.cs" />
+    <Compile Include="Assets\MadeByProfessorOakie\SimpleSonarShader\Example\SimpleSonarShader_ExampleConfigureChildren.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModeSelector.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainAttachPassenger.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\JUCameraSystemLib.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Damager.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Gravity Switching\JUGravitySwitcher.cs" />
     <Compile Include="Assets\Project\Scripts\AI\Skills\AISkill.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\LobbyPlayer.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\ShinyImage.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Effects\ShakeOneTime.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\AmmoBox.cs" />
     <Compile Include="Assets\StarterAssets\Mobile\Scripts\CanvasInputs\UICanvasControllerInput.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerImageEditor.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Route.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUCharacterSettingsDrawer.cs" />
     <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UIMenuManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainPhysics.cs" />
@@ -394,136 +213,345 @@
     <Compile Include="Assets\all_Projects\Scripts\Additionals\ShootTargetMovement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotificationEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUGameSettings.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManagerEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\SettingsDescriptionManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\NewsSliderEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\TargetFrameRate.cs" />
+    <Compile Include="Assets\TerrainDemoScene_HDRP\Scripts\SceneAnnotation.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\CanvasGroupAnimator.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Effects\GlowBlink.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManagerEditor.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\HotkeyEvent.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\Vehicle System Libs\JUVehicleEngine.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\WSM_TerrainTools.cs" />
+    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UISettingsManager.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\UniqueMesh.cs" />
+    <Compile Include="Assets\Project\Scripts\PlayerOnboardingController.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TC_Enums.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\SentisTacticalEvaluator.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\JUInverseKinematicExtension.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManagerEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\AI\ZombieAI.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\DropArea.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainWheel_v3.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\DropdownEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\DestructibleObject.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Sensory\AIPredictiveTracker.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\UIHealhBar.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\ExitGame.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainProfile.cs" />
+    <Compile Include="Assets\Day &amp; Night Cycle\Scripts\cyclemanager.cs" />
+    <Compile Include="Assets\TerrainDemoScene_HDRP\Scripts\TerrainTreeToggle.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\CanvasManager.cs" />
+    <Compile Include="Assets\Project\Scripts\BattleRoyaleLoadingScreen.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelector.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsManagerEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Wagon_v3.cs" />
+    <Compile Include="Assets\Project\Scripts\LobbyMatchmakingController.cs" />
+    <Compile Include="Assets\Project\Scripts\NetworkSessionBootstrap.cs" />
+    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileScrollViewSpawner.cs" />
+    <Compile Include="Assets\StarterAssets\InputSystem\StarterAssetsInputs.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsMentionItem.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\LinkedSplineFollower.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\MultipleInputEvent.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SwitchManager.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\AI\JUCharacterArtificialInteligenceBrain.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguageEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Armor System\Armor.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\TimerBarEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Spline.cs" />
+    <Compile Include="Assets\Project\Scripts\LoginUI.cs" />
+    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileProgressBarUI.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainSpawner.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\MovingPlataform.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Speed.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\MeleeAttack.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_IgnoredObject.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceRootMotion.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\JU_UIPause.cs" />
+    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualTouchZone.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManagerEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Scenary\Bumper.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravitySphere.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainSuspension.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\BikePedal.cs" />
+    <Compile Include="Assets\Project\Scripts\AuthenticationService.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Tools Components\JUIconGenerator.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Tools Components\FractureTool.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerColorChanger.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTable.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomWagonCreator.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SocialsWidgetEditor.cs" />
+    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Audio\CheckSFXVolume.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\UIGradientEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\OnScreenGameobjectDetector.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\RLTrainingManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\VFX.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\PopupAnimator.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguage.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\Gravity Switching System Libs\JUTPSGravitySwitchingLibrary.cs" />
+    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualJoystick.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Tools Components\CommentTool.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\JUAnimationEventReceiver.cs" />
+    <Compile Include="Assets\SandBox\Networking\Prefabs\DisableServerUI.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnMousePosition.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileAsset.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\Editor Libs\JUHeaderPropertyDecorator.cs" />
+    <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkTransform.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\Dropdown.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Components\JUVehicleAnimatedSteerWheel.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Effects\ProceduralDrivingAnimation.cs" />
+    <Compile Include="Assets\Project\Scripts\PlayerProfileService.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\InputFieldManager.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Gravity Switch Physics\GravityBox.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\UISway.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\StationStopTrigger.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\AimOnRightJoystickDirection.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Skills\AIProfileData.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerText.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsSectionItem.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationManagerEditor.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderManagerEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\WSM_TerrainBackup.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Abilities\FallDamage.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\DamageableBodyPart.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\RailSensor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Convert.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Character Physics\AdvancedRagdollController.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Motorcycle Physics\MotorcycleController.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\JU_UITabs.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementLibrary.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Mobile\Optimization\PixelQualityScale.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\ThrowableItem.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ModalWindowManager.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTableWindow.cs" />
+    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\ThemeEditor\ThemedUIElement.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\JUHealth.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Bullet.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Examples\CustomVehicleExample.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\DamageableBody.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\MenuAnimator.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\GeneralHoldableObject.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\HUDManagerEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_GeneratedCollider.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\SelectorInputHandler.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\TacticalUIHoverEffect.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\ITrainDoorsController.cs" />
+    <Compile Include="Assets\Project\Scripts\SecureSessionStore.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManagerEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\Editor Libs\UnityEditorUtilities.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\RouteManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_MeshGenerationProfile.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SmoothScrollbar.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\UIItemInformation.cs" />
+    <Compile Include="Assets\test.cs" />
+    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UILoopFadeColor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\OrientedPoint.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\ImagePulse.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SplineBasedWagon.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationTableEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_Enums.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\IconAnimator.cs" />
+    <Compile Include="Assets\Project\Scripts\LobbyUIController.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\SurfaceInteraction.cs" />
+    <Compile Include="Assets\Nokobot\Modern Guns - Handgun\_Demo Assets\SimpleShoot.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainWheelsTruck.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoMove.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Scene Management\LevelLoader.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\NewsSlider.cs" />
+    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Audio\CheckMusicVolume.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\MeleeWeapon.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\PointerEvent.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainPlayerInput.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\PanelManagerEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUApplyAudioVolumeSettings.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\NotificationPresenter.cs" />
+    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletProjectile.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\AddForceAndAngularVelocity.cs" />
+    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scenes\Scripts\ThirdPersonShooterController.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Editor Handlers\ReachUIEditorHandler.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\RL\JUCharacterRLAgent.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\Bezier.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\CustomEventZone.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleDamageController.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\VehicleAirRotation.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManager.cs" />
+    <Compile Include="Assets\Project\Scripts\UI\LobbyCharacterPreviewManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineMeshRenderer.cs" />
+    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIDragDropPanel.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainAudio.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Camera\CameraSettings.cs" />
+    <Compile Include="Assets\Project\Scripts\GameManager.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_Theme.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Effects\BodyLeanInert.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\AI\VehicleAI.cs" />
+    <Compile Include="Assets\Project\Scripts\AI\Sensory\SoundStimulus.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\UITween.cs" />
+    <Compile Include="Assets\Project\Scripts\Animation\UISfx.cs" />
+    <Compile Include="Assets\StarterAssets\TutorialInfo\Scripts\Readme.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObject.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_MeshCapTag.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SMR_GeneratedMesh.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\WeaponAimRotationCenter.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Sensors.cs" />
+    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Misc\ExtraLinks.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUApplyCameraSettings.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Effects\JUFootstep.cs" />
+    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\UIPanelToggleAutoHide.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\VehicleJump.cs" />
+    <Compile Include="Assets\StarterAssets\Mobile\Scripts\VirtualInputs\UIVirtualButton.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\CutoutMask.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\ChapterManagerEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\IGeneratedMesh.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\QuestItem.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\HomeButtonIconHandler.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Scene Management\QuitApplication.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplinePrefabSpawner.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\MeshColliderCorrect.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManager.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerManager.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ProgressBarEditor.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\UI\UIMenssengerTrigger.cs" />
+    <Compile Include="Assets\SandBox\Networking\Nakama\NewNakamaConnection.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Scene Management\SceneController.cs" />
+    <Compile Include="Assets\Project\Scripts\BR\BRFeedNotificationManager.cs" />
+    <Compile Include="Assets\Project\Scripts\Vehicles\VehicleRacingAudio.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Granade.cs" />
+    <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BulletTarget.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\InventoryUIManager.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Explosion.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\ButtonVirtual.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Car Physics\CarController.cs" />
+    <Compile Include="Assets\Project\Scripts\LoginPolish.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Utilities\AutoDisable.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\ForceNOFootPlacement.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\SplineDefaultValues.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\PauseMenuManager.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Motorcycle Physics\MotorcycleSuspensionScaler.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Scope System\JUScopeSystemUI.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Camera\CameraFollow.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\PanelButton.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SpeedChangeZone_v3.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainAttachPassenger.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Libraries\JUCameraSystemLib.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Gravity Switching\JUGravitySwitcher.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Effects\ShakeOneTime.cs" />
+    <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\AmmoBox.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerImageEditor.cs" />
+    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Route.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Rendering\GraphicsManagerEditor.cs" />
+    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\SettingsDescriptionManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizedObjectEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\SpotButtonImage.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SFX.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerImage.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ControllerManagerEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Animation\CanvasGroupAnimator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Vehicle Abilities\JUVehicleEngineSound.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\UseCurrentMeleeWeapon.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Effects\GlowBlink.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\QuestItemEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ShopButtonManagerEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Events\HotkeyEvent.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverTrigger.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SplineBasedLocomotive.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\AI\WaypointPath.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\DirectionIndicator.cs" />
     <Compile Include="Assets\Project\Scripts\UI\RailboundLobbyUIDocController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\SwitchTrigger.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\JUAutoInstantiate.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerSplashScreen.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\Vehicle System Libs\JUVehicleEngine.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\WSM_TerrainTools.cs" />
-    <Compile Include="Assets\SlimUI\Modern Menu 1\Scripts\Managers\UISettingsManager.cs" />
     <Compile Include="Assets\SandBox\Networking\Nakama\LoginManager.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\ButtonManager.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\BakedSegment.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\UniqueMesh.cs" />
-    <Compile Include="Assets\Project\Scripts\PlayerOnboardingController.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Extensions Interfaces\IRailwayVehicle.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TC_Enums.cs" />
+    <Compile Include="Assets\MadeByProfessorOakie\SimpleSonarShader\SimpleSonarShader_Object.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Cover System\JUCoverController.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\RL\SentisTacticalEvaluator.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Libraries\JUInverseKinematicExtension.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\MenuManagerEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Camera Controllers\TPSCameraController.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\AI\ZombieAI.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainParticles.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\AnimationParameters.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\ScreenTransition.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainDoor.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Inventory System\Inventory UI\DropArea.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainWheel_v3.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\DropdownEditor.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\RailroadSwitch_v3.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Mobile\Mobile Input\JoystickVirtual.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Physics\DestructibleObject.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\BellZone.cs" />
-    <Compile Include="Assets\Project\Scripts\AI\Sensory\AIPredictiveTracker.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Achievements\AchievementManager.cs" />
     <Compile Include="Assets\Project\Scripts\SceneIndexes.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Artificial Inteligence Lib\WaypointUtilitiesLib.cs" />
     <Compile Include="Assets\Project\Scripts\UI\PlayerTargetIndicatorsController.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\ClientNetworkAnimator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\State Machine Behaviours\JUAnimationEvent.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\UI\UIHealhBar.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Core\ReachUIInternalTools.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Misc\ExitGame.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\DemoUI_v3.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\TrainProfile.cs" />
     <Compile Include="Assets\StarterAssets\ThirdPersonController\Scripts\BasicRigidBodyPush.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SliderInput.cs" />
-    <Compile Include="Assets\Day &amp; Night Cycle\Scripts\cyclemanager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Libraries\Character Controller Libs\Item System Libs\ItemSystemLib.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerAudioEditor.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\CanvasManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Input\ScrollbarInputHandler.cs" />
-    <Compile Include="Assets\Project\Scripts\BattleRoyaleLoadingScreen.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\HorizontalSelector.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\LobbyPlayerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Wagon_v3.cs" />
-    <Compile Include="Assets\Project\Scripts\LobbyMatchmakingController.cs" />
-    <Compile Include="Assets\Project\Scripts\NetworkSessionBootstrap.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Panels\ChapterManager.cs" />
     <Compile Include="Assets\SandBox\Networking\Prefabs\JUNetworkPlayer.cs" />
-    <Compile Include="Assets\Strategic Warfare UI Starter Pack\scripts\ProfileScrollViewSpawner.cs" />
-    <Compile Include="Assets\StarterAssets\InputSystem\StarterAssetsInputs.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Credits\CreditsMentionItem.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerAudio.cs" />
-    <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationManager.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Manager\UIManagerEditor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\HUDManager.cs" />
-    <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Railroad Builder\Scripts\LinkedSplineFollower.cs" />
-    <Compile Include="Assets\all_Projects\Scripts\Gameplay\JU Input\MultipleInputEvent.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\Stamps.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\ThirdPartyNotices.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\FadeDistances.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\ImportingMaps.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\DiffusionProfiles.txt" />
     <None Include="Assets\Modern GDR - Free icons pack\01_Demo\Font\Ibarra_OFL.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Prefabs\Deprecated\READ ME.txt" />
     <None Include="Assets\Project\UI\Lobby\TestLobby.uxml" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap.shader" />
+    <None Include="Assets\MadeByProfessorOakie\SimpleSonarShader\Readme.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Mobile.cginc" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF SSD.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Scripts\Resources\SceneAnnotation.uxml" />
     <None Include="Assets\Reach - Complete Sci-Fi UI\Read Me.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface-Mobile.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\Layers.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Models\Deprecated\READ ME.txt" />
     <None Include="Assets\Nokobot\Modern Guns - Handgun\README.txt" />
     <None Include="Assets\VisualX_Studio\App_UI_Icon_animation_FREE\App_UI_Icon_animation_FREE.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\Welcome.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface.shader" />
     <None Include="Assets\TextMesh Pro\Sprites\EmojiOne Attribution.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Custom-Atlas.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\Reflections.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF.shader" />
     <None Include="Assets\StarterAssets\license.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile SSD.shader" />
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Properties.cginc" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Scripts\Resources\SceneAnnotationUI.uss" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Surface.cginc" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\DenseDetails.txt" />
     <None Include="Assets\Project\UI\Lobby\RailboundLobby.uss" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Demo\READ ME.txt" />
     <None Include="Assets\all_Projects\Third-Party Notices.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\ProxyTerrain.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Documentation\Readme.txt" />
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
     <None Include="Assets\WSM Game Studio\Train Controller_v3\Prefabs\READ ME - Addons and Extensions.txt" />
     <None Include="Assets\NewSurfaceShader.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
+    <None Include="Assets\TextMesh Pro\Fonts\License.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\Tiles.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\SkyboxAssets.txt" />
     <None Include="Assets\Project\UI\Lobby\TestStyle.uss" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Mobile.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\WaterShader.txt" />
     <None Include="Assets\Project\UI\Lobby\RailboundLobby.uxml" />
     <None Include="Assets\Modern GDR - Free icons pack\01_Demo\Font\Jost_OFL.txt" />
     <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\SpeedTrees.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />
+    <None Include="Assets\MadeByProfessorOakie\SimpleSonarShader\SimpleSonarShader.shader" />
     <None Include="Assets\all_Projects\Materials\Standard-DoubleSided.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Sprite.shader" />
+    <None Include="Assets\TerrainDemoScene_HDRP\Notes\ProceduralSkies.txt" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -887,7 +915,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">
@@ -1458,6 +1486,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.AI.Navigation.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.TerrainTools.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.TerrainTools.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Barracuda.iOSBLAS">
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.iOSBLAS.dll</HintPath>
       <Private>False</Private>
@@ -1530,6 +1562,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.ProBuilder.AddOns.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.Core">
       <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Core.dll</HintPath>
       <Private>False</Private>
@@ -1554,8 +1590,16 @@
       <HintPath>Library\ScriptAssemblies\UnityEngine.Purchasing.SecurityStub.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.VisualEffectGraph.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualEffectGraph.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="KitWright.Editor">
       <HintPath>Library\ScriptAssemblies\KitWright.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Collections.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.Collections.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Profiling.Core">
@@ -1730,6 +1774,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Services.Analytics.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Config.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Config.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.Purchasing">
       <HintPath>Library\ScriptAssemblies\UnityEngine.Purchasing.dll</HintPath>
       <Private>False</Private>
@@ -1760,6 +1808,10 @@
     </Reference>
     <Reference Include="Unity.Animation.Rigging.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Animation.Rigging.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.TerrainTools">
+      <HintPath>Library\ScriptAssemblies\Unity.TerrainTools.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Timeline.Editor">
@@ -1834,6 +1886,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.VisualEffectGraph.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualEffectGraph.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Multiplayer.Tools.NetStatsMonitor.Configuration">
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.NetStatsMonitor.Configuration.dll</HintPath>
       <Private>False</Private>
@@ -1858,12 +1914,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.EditorCoroutines.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.VisualScripting.State.Editor">
-      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.State.Editor.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.Multiplayer.Tools.Adapters">
       <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Adapters.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.State.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.State.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Cinemachine">
@@ -1890,6 +1946,10 @@
       <HintPath>Library\ScriptAssemblies\Unity.Mathematics.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Runtime">
+      <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.ProBuilder">
       <HintPath>Library\ScriptAssemblies\Unity.ProBuilder.dll</HintPath>
       <Private>False</Private>
@@ -1908,6 +1968,10 @@
     </Reference>
     <Reference Include="Unity.Services.Core.Environments">
       <HintPath>Library\ScriptAssemblies\Unity.Services.Core.Environments.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VSCode.Editor">
+      <HintPath>Library\ScriptAssemblies\Unity.VSCode.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Postprocessing.Runtime">
@@ -1938,12 +2002,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.Barracuda.MacBLAS.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.Multiplayer.Tools.Initialization">
-      <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Initialization.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.VisualStudio.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.VisualStudio.Editor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Multiplayer.Tools.Initialization">
+      <HintPath>Library\ScriptAssemblies\Unity.Multiplayer.Tools.Initialization.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Multiplayer.Tools.MetricTypes">

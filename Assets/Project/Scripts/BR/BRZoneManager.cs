@@ -7,12 +7,26 @@ using JUTPS;
 namespace Railbound.BR
 {
     /// <summary>
-    /// Manages the Battle Royale Safe Zone / Shrinking Storm Ring.
-    /// Handles Netcode state synchronization for multiplayer, with automatic fallback for offline/editor play testing.
+    /// Manages the Battle Royale Safe Zone / Shrinking Storm Ring with realistic tactical pacing.
+    /// Implements continuous client-side smooth interpolation synchronized with server authoritative state.
+    /// Automatically triggers Reach UI Feed Notifications (Yellow warnings, Red critical alerts, Cyan info)
+    /// and tactical notification audio clips.
     /// </summary>
     public class BRZoneManager : NetworkBehaviour
     {
-        public static BRZoneManager Instance { get; private set; }
+        private static BRZoneManager _instance;
+        public static BRZoneManager Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = FindObjectOfType<BRZoneManager>();
+                }
+                return _instance;
+            }
+            private set => _instance = value;
+        }
 
         [System.Serializable]
         public struct ZonePhase
@@ -34,82 +48,105 @@ namespace Railbound.BR
         }
 
         [Header("Zone Configuration")]
-        [SerializeField] private float initialRadius = 300f;
+        [SerializeField] private float initialRadius = 550f;
         [SerializeField] private Vector3 initialCenter = new Vector3(0f, 0f, 15f);
-        [SerializeField] private float wallHeight = 100f;
+        [SerializeField] private float wallHeight = 120f;
         [SerializeField] private Material stormWallMaterial;
 
-        [Header("Phases")]
+        [Header("Realistic Battle Royale Phases (Paced like Warzone / Apex)")]
         [SerializeField] private ZonePhase[] phases = new ZonePhase[]
         {
-            new ZonePhase("Phase 1", 60f, 45f, 200f, 1.5f),
-            new ZonePhase("Phase 2", 45f, 35f, 120f, 3.0f),
-            new ZonePhase("Phase 3", 30f, 25f, 60f, 6.0f),
-            new ZonePhase("Phase 4", 20f, 20f, 25f, 10.0f),
-            new ZonePhase("Phase 5 - Final", 15f, 15f, 0f, 15.0f)
+            new ZonePhase("Phase 1 - Infiltration", 120f, 90f, 380f, 1.0f),
+            new ZonePhase("Phase 2 - Sector Choke", 90f, 75f, 240f, 2.0f),
+            new ZonePhase("Phase 3 - Tactical Closure", 75f, 60f, 140f, 4.0f),
+            new ZonePhase("Phase 4 - Enclosure", 60f, 50f, 70f, 7.0f),
+            new ZonePhase("Phase 5 - Endgame", 45f, 40f, 25f, 10.0f),
+            new ZonePhase("Phase 6 - Final Collapse", 30f, 30f, 0f, 18.0f)
         };
 
-        [Header("State (Runtime)")]
-        public NetworkVariable<Vector3> NetCenter = new NetworkVariable<Vector3>(
-            Vector3.zero,
-            NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Server
-        );
-
-        public NetworkVariable<float> NetRadius = new NetworkVariable<float>(
-            300f,
-            NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Server
-        );
-
+        [Header("Network Sync State")]
         public NetworkVariable<int> NetCurrentPhase = new NetworkVariable<int>(
-            0,
-            NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Server
-        );
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public NetworkVariable<bool> NetIsShrinking = new NetworkVariable<bool>(
-            false,
-            NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Server
-        );
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public NetworkVariable<float> NetTimeRemaining = new NetworkVariable<float>(
-            0f,
-            NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Server
-        );
+            120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public NetworkVariable<float> NetPhaseDuration = new NetworkVariable<float>(
+            120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public NetworkVariable<float> NetStartRadius = new NetworkVariable<float>(
+            550f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public NetworkVariable<float> NetTargetRadius = new NetworkVariable<float>(
+            380f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public NetworkVariable<Vector3> NetStartCenter = new NetworkVariable<Vector3>(
+            new Vector3(0f, 0f, 15f), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public NetworkVariable<Vector3> NetTargetCenter = new NetworkVariable<Vector3>(
+            new Vector3(0f, 0f, 15f), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         // Offline / Local fallback values
-        private Vector3 localCenter;
-        private float localRadius;
         private int localPhaseIndex = 0;
         private bool localIsShrinking = false;
-        private float localTimeRemaining = 0f;
+        private float localTimeRemaining = 120f;
+        private float localPhaseDuration = 120f;
+        private float localStartRadius = 550f;
+        private float localTargetRadius = 380f;
+        private Vector3 localStartCenter = new Vector3(0f, 0f, 15f);
+        private Vector3 localTargetCenter = new Vector3(0f, 0f, 15f);
+
+        // Smooth continuous runtime state (interpolated locally every frame)
+        private float interpolatedRadius;
+        private Vector3 interpolatedCenter;
 
         private Transform ringVisualTransform;
         private float damageTimer = 0f;
 
-        public Vector3 CurrentCenter => IsNetworkedActive ? NetCenter.Value : localCenter;
-        public float CurrentRadius => IsNetworkedActive ? NetRadius.Value : localRadius;
+        // Notification debouncers
+        private int lastNotifiedPhase = -1;
+        private bool notified30sWarning = false;
+        private bool notified10sWarning = false;
+        private bool notifiedShrinkStart = false;
+        private bool wasLocalPlayerInsideSafeZone = true;
+        private float lastOutsideWarningTime = -99f;
+        private Transform localPlayerTransform;
+
+        public Vector3 CurrentCenter => interpolatedCenter;
+        public float CurrentRadius => interpolatedRadius;
         public int CurrentPhaseIndex => IsNetworkedActive ? NetCurrentPhase.Value : localPhaseIndex;
         public bool IsShrinking => IsNetworkedActive ? NetIsShrinking.Value : localIsShrinking;
         public float TimeRemaining => IsNetworkedActive ? NetTimeRemaining.Value : localTimeRemaining;
+        public float PhaseDuration => IsNetworkedActive ? NetPhaseDuration.Value : localPhaseDuration;
+        public float StartRadius => IsNetworkedActive ? NetStartRadius.Value : localStartRadius;
+        public float TargetRadius => IsNetworkedActive ? NetTargetRadius.Value : localTargetRadius;
+        public Vector3 StartCenter => IsNetworkedActive ? NetStartCenter.Value : localStartCenter;
+        public Vector3 TargetCenter => IsNetworkedActive ? NetTargetCenter.Value : localTargetCenter;
 
         private bool IsNetworkedActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         private bool IsAuthority => !IsNetworkedActive || IsServer;
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
+            if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
-            Instance = this;
+            _instance = this;
 
-            localCenter = initialCenter;
-            localRadius = initialRadius;
+            localStartRadius = initialRadius;
+            localTargetRadius = phases.Length > 0 ? phases[0].TargetRadius : initialRadius;
+            localStartCenter = initialCenter;
+            localTargetCenter = initialCenter;
+            localPhaseDuration = phases.Length > 0 ? phases[0].WaitDuration : 120f;
+            localTimeRemaining = localPhaseDuration;
+
+            interpolatedRadius = initialRadius;
+            interpolatedCenter = initialCenter;
 
             SetupVisualBarrier();
         }
@@ -120,10 +157,14 @@ namespace Railbound.BR
             {
                 if (IsNetworkedActive)
                 {
-                    NetCenter.Value = initialCenter;
-                    NetRadius.Value = initialRadius;
                     NetCurrentPhase.Value = 0;
                     NetIsShrinking.Value = false;
+                    NetPhaseDuration.Value = localPhaseDuration;
+                    NetTimeRemaining.Value = localPhaseDuration;
+                    NetStartRadius.Value = localStartRadius;
+                    NetTargetRadius.Value = localTargetRadius;
+                    NetStartCenter.Value = localStartCenter;
+                    NetTargetCenter.Value = localTargetCenter;
                 }
                 StartCoroutine(ZoneRoutine());
             }
@@ -131,7 +172,9 @@ namespace Railbound.BR
 
         private void Update()
         {
+            UpdateInterpolatedZone();
             UpdateVisualBarrier();
+            MonitorLocalPlayerSafeZone();
 
             if (IsAuthority)
             {
@@ -140,6 +183,64 @@ namespace Railbound.BR
                 {
                     damageTimer = 0f;
                     ApplyStormDamage();
+                }
+            }
+        }
+
+        private void UpdateInterpolatedZone()
+        {
+            bool shrinking = IsShrinking;
+            float duration = PhaseDuration;
+            float remaining = TimeRemaining;
+
+            if (shrinking && duration > 0.01f)
+            {
+                float elapsed = Mathf.Clamp(duration - remaining, 0f, duration);
+                float t = Mathf.Clamp01(elapsed / duration);
+                // Silky smooth SmoothStep curve for natural military ring closure
+                float smoothT = t * t * (3f - 2f * t);
+
+                interpolatedRadius = Mathf.Lerp(StartRadius, TargetRadius, smoothT);
+                interpolatedCenter = Vector3.Lerp(StartCenter, TargetCenter, smoothT);
+            }
+            else
+            {
+                interpolatedRadius = StartRadius;
+                interpolatedCenter = StartCenter;
+            }
+        }
+
+        private void MonitorLocalPlayerSafeZone()
+        {
+            if (localPlayerTransform == null)
+            {
+                var playerObj = GameObject.Find("TPS Character");
+                if (playerObj != null) localPlayerTransform = playerObj.transform;
+                if (localPlayerTransform == null) return;
+            }
+
+            bool isInside = IsPositionInSafeZone(localPlayerTransform.position);
+
+            if (!isInside)
+            {
+                if (wasLocalPlayerInsideSafeZone)
+                {
+                    wasLocalPlayerInsideSafeZone = false;
+                    lastOutsideWarningTime = Time.time;
+                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: YOU ARE OUTSIDE THE SAFE ZONE - TAKE SHELTER!");
+                }
+                else if (Time.time - lastOutsideWarningTime > 12.0f)
+                {
+                    lastOutsideWarningTime = Time.time;
+                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: TAKING STORM DAMAGE - RETURN TO SAFE ZONE!");
+                }
+            }
+            else
+            {
+                if (!wasLocalPlayerInsideSafeZone)
+                {
+                    wasLocalPlayerInsideSafeZone = true;
+                    BRFeedNotificationManager.Instance?.ShowInfo("SAFE: RE-ENTERED SAFE ZONE");
                 }
             }
         }
@@ -192,7 +293,6 @@ namespace Railbound.BR
             float radius = CurrentRadius;
             Vector3 center = CurrentCenter;
 
-            // Cylinder default primitive has diameter=1, height=2
             ringVisualTransform.position = new Vector3(center.x, wallHeight * 0.5f, center.z);
             ringVisualTransform.localScale = new Vector3(radius * 2f, wallHeight * 0.5f, radius * 2f);
         }
@@ -204,8 +304,57 @@ namespace Railbound.BR
                 ZonePhase phase = phases[p];
 
                 // 1. Wait phase
-                SetPhaseState(p, false, phase.WaitDuration);
+                SetPhaseWait(p, phase.WaitDuration);
                 float timer = phase.WaitDuration;
+
+                // Reset per-phase notification flags
+                notified30sWarning = false;
+                notified10sWarning = false;
+                notifiedShrinkStart = false;
+
+                // Notify new phase
+                BRFeedNotificationManager.Instance?.ShowInfo($"NEW SAFE ZONE LOCATED ({phase.PhaseName})");
+
+                while (timer > 0f)
+                {
+                    timer -= Time.deltaTime;
+                    UpdateTimeRemaining(timer);
+
+                    // Tactical threshold notifications
+                    if (timer <= 30.5f && timer > 28.5f && !notified30sWarning)
+                    {
+                        notified30sWarning = true;
+                        BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 30 SECONDS");
+                    }
+                    else if (timer <= 10.5f && timer > 8.5f && !notified10sWarning)
+                    {
+                        notified10sWarning = true;
+                        BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 10 SECONDS - MOVE NOW!");
+                    }
+
+                    yield return null;
+                }
+
+                // Calculate next center (smooth shift towards a random offset inside current radius)
+                Vector3 currentC = StartCenter;
+                float currentR = StartRadius;
+                float maxShift = (currentR - phase.TargetRadius) * 0.35f;
+                Vector2 randomOffset = Random.insideUnitCircle * Mathf.Max(0f, maxShift);
+                Vector3 targetC = currentC + new Vector3(randomOffset.x, 0f, randomOffset.y);
+
+                // 2. Shrink phase
+                SetPhaseShrink(p, phase.ShrinkDuration, currentR, phase.TargetRadius, currentC, targetC);
+
+                if (p == phases.Length - 1)
+                {
+                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: FINAL COLLAPSE INITIATED - ELIMINATE ALL HOSTILES!");
+                }
+                else
+                {
+                    BRFeedNotificationManager.Instance?.ShowWarning("RESTRICTED AREA: SAFE ZONE IS NOW SHRINKING");
+                }
+
+                timer = phase.ShrinkDuration;
                 while (timer > 0f)
                 {
                     timer -= Time.deltaTime;
@@ -213,63 +362,66 @@ namespace Railbound.BR
                     yield return null;
                 }
 
-                // Calculate next center (shrink slightly towards a random offset inside the current radius)
-                Vector3 startCenter = CurrentCenter;
-                float maxShift = (CurrentRadius - phase.TargetRadius) * 0.4f;
-                Vector2 randomOffset = Random.insideUnitCircle * Mathf.Max(0f, maxShift);
-                Vector3 targetCenter = startCenter + new Vector3(randomOffset.x, 0f, randomOffset.y);
-
-                float startRadius = CurrentRadius;
-                float targetRadius = phase.TargetRadius;
-
-                // 2. Shrink phase
-                SetPhaseState(p, true, phase.ShrinkDuration);
-                timer = phase.ShrinkDuration;
-                float elapsed = 0f;
-
-                while (elapsed < phase.ShrinkDuration)
-                {
-                    elapsed += Time.deltaTime;
-                    float t = Mathf.Clamp01(elapsed / phase.ShrinkDuration);
-                    // Smoothstep interpolation
-                    float smoothT = t * t * (3f - 2f * t);
-
-                    float currentR = Mathf.Lerp(startRadius, targetRadius, smoothT);
-                    Vector3 currentC = Vector3.Lerp(startCenter, targetCenter, smoothT);
-
-                    SetRadiusAndCenter(currentR, currentC);
-                    UpdateTimeRemaining(phase.ShrinkDuration - elapsed);
-
-                    yield return null;
-                }
-
-                SetRadiusAndCenter(targetRadius, targetCenter);
+                // Finalize ring at exact target before starting next wait phase
+                SetPhaseFinalized(phase.TargetRadius, targetC);
             }
         }
 
-        private void SetPhaseState(int phaseIndex, bool isShrinking, float duration)
+        private void SetPhaseWait(int phaseIndex, float duration)
         {
             localPhaseIndex = phaseIndex;
-            localIsShrinking = isShrinking;
+            localIsShrinking = false;
+            localPhaseDuration = duration;
             localTimeRemaining = duration;
 
             if (IsNetworkedActive && IsServer)
             {
                 NetCurrentPhase.Value = phaseIndex;
-                NetIsShrinking.Value = isShrinking;
+                NetIsShrinking.Value = false;
+                NetPhaseDuration.Value = duration;
                 NetTimeRemaining.Value = duration;
             }
         }
 
-        private void SetRadiusAndCenter(float radius, Vector3 center)
+        private void SetPhaseShrink(int phaseIndex, float duration, float startR, float targetR, Vector3 startC, Vector3 targetC)
         {
-            localRadius = radius;
-            localCenter = center;
+            localPhaseIndex = phaseIndex;
+            localIsShrinking = true;
+            localPhaseDuration = duration;
+            localTimeRemaining = duration;
+            localStartRadius = startR;
+            localTargetRadius = targetR;
+            localStartCenter = startC;
+            localTargetCenter = targetC;
 
             if (IsNetworkedActive && IsServer)
             {
-                NetRadius.Value = radius;
-                NetCenter.Value = center;
+                NetCurrentPhase.Value = phaseIndex;
+                NetIsShrinking.Value = true;
+                NetPhaseDuration.Value = duration;
+                NetTimeRemaining.Value = duration;
+                NetStartRadius.Value = startR;
+                NetTargetRadius.Value = targetR;
+                NetStartCenter.Value = startC;
+                NetTargetCenter.Value = targetC;
+            }
+        }
+
+        private void SetPhaseFinalized(float finalR, Vector3 finalC)
+        {
+            localStartRadius = finalR;
+            localTargetRadius = finalR;
+            localStartCenter = finalC;
+            localTargetCenter = finalC;
+            localIsShrinking = false;
+
+            if (IsNetworkedActive && IsServer)
+            {
+                NetStartRadius.Value = finalR;
+                NetTargetRadius.Value = finalR;
+                NetStartCenter.Value = finalC;
+                NetTargetCenter.Value = finalC;
+                NetIsShrinking.Value = false;
             }
         }
 
