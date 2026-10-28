@@ -60,17 +60,17 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Target Indicators\Runtime\Internal\ScreenData.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\TargetIndicator.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\TargetIndicatorManager.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\BoundaryShape.cs" />
+    <Compile Include="Assets\Target Indicators\Runtime\Internal\RectangleScreenPose.cs" />
+    <Compile Include="Assets\Target Indicators\Runtime\Internal\EllipseScreenPose.cs" />
+    <Compile Include="Assets\Target Indicators\Runtime\Ellipse.cs" />
+    <Compile Include="Assets\Target Indicators\Runtime\Internal\ScreenData.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\TargetIndicatorId.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\Internal\CompassTapeScreenPose.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\TargetIndicatorBoundaryVisualizer.cs" />
     <Compile Include="Assets\Target Indicators\Runtime\BoundaryType.cs" />
-    <Compile Include="Assets\Target Indicators\Runtime\Internal\RectangleScreenPose.cs" />
-    <Compile Include="Assets\Target Indicators\Runtime\Internal\EllipseScreenPose.cs" />
-    <Compile Include="Assets\Target Indicators\Runtime\Ellipse.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Target Indicators\Runtime\TargetIndicators.asmdef" />
@@ -457,7 +457,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">

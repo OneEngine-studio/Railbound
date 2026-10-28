@@ -6,11 +6,28 @@ using UnityEngine.Rendering.Universal;
 
 public class cyclemanager : MonoBehaviour
 {
+    public enum DayCycleMode
+    {
+        OnlyDay,
+        FullDayNight
+    }
+
+    [Header("☀️ Day / Night Mode Option")]
+    [Tooltip("Choose whether the environment is locked to Day only or runs the full 24-hour cycle.")]
+    public DayCycleMode cycleMode = DayCycleMode.OnlyDay;
+
+    [Tooltip("Enable to lock environment permanently to Day time.")]
+    public bool onlyDay = true;
+
+    [Tooltip("Hour of the day when locked to Day (e.g. 11.5 = high sun / golden noon).")]
+    [Range(6f, 18f)] public float dayLockedTime = 11.5f;
+
+    [Space]
     [Header("⏱️ Time Progression")]
     [Tooltip("Current time of day in 24-hour format.")]
-    [Range(0f, 24f)] public float currentTime = 10f;
+    [Range(0f, 24f)] public float currentTime = 11.5f;
 
-    [Tooltip("Speed multiplier for time progression.")]
+    [Tooltip("Speed multiplier for time progression (used when FullDayNight is selected).")]
     public float timeSpeed = 0.2f;
 
     [Space]
@@ -84,11 +101,12 @@ public class cyclemanager : MonoBehaviour
     [Header("🔁 Status Flags (Read-Only)")]
     public bool isDay = true;
     public bool sunActive = true;
-    public bool moonActive = true;
+    public bool moonActive = false;
 
     void Start()
     {
         NormalizeLegacyHdrpValues();
+        SyncDayNightState();
         UpdateTimeText();
         UpdateLight();
         CheckShadowStatus();
@@ -101,14 +119,34 @@ public class cyclemanager : MonoBehaviour
         if (moonIntensity > 5f) moonIntensity = 0.35f;
     }
 
+    void SyncDayNightState()
+    {
+        if (onlyDay || cycleMode == DayCycleMode.OnlyDay)
+        {
+            onlyDay = true;
+            cycleMode = DayCycleMode.OnlyDay;
+            currentTime = dayLockedTime;
+        }
+        else
+        {
+            onlyDay = false;
+            cycleMode = DayCycleMode.FullDayNight;
+        }
+    }
+
     void Update()
     {
-        currentTime += Time.deltaTime * timeSpeed;
+        SyncDayNightState();
 
-        if (currentTime >= 24f)
+        if (!onlyDay)
         {
-            currentTime = 0f;
-            lunarDay = (lunarDay % 30) + 1;
+            currentTime += Time.deltaTime * timeSpeed;
+
+            if (currentTime >= 24f)
+            {
+                currentTime = 0f;
+                lunarDay = (lunarDay % 30) + 1;
+            }
         }
 
         UpdateTimeText();
@@ -120,6 +158,7 @@ public class cyclemanager : MonoBehaviour
     private void OnValidate()
     {
         NormalizeLegacyHdrpValues();
+        SyncDayNightState();
         UpdateTimeText();
         UpdateLight();
         CheckShadowStatus();
@@ -183,12 +222,22 @@ public class cyclemanager : MonoBehaviour
     void CheckShadowStatus()
     {
         float t = currentTime;
-        isDay = t >= 6f && t <= 18f;
+        if (onlyDay || cycleMode == DayCycleMode.OnlyDay)
+        {
+            isDay = true;
+            sunActive = true;
+            moonActive = false;
+        }
+        else
+        {
+            isDay = t >= 6f && t <= 18f;
+            sunActive = t >= 5.7f && t <= 18.3f;
+            moonActive = !(t >= 6.3f && t <= 17.7f);
+        }
 
         if (sunLight != null)
         {
             sunLight.shadows = isDay ? LightShadows.Soft : LightShadows.None;
-            sunActive = t >= 5.7f && t <= 18.3f;
             if (!sunLight.gameObject.activeSelf)
                 sunLight.gameObject.SetActive(true);
         }
@@ -196,9 +245,7 @@ public class cyclemanager : MonoBehaviour
         if (moonLight != null)
         {
             moonLight.shadows = !isDay ? LightShadows.Soft : LightShadows.None;
-            moonActive = !(t >= 6.3f && t <= 17.7f);
-            if (Application.isPlaying)
-                moonLight.gameObject.SetActive(moonActive);
+            moonLight.gameObject.SetActive(moonActive);
         }
     }
 
