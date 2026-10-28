@@ -82,6 +82,7 @@
     <Compile Include="Assets\Project\Editor\RailboundUIBuilder.cs" />
     <Compile Include="Assets\Project\Editor\GameLobbyQASuite.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Help Tab\ThankYouMessage.cs" />
+    <Compile Include="Assets\Project\Editor\TacticalLightingProfileApplier.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\AdvancedRagdollControllerEditor.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\GranadeComponentEditor.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Create Functions\JUTPSQuickSetup.cs" />
