@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -20,7 +20,7 @@ namespace JUTPS.AI
         private Vector3 lastVisiblePosition;
 
         [Header("Follow Settings")]
-        public string[] TargetTags = new string[] { "Player" };
+        public string[] TargetTags = new string[] { "Player", "Enemy" };
         public FieldView FieldOfView = new FieldView(10, 60);
         public LayerMask SensorLayerMask;
         public float StartRunningAtDistance = 5;
@@ -57,6 +57,10 @@ namespace JUTPS.AI
 
         private void Start()
         {
+            if (TargetTags == null || TargetTags.Length == 0 || !System.Array.Exists(TargetTags, t => t == "Enemy"))
+            {
+                TargetTags = new string[] { "Player", "Enemy" };
+            }
             //Timed Tartget Check
             InvokeRepeating(nameof(CheckTargets), 0.5f, 0.5f);
         }
@@ -177,22 +181,16 @@ namespace JUTPS.AI
                 if (currentTarget == null)
                 {
                     targetJuCharacter = null;
+                    isCurrentTargetAttackable = false;
                 }
                 else
                 {
-                    if (targetJuCharacter != null)
+                    if (targetJuCharacter == null || currentTarget != targetJuCharacter.transform)
                     {
-                        isCurrentTargetAttackable = !targetJuCharacter.IsDead;
-                        if (currentTarget != targetJuCharacter.transform)
-                        {
-                            if (currentTarget.TryGetComponent(out JUTPS.CharacterBrain.JUCharacterBrain character)) targetJuCharacter = character;
-                        }
+                        targetJuCharacter = currentTarget.GetComponent<JUTPS.CharacterBrain.JUCharacterBrain>() ?? currentTarget.GetComponentInParent<JUTPS.CharacterBrain.JUCharacterBrain>();
                     }
-                    else
-                    {
-                        isCurrentTargetAttackable = false;
-                        if (currentTarget.TryGetComponent(out JUTPS.CharacterBrain.JUCharacterBrain character)) targetJuCharacter = character;
-                    }
+                    var h = currentTarget.GetComponent<JUHealth>() ?? currentTarget.GetComponentInParent<JUHealth>();
+                    isCurrentTargetAttackable = h != null ? !h.IsDead : (targetJuCharacter != null ? !targetJuCharacter.IsDead : true);
                 }
             }
             

@@ -1,4 +1,4 @@
-﻿// SimpleSonarShader scripts and shaders were written by Drew Okenfuss.
+// SimpleSonarShader scripts and shaders were written by Drew Okenfuss.
 
 using System.Collections;
 using System.Collections.Generic;
@@ -66,7 +66,44 @@ public class SimpleSonarShader_Object : MonoBehaviour
         intensityQueue.Dequeue();
         intensityQueue.Enqueue(intensity);
 
-        RingDelegate();
+        if (RingDelegate != null)
+        {
+            RingDelegate();
+        }
+    }
+
+    /// <summary>
+    /// Static trigger to start a sonar ring from any script.
+    /// </summary>
+    public static void TriggerSonar(Vector3 position, float intensity)
+    {
+        if (NeedToInitQueues)
+        {
+            NeedToInitQueues = false;
+            for (int i = 0; i < QueueSize; i++)
+            {
+                positionsQueue.Enqueue(GarbagePosition);
+                intensityQueue.Enqueue(-5000f);
+            }
+        }
+
+        Vector4 posWithTime = new Vector4(position.x, position.y, position.z, Time.timeSinceLevelLoad);
+        if (positionsQueue.Count >= QueueSize)
+        {
+            positionsQueue.Dequeue();
+        }
+        positionsQueue.Enqueue(posWithTime);
+
+        if (intensityQueue.Count >= QueueSize)
+        {
+            intensityQueue.Dequeue();
+        }
+        intensityQueue.Enqueue(intensity);
+
+        if (RingDelegate != null)
+        {
+            RingDelegate();
+        }
     }
 
     /// <summary>
@@ -77,8 +114,11 @@ public class SimpleSonarShader_Object : MonoBehaviour
         // Send updated queues to the shaders
         foreach (Renderer r in ObjectRenderers)
         {
-            r.material.SetVectorArray("_hitPts", positionsQueue.ToArray());
-            r.material.SetFloatArray("_Intensity", intensityQueue.ToArray());
+            if (r != null)
+            {
+                r.material.SetVectorArray("_hitPts", positionsQueue.ToArray());
+                r.material.SetFloatArray("_Intensity", intensityQueue.ToArray());
+            }
         }
     }
 

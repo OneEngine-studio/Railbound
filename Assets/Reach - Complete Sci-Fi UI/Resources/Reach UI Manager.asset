@@ -24,7 +24,7 @@ MonoBehaviour:
   primaryColor: {r: 1, g: 1, b: 1, a: 1}
   secondaryColor: {r: 1, g: 1, b: 1, a: 1}
   negativeColor: {r: 1, g: 0.29411766, b: 0.29411766, a: 1}
-  backgroundColor: {r: 0.09803922, g: 0.13725491, b: 0.1764706, a: 1}
+  backgroundColor: {r: 0.015, g: 0.015, b: 0.02, a: 1}
   fontLight: {fileID: 11400000, guid: a4412f15afcccfd4591f5f064f5004b4, type: 2}
   fontRegular: {fileID: 11400000, guid: 2a97c72100ce9a34eb2d3c2e68bca265, type: 2}
   fontMedium: {fileID: 11400000, guid: 8322a83c36dbf604db8a075474b12c47, type: 2}

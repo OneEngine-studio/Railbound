@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 853e1bee11e44928bea5a7d25a356135
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 226420
+  packageName: Simple Mini Map
+  packageVersion: 1.1.0
+  assetPath: Assets/UnitySimpleMiniMap/Runtime/MiniMapView.Follow.cs
+  uploadId: 1000574

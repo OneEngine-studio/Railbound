@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: bb3560c10cabef843bb657ebb7d936c9
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 226420
+  packageName: Simple Mini Map
+  packageVersion: 1.1.0
+  assetPath: Assets/UnitySimpleMiniMap/Demo/Mesh.prefab
+  uploadId: 1000574

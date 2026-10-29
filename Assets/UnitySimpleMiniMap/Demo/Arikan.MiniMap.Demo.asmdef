@@ -1,0 +1,16 @@
+{
+    "name": "Arikan.MiniMap.Demo",
+    "rootNamespace": "",
+    "references": [
+        "GUID:284f1ac0e436e084aade9a0e1570f09e"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
