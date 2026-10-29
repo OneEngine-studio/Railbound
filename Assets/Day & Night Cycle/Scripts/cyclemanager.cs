@@ -2,9 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
-public class cyclemanager : MonoBehaviour
+public class CycleManager : MonoBehaviour
 {
     public enum DayCycleMode
     {
@@ -15,9 +14,6 @@ public class cyclemanager : MonoBehaviour
     [Header("☀️ Day / Night Mode Option")]
     [Tooltip("Choose whether the environment is locked to Day only or runs the full 24-hour cycle.")]
     public DayCycleMode cycleMode = DayCycleMode.OnlyDay;
-
-    [Tooltip("Enable to lock environment permanently to Day time.")]
-    public bool onlyDay = true;
 
     [Tooltip("Hour of the day when locked to Day (e.g. 11.5 = high sun / golden noon).")]
     [Range(6f, 18f)] public float dayLockedTime = 11.5f;
@@ -30,6 +26,9 @@ public class cyclemanager : MonoBehaviour
     [Tooltip("Speed multiplier for time progression (used when FullDayNight is selected).")]
     public float timeSpeed = 0.2f;
 
+    [Tooltip("Speed of lighting transitions.")]
+    public float transitionSpeed = 2f;
+
     [Space]
     [Header("🕒 Current Time Display")]
     [Tooltip("Formatted time string for UI or display.")]
@@ -38,63 +37,24 @@ public class cyclemanager : MonoBehaviour
     [Space]
     [Header("☀️ Sun Configuration")]
     public Light sunLight;
-
-    [Tooltip("Sun latitude angle.")]
     [Range(0f, 90f)] public float sunLatitude = 20f;
-
-    [Tooltip("Sun longitude angle.")]
     [Range(-180f, 180f)] public float sunLongitude = -90f;
-
-    [Tooltip("Base intensity for sun.")]
     public float sunIntensity = 1.5f;
-
-    public AnimationCurve sunIntensityMultiplier = new AnimationCurve(
-        new Keyframe(0f, 0f),
-        new Keyframe(0.25f, 0.2f),
-        new Keyframe(0.5f, 1f),
-        new Keyframe(0.75f, 0.2f),
-        new Keyframe(1f, 0f));
-
-    public AnimationCurve sunTemperatureCurve = new AnimationCurve(
-        new Keyframe(0f, 0.25f),
-        new Keyframe(0.25f, 0.35f),
-        new Keyframe(0.5f, 0.65f),
-        new Keyframe(0.75f, 0.35f),
-        new Keyframe(1f, 0.25f));
+    public AnimationCurve sunIntensityMultiplier;
+    public AnimationCurve sunTemperatureCurve;
 
     [Space]
     [Header("🌙 Moon Configuration")]
     public Light moonLight;
-
-    [Tooltip("Moon latitude angle.")]
     [Range(0f, 90f)] public float moonLatitude = 40f;
-
-    [Tooltip("Moon longitude angle.")]
     [Range(-180f, 180f)] public float moonLongitude = 90f;
-
-    [Tooltip("Base intensity for moon.")]
     public float moonIntensity = 0.35f;
-
-    public AnimationCurve moonIntensityMultiplier = new AnimationCurve(
-        new Keyframe(0f, 1f),
-        new Keyframe(0.25f, 0.1f),
-        new Keyframe(0.5f, 0f),
-        new Keyframe(0.75f, 0.1f),
-        new Keyframe(1f, 1f));
-
-    public AnimationCurve moonTemperatureCurve = new AnimationCurve(
-        new Keyframe(0f, 0.85f),
-        new Keyframe(0.5f, 0.65f),
-        new Keyframe(1f, 0.85f));
+    public AnimationCurve moonIntensityMultiplier;
+    public AnimationCurve moonTemperatureCurve;
 
     [Space]
     [Header("🌕 Lunar Cycle Settings")]
     [Range(1, 30)] public int lunarDay = 15;
-
-    [Tooltip("Speed at which the lunar day changes.")]
-    public float lunarCycleSpeed = 1f;
-
-    [Tooltip("Reference to moon visual model.")]
     public Transform moonModel;
 
     [Space]
@@ -121,24 +81,15 @@ public class cyclemanager : MonoBehaviour
 
     void SyncDayNightState()
     {
-        if (onlyDay || cycleMode == DayCycleMode.OnlyDay)
+        if (cycleMode == DayCycleMode.OnlyDay)
         {
-            onlyDay = true;
-            cycleMode = DayCycleMode.OnlyDay;
             currentTime = dayLockedTime;
-        }
-        else
-        {
-            onlyDay = false;
-            cycleMode = DayCycleMode.FullDayNight;
         }
     }
 
     void Update()
     {
-        SyncDayNightState();
-
-        if (!onlyDay)
+        if (cycleMode == DayCycleMode.FullDayNight)
         {
             currentTime += Time.deltaTime * timeSpeed;
 
@@ -215,14 +166,17 @@ public class cyclemanager : MonoBehaviour
             }
         }
 
-        RenderSettings.ambientIntensity = Mathf.Lerp(0.3f, 1.0f, sunCurve);
-        RenderSettings.reflectionIntensity = Mathf.Lerp(0.25f, 1.0f, sunCurve);
+        float targetAmbient = Mathf.Lerp(0.3f, 1.0f, sunCurve);
+        float targetReflection = Mathf.Lerp(0.25f, 1.0f, sunCurve);
+
+        RenderSettings.ambientIntensity = Mathf.Lerp(RenderSettings.ambientIntensity, targetAmbient, Time.deltaTime * transitionSpeed);
+        RenderSettings.reflectionIntensity = Mathf.Lerp(RenderSettings.reflectionIntensity, targetReflection, Time.deltaTime * transitionSpeed);
     }
 
     void CheckShadowStatus()
     {
         float t = currentTime;
-        if (onlyDay || cycleMode == DayCycleMode.OnlyDay)
+        if (cycleMode == DayCycleMode.OnlyDay)
         {
             isDay = true;
             sunActive = true;
