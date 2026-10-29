@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -797,7 +797,7 @@ namespace JUTPS.CharacterBrain
                 //}
                 //else
                 //{
-                if (IsMoving)
+                if (IsMoving && !WallAHead)
                 {
                     transform.Translate(DirectionTransform.forward * AirInfluenceControll / 2 * Time.deltaTime, Space.World);
                 }
@@ -1064,7 +1064,8 @@ namespace JUTPS.CharacterBrain
             //Ground Check
             if (IsDriving == false)
             {
-                Collider[] groundcheck = Physics.OverlapBox(transform.position + transform.up * GroundCheckHeighOfsset, new Vector3(GroundCheckRadius, GroundCheckSize, GroundCheckRadius), transform.rotation, WhatIsGround);
+                float effRadius = (coll is CapsuleCollider cap) ? Mathf.Max(GroundCheckRadius, cap.radius * 0.92f) : Mathf.Max(GroundCheckRadius, 0.35f);
+                Collider[] groundcheck = Physics.OverlapBox(transform.position + transform.up * GroundCheckHeighOfsset, new Vector3(effRadius, GroundCheckSize, effRadius), transform.rotation, WhatIsGround, QueryTriggerInteraction.Ignore);
                 if (groundcheck.Length != 0 && IsJumping == false)
                 {
                     IsGrounded = true;
@@ -1083,7 +1084,7 @@ namespace JUTPS.CharacterBrain
 
             //Ground Angle Check
             RaycastHit hit;
-            if (Physics.Raycast(transform.position + transform.up * 0.5f, -transform.up, out hit, 2, WhatIsGround))
+            if (Physics.Raycast(transform.position + transform.up * 0.5f, -transform.up, out hit, 2, WhatIsGround, QueryTriggerInteraction.Ignore))
             {
                 GroundAngle = Vector3.Angle(Vector3.up, hit.normal);
                 GroundNormal = hit.normal;
@@ -1099,7 +1100,7 @@ namespace JUTPS.CharacterBrain
         protected Vector3 GetGroundPoint()
         {
             RaycastHit hit;
-            if (Physics.Raycast(transform.position + transform.up * 0.5f, -transform.up, out hit, 1000, WhatIsGround))
+            if (Physics.Raycast(transform.position + transform.up * 0.5f, -transform.up, out hit, 1000, WhatIsGround, QueryTriggerInteraction.Ignore))
             {
                 GroundPoint = hit.point;
             }
@@ -1113,7 +1114,7 @@ namespace JUTPS.CharacterBrain
         {
             //Wall in front
             RaycastHit HitFront;
-            if (Physics.Raycast(transform.position + transform.up * WallRayHeight, DirectionTransform.forward, out HitFront, WallRayDistance, WhatIsWall))
+            if (Physics.Raycast(transform.position + transform.up * WallRayHeight, DirectionTransform.forward, out HitFront, WallRayDistance, WhatIsWall, QueryTriggerInteraction.Ignore))
             {
                 WallAHead = true;
                 Debug.DrawLine(HitFront.point, transform.position + transform.up * WallRayHeight);
@@ -1188,13 +1189,13 @@ namespace JUTPS.CharacterBrain
             if (IsMoving && EnableUngroundedStepUp && IsGrounded == false && LeftFootBone != null && RightFootBone != null && UngroundedStepUpSpeed > 0 && WallAHead == false)
             {
                 // Step detection
-                if (Physics.SphereCast(transform.position + transform.up * FootstepHeight + transform.forward * ForwardStepOffset, ((CapsuleCollider)coll).radius / 2, -transform.up, out FootStepHit, UngroundedStepUpRayDistance, WhatIsGround) && GoToStepPosition == false) { if (FootStepHit.point.y > GroundPoint.y + StepHeight && FootStepHit.point.y > transform.position.y + StepHeight && StepAngle() < 10) { StepPosition = FootStepHit.point; GoToStepPosition = true; StartStepUpCharacterPosition = transform.position; } }
+                if (Physics.SphereCast(transform.position + transform.up * FootstepHeight + transform.forward * ForwardStepOffset, ((CapsuleCollider)coll).radius / 2, -transform.up, out FootStepHit, UngroundedStepUpRayDistance, WhatIsGround, QueryTriggerInteraction.Ignore) && GoToStepPosition == false) { if (FootStepHit.point.y > GroundPoint.y + StepHeight && FootStepHit.point.y > transform.position.y + StepHeight && Vector3.Angle(transform.up, FootStepHit.normal) < 10) { StepPosition = FootStepHit.point; GoToStepPosition = true; StartStepUpCharacterPosition = transform.position; } }
             }
 
             if (IsMoving && EnableStepCorrection && IsGrounded == true && WallAHead == false)
             {
                 //Step height Correction
-                if (Physics.Raycast(transform.position + transform.up * FootstepHeight + DirectionTransform.forward * ForwardStepOffset, -Vector3.up, out Step_Hit, FootstepHeight - StepHeight, WhatIsGround) && AdjustHeight == false)
+                if (Physics.Raycast(transform.position + transform.up * FootstepHeight + DirectionTransform.forward * ForwardStepOffset, -Vector3.up, out Step_Hit, FootstepHeight - StepHeight, WhatIsGround, QueryTriggerInteraction.Ignore) && AdjustHeight == false)
                 {
                     if (Step_Hit.point.y > transform.position.y && StepAngle() < 10)
                     {
@@ -1227,7 +1228,7 @@ namespace JUTPS.CharacterBrain
                     anim.SetBool(AnimatorParameters.Grounded, true);
                     anim.SetFloat(AnimatorParameters.LandingIntensity, 1.5f);
                 }
-                if (GoingToStepTime >= (1f + StoppingTimeOnStepPosition))
+                if (GoingToStepTime >= (1f + StoppingTimeOnStepPosition) || WallAHead || !IsMoving)
                 {
                     GoToStepPosition = false;
                     GoingToStepTime = 0;
@@ -1252,7 +1253,7 @@ namespace JUTPS.CharacterBrain
                 anim.SetBool(AnimatorParameters.Grounded, true);
                 //rb.AddForce(transform.up * rb.mass * UpStepSpeed / 10, ForceMode.Impulse);
 
-                if (transform.position.y > playerStepPosition.y + 0.05F)
+                if (transform.position.y >= playerStepPosition.y - 0.02f || WallAHead || !IsMoving)
                 {
                     Step_Hit.point = transform.position;
                     AdjustHeight = false;

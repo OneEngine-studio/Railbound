@@ -19,24 +19,27 @@ namespace Project.Vehicles
     {
         [Header("Collision Damage Tuning")]
         [Tooltip("Minimum impact velocity (m/s) before damage is incurred (avoids damage on minor nudges).")]
-        public float MinDamageSpeed = 4.0f; // ~14.4 km/h
+        public float MinDamageSpeed = 6.0f; // ~21.6 km/h
 
         [Tooltip("Damage dealt per m/s of impact velocity above MinDamageSpeed.")]
-        public float DamagePerSpeed = 16f;
+        public float DamagePerSpeed = 8.0f;
 
         [Tooltip("Speed threshold (m/s) at which crash is considered heavy.")]
-        public float HeavyCrashSpeed = 11.5f;
+        public float HeavyCrashSpeed = 13.0f;
 
         [Header("Driver Concussion Damage")]
         [Tooltip("Impact speed (m/s) above which the driver takes concussion injury.")]
-        public float DriverDamageSpeedThreshold = 14.0f; // ~50 km/h
+        public float DriverDamageSpeedThreshold = 16.0f; // ~58 km/h
 
         [Tooltip("Damage multiplier applied to the driver on high-speed crash.")]
-        public float DriverDamageMultiplier = 2.2f;
+        public float DriverDamageMultiplier = 1.5f;
 
         [Header("Pedestrian / Character Ramming")]
-        [Tooltip("Damage inflicted on pedestrians/characters hit by this vehicle.")]
-        public float RammingDamageMultiplier = 12f;
+        [Tooltip("Minimum vehicle speed (m/s) required to damage pedestrians on impact.")]
+        public float MinRammingVehicleSpeed = 7.5f;
+
+        [Tooltip("Damage inflicted on pedestrians/characters hit by this moving vehicle.")]
+        public float RammingDamageMultiplier = 4.0f;
 
         [Header("Engine Offset & Visual FX")]
         [Tooltip("Local position of the engine / hood where smoke and fire originate.")]
@@ -66,12 +69,19 @@ namespace Project.Vehicles
         private GameObject _smokeInstance;
         private GameObject _fireInstance;
         private bool _isDestroyed = false;
+        private float _spawnTime;
+        private float _lastCollisionTime = -10f;
+        private float _lastPedestrianHitTime = -10f;
+
+        private const float SPAWN_GRACE_PERIOD = 2.0f;
+        private const float COLLISION_COOLDOWN = 0.35f;
 
         private void Awake()
         {
             _vehicle = GetComponent<Vehicle>();
             _health = GetComponent<JUHealth>();
             _rb = GetComponent<Rigidbody>();
+            _spawnTime = Time.time;
 
             SetupImpactAudio();
             InitializeVisualFX();
@@ -80,6 +90,11 @@ namespace Project.Vehicles
             {
                 _health.OnDeath.AddListener(OnVehicleDestroyed);
             }
+        }
+
+        private void Start()
+        {
+            _spawnTime = Time.time;
         }
 
         private void SetupImpactAudio()
@@ -102,15 +117,33 @@ namespace Project.Vehicles
             {
                 _smokeInstance = Instantiate(SmokeFXPrefab, worldPos, transform.rotation, transform);
                 _smokeInstance.transform.localPosition = EngineHoodOffset;
+                SanitizeVisualFXObject(_smokeInstance);
                 _smokeInstance.SetActive(false);
             }
 
-            // Pre-instantiate Fire FX
+            // Pre-instantiate Fire FX (strip DeadZone tag and trigger colliders so it is purely visual!)
             if (FireFXPrefab != null)
             {
                 _fireInstance = Instantiate(FireFXPrefab, worldPos, transform.rotation, transform);
                 _fireInstance.transform.localPosition = EngineHoodOffset;
+                SanitizeVisualFXObject(_fireInstance);
                 _fireInstance.SetActive(false);
+            }
+        }
+
+        private static void SanitizeVisualFXObject(GameObject fxObj)
+        {
+            if (fxObj == null) return;
+
+            foreach (Transform t in fxObj.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.tag = "Untagged";
+            }
+
+            foreach (Collider col in fxObj.GetComponentsInChildren<Collider>(true))
+            {
+                col.enabled = false;
+                Destroy(col);
             }
         }
 
@@ -120,7 +153,7 @@ namespace Project.Vehicles
 
             float healthPercent = _health.Health / Mathf.Max(_health.MaxHealth, 1f);
 
-            // Smoke Stage (< 50% HP)
+            // Smoke Stage (<= 50% HP)
             if (_smokeInstance != null)
             {
                 bool shouldSmoke = healthPercent <= 0.50f && healthPercent > 0f;
@@ -130,7 +163,7 @@ namespace Project.Vehicles
                 }
             }
 
-            // Fire Stage (< 25% HP)
+            // Fire Stage (<= 25% HP)
             if (_fireInstance != null)
             {
                 bool shouldFire = healthPercent <= 0.25f && healthPercent > 0f;
@@ -151,20 +184,58 @@ namespace Project.Vehicles
         {
             if (_isDestroyed) return;
 
+            // Ignore collisions during initial scene physics settling
+            if (Time.time - _spawnTime < SPAWN_GRACE_PERIOD) return;
+
+            // Ignore own child colliders
+            if (collision.transform.IsChildOf(transform)) return;
+
+            // Check if the collided object is a character / pedestrian / ragdoll bone
+            JUCharacterController character = collision.gameObject.GetComponentInParent<JUCharacterController>();
+            AdvancedRagdollController ragdoll = collision.gameObject.GetComponentInParent<AdvancedRagdollController>();
+            bool isCharacterOrRagdoll = (character != null) || (ragdoll != null) || (collision.gameObject.layer == 15);
+
+            if (isCharacterOrRagdoll)
+            {
+                // Characters touching a stopped/slow vehicle never damage the vehicle;
+                // only check if this moving vehicle is ramming a pedestrian at high speed.
+                CheckPedestrianCollision(collision, character, ragdoll);
+                return;
+            }
+
+            // Ignore small items / pickups
+            if (collision.gameObject.layer == LayerMask.NameToLayer("Item")) return;
+
+            // Cooldown between collision damage events
+            if (Time.time - _lastCollisionTime < COLLISION_COOLDOWN) return;
+
+            // Ignore flat vertical ground / suspension bottoming-out contacts (only crash into walls, obstacles, or steep impacts)
+            if (collision.contactCount > 0)
+            {
+                Vector3 normal = collision.GetContact(0).normal;
+                // If contact normal is pointing mostly straight up (ground under vehicle), ignore unless impact is extreme
+                if (normal.y > 0.72f) return;
+            }
+
+            // Ensure either this vehicle or the other colliding body is actually moving fast
+            float ownSpeed = _rb != null ? _rb.velocity.magnitude : 0f;
+            float otherSpeed = collision.rigidbody != null ? collision.rigidbody.velocity.magnitude : 0f;
+            if (ownSpeed < MinDamageSpeed * 0.5f && otherSpeed < MinDamageSpeed * 0.5f) return;
+
             float impactSpeed = collision.relativeVelocity.magnitude;
-
-            // Check if we hit a pedestrian / character
-            CheckPedestrianCollision(collision, impactSpeed);
-
-            // Ignore light bumps below damage threshold
             if (impactSpeed < MinDamageSpeed) return;
+
+            _lastCollisionTime = Time.time;
 
             // 1. Play Metal Impact Audio
             PlayImpactAudio(impactSpeed);
 
-            // 2. Calculate and apply vehicle collision damage
-            float damage = (impactSpeed - MinDamageSpeed) * DamagePerSpeed;
-            Vector3 contactPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+            // 2. Calculate and apply vehicle collision damage (clamped so a single bump cannot insta-kill a full-HP car)
+            float rawDamage = (impactSpeed - MinDamageSpeed) * DamagePerSpeed;
+            float maxSingleHitDamage = _health.MaxHealth * 0.45f;
+            float damage = Mathf.Min(rawDamage, maxSingleHitDamage);
+
+            Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
             _health.DoDamage(damage, contactPoint);
 
             // 3. High-speed crash driver concussion injury
@@ -187,33 +258,59 @@ namespace Project.Vehicles
             }
         }
 
-        private void CheckPedestrianCollision(Collision collision, float impactSpeed)
+        private void CheckPedestrianCollision(Collision collision, JUCharacterController character, AdvancedRagdollController rag)
         {
-            // Ignore own colliders
-            if (collision.transform.IsChildOf(transform)) return;
+            // NEVER damage characters if the vehicle is parked, turned off, or moving slowly!
+            if (_vehicle == null || !_vehicle.IsOn || _rb == null) return;
 
-            JUHealth targetHealth = collision.gameObject.GetComponentInParent<JUHealth>();
+            float vehicleSpeed = _rb.velocity.magnitude;
+            if (vehicleSpeed < MinRammingVehicleSpeed) return;
+
+            if (Time.time - _lastPedestrianHitTime < 0.5f) return;
+
+            // Never damage the driver or someone currently entering/exiting this vehicle
+            DriveVehicles driveAbility = character != null
+                ? character.GetComponent<DriveVehicles>()
+                : collision.gameObject.GetComponentInParent<DriveVehicles>();
+
+            if (driveAbility != null)
+            {
+                if (driveAbility.CurrentVehicle == _vehicle || driveAbility.IsDriving || driveAbility.IsCharacterEntering || driveAbility.IsCharacterExiting)
+                {
+                    return;
+                }
+            }
+
+            // Ensure the vehicle is actually moving toward the character
+            Vector3 targetPos = character != null ? character.transform.position : collision.transform.position;
+            Vector3 dirToTarget = (targetPos - transform.position).normalized;
+            if (Vector3.Dot(_rb.velocity.normalized, dirToTarget) < 0.3f) return;
+
+            JUHealth targetHealth = character != null
+                ? character.CharacterHealth
+                : collision.gameObject.GetComponentInParent<JUHealth>();
+
             if (targetHealth != null && targetHealth != _health)
             {
-                // Hit a character / player / enemy
-                if (impactSpeed > 3.0f)
-                {
-                    float pedDamage = impactSpeed * RammingDamageMultiplier;
-                    Vector3 contactPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : collision.transform.position;
-                    targetHealth.DoDamage(pedDamage, contactPoint);
+                _lastPedestrianHitTime = Time.time;
 
-                    // Ragdoll pedestrian if possible
-                    AdvancedRagdollController rag = collision.gameObject.GetComponentInParent<AdvancedRagdollController>();
-                    if (rag != null)
+                float pedDamage = Mathf.Clamp((vehicleSpeed - MinRammingVehicleSpeed) * RammingDamageMultiplier, 10f, 85f);
+                Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : targetPos;
+                targetHealth.DoDamage(pedDamage, contactPoint);
+
+                PlayImpactAudio(vehicleSpeed);
+
+                // Ragdoll pedestrian with controlled velocity change (avoid extreme impulses)
+                if (rag != null)
+                {
+                    rag.SetActiveRagdoll(true);
+                    if (rag.Hips != null)
                     {
-                        rag.SetActiveRagdoll(true);
-                        if (rag.Hips != null)
+                        Rigidbody hipsRb = rag.Hips.GetComponent<Rigidbody>();
+                        if (hipsRb != null)
                         {
-                            Rigidbody hipsRb = rag.Hips.GetComponent<Rigidbody>();
-                            if (hipsRb != null)
-                            {
-                                hipsRb.AddForce(transform.forward * (impactSpeed * 350f) + Vector3.up * 200f, ForceMode.Impulse);
-                            }
+                            Vector3 knockbackVel = _rb.velocity.normalized * Mathf.Min(vehicleSpeed * 0.8f, 12f) + Vector3.up * 3.5f;
+                            hipsRb.AddForce(knockbackVel, ForceMode.VelocityChange);
                         }
                     }
                 }
@@ -230,7 +327,7 @@ namespace Project.Vehicles
                     JUHealth driverHealth = d.GetComponent<JUHealth>();
                     if (driverHealth != null)
                     {
-                        float driverDamage = (impactSpeed - DriverDamageSpeedThreshold) * DriverDamageMultiplier;
+                        float driverDamage = Mathf.Clamp((impactSpeed - DriverDamageSpeedThreshold) * DriverDamageMultiplier, 5f, 45f);
                         driverHealth.DoDamage(driverDamage, d.transform.position);
                     }
                     break;
@@ -251,7 +348,7 @@ namespace Project.Vehicles
                 _vehicle.enabled = false;
             }
 
-            // Eject and protect driver
+            // Eject driver safely before explosion
             DriveVehicles[] drivers = FindObjectsOfType<DriveVehicles>();
             foreach (DriveVehicles d in drivers)
             {
@@ -259,36 +356,28 @@ namespace Project.Vehicles
                 {
                     d.ExitVehicle();
 
-                    // Toss driver clear of wreckage
-                    AdvancedRagdollController rag = d.GetComponent<AdvancedRagdollController>();
-                    if (rag != null)
-                    {
-                        rag.SetActiveRagdoll(true);
-                        if (rag.Hips != null)
-                        {
-                            Rigidbody hipsRb = rag.Hips.GetComponent<Rigidbody>();
-                            if (hipsRb != null)
-                            {
-                                hipsRb.AddForce(Vector3.up * 8f + transform.forward * 4f, ForceMode.VelocityChange);
-                            }
-                        }
-                    }
+                    // Place driver slightly clear of the vehicle blast
+                    d.transform.position = transform.position - transform.right * 3.2f + Vector3.up * 0.5f;
                 }
             }
 
-            // Spawn Explosion FX
-            Vector3 explosionPos = transform.TransformPoint(EngineHoodOffset);
-            if (ExplosionFXPrefab != null)
+            // Spawn Explosion FX only if vehicle doesn't already have an active Explosion Particle child
+            Transform existingExplosion = transform.Find("Explosion Particle");
+            if (existingExplosion != null)
             {
+                existingExplosion.gameObject.SetActive(true);
+            }
+            else if (ExplosionFXPrefab != null)
+            {
+                Vector3 explosionPos = transform.TransformPoint(EngineHoodOffset);
                 GameObject explosion = Instantiate(ExplosionFXPrefab, explosionPos, Quaternion.identity);
                 Destroy(explosion, 6f);
             }
 
-            // Apply explosive shockwave torque to the wrecked vehicle
+            // Apply controlled shockwave jolt to the wrecked vehicle
             if (_rb != null)
             {
-                _rb.AddForce(Vector3.up * 4500f, ForceMode.Impulse);
-                _rb.AddTorque(Random.insideUnitSphere * 2500f, ForceMode.Impulse);
+                _rb.AddForce(Vector3.up * (_rb.mass * 3.5f), ForceMode.Impulse);
             }
 
             // Play heavy crash sound

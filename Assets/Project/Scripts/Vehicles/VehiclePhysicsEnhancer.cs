@@ -83,8 +83,17 @@ namespace Project.Vehicles
 
         public void ApplyCenterOfMass()
         {
-            if (_rb == null || !EnforceCenterOfMass) return;
-            _rb.centerOfMass = CenterOfMassOffset;
+            if (!EnforceCenterOfMass) return;
+
+            if (_vehicle != null && _vehicle.Engine != null)
+            {
+                _vehicle.Engine.CenterOfMass = CenterOfMassOffset;
+            }
+
+            if (_rb != null)
+            {
+                _rb.centerOfMass = CenterOfMassOffset;
+            }
         }
 
         private void TuneTireFriction()
@@ -161,8 +170,13 @@ namespace Project.Vehicles
                 _rb.centerOfMass = CenterOfMassOffset;
             }
 
-            ApplyAntiRollBars();
-            ApplyDownforce();
+            // Only apply active suspension and aerodynamic forces while driving or moving
+            if (_vehicle.IsOn || _rb.velocity.sqrMagnitude > 1.0f)
+            {
+                ApplyAntiRollBars();
+                ApplyDownforce();
+            }
+
             CheckAutoRight();
         }
 

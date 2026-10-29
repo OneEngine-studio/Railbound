@@ -1,7 +1,8 @@
 {
     "platforms": [
         "agents",
-        "claude"
+        "claude",
+        "cursor"
     ],
     "skillVersions": [
         {

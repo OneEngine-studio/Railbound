@@ -1,0 +1,313 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="RailboundLobby.uss" />
+
+    <ui:VisualElement name="LobbyRoot" class="hud-root">
+
+        <!-- ============================================================ -->
+        <!-- REGION A: TOP HEADER                                         -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="TopHeader" class="header-container">
+            
+            <!-- Left: Logo & Season -->
+            <ui:VisualElement name="HeaderLeft" class="header-left">
+                <ui:Image name="LogoRailbound" class="logo-image" />
+                <ui:VisualElement name="SeasonBadge" class="season-badge">
+                    <ui:Label text="SEASON 01" class="season-badge-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Center: Operator Switcher HUD Plate -->
+            <ui:VisualElement name="HeaderCenter" class="header-center">
+                <ui:Button name="BtnPrevOp" class="btn-arrow-op">
+                    <ui:Image class="arrow-icon-left" />
+                </ui:Button>
+                <ui:VisualElement name="OpPlate" class="op-plate">
+                    <ui:Label name="HeaderOpName" text="MIL-R5 GHOST" class="op-plate-title" />
+                    <ui:Label name="HeaderOpRole" text="// ASSAULT / SPEC-OPS" class="op-plate-subtitle" />
+                </ui:VisualElement>
+                <ui:Button name="BtnNextOp" class="btn-arrow-op">
+                    <ui:Image class="arrow-icon-right" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Right: Profile, Currencies, Settings -->
+            <ui:VisualElement name="HeaderRight" class="header-right">
+                <ui:VisualElement class="profile-avatar-box">
+                    <ui:Image name="HeaderAvatarPhoto" class="avatar-photo" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="profile-text-meta">
+                    <ui:Label name="HeaderPlayerName" text="KUSHAN" class="profile-name-text" />
+                    <ui:Label name="HeaderPlayerLevel" text="LVL. Inexpert" class="profile-level-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="profile-xp-bar-bg">
+                    <ui:VisualElement name="HeaderXpFill" class="profile-xp-bar-fill" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="currency-group">
+                    <ui:Image class="currency-icon-coin" />
+                    <ui:Label name="HeaderCoinsText" text="2,450" class="currency-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="currency-group">
+                    <ui:Image class="currency-icon-star" />
+                    <ui:Label name="HeaderStarsText" text="850" class="currency-text" />
+                </ui:VisualElement>
+
+                <ui:Button name="BtnSettings" class="btn-settings-gear">
+                    <ui:Image class="gear-icon" />
+                </ui:Button>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION B: LEFT NAVIGATION MENU (6 entries)                   -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="LeftNav" class="left-nav-container">
+            
+            <ui:Button name="NavPlay" class="nav-tab-button nav-tab-selected">
+                <ui:VisualElement name="IndPlay" class="nav-indicator-bar" />
+                <ui:Image class="nav-tab-icon icon-play" />
+                <ui:Label text="PLAY" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+            <ui:Button name="NavOperators" class="nav-tab-button">
+                <ui:VisualElement name="IndOperators" class="nav-indicator-bar" style="display: none;" />
+                <ui:Image class="nav-tab-icon icon-operators" />
+                <ui:Label text="OPERATORS" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+            <ui:Button name="NavLoadout" class="nav-tab-button">
+                <ui:VisualElement name="IndLoadout" class="nav-indicator-bar" style="display: none;" />
+                <ui:Image class="nav-tab-icon icon-loadout" />
+                <ui:Label text="LOADOUT" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+            <ui:Button name="NavBattlePass" class="nav-tab-button">
+                <ui:VisualElement name="IndBattlePass" class="nav-indicator-bar" style="display: none;" />
+                <ui:Image class="nav-tab-icon icon-battlepass" />
+                <ui:Label text="BATTLE PASS" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+            <ui:Button name="NavChallenges" class="nav-tab-button">
+                <ui:VisualElement name="IndChallenges" class="nav-indicator-bar" style="display: none;" />
+                <ui:Image class="nav-tab-icon icon-challenges" />
+                <ui:Label text="CHALLENGES" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+            <ui:Button name="NavStore" class="nav-tab-button">
+                <ui:VisualElement name="IndStore" class="nav-indicator-bar" style="display: none;" />
+                <ui:Image class="nav-tab-icon icon-store" />
+                <ui:Label text="STORE" class="nav-tab-label" />
+                <ui:Label text="&gt;" class="nav-tab-chevron" />
+            </ui:Button>
+
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION C: FLOATING OPERATOR TAG                              -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="FloatingTag" class="floating-op-tag">
+            <ui:Label text="R" class="tag-logo-r" />
+            <ui:Label name="FloatingOpName" text="MIL-R5 GHOST" class="tag-name" />
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION D: LOWER-LEFT GAME MODE PANEL                         -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="GameModePanel" class="gamemode-panel">
+            <ui:VisualElement class="corner-detail-tl" />
+            <ui:VisualElement class="corner-detail-tr" />
+
+            <!-- Train Preview Banner -->
+            <ui:VisualElement name="TrainBanner" class="train-banner-preview">
+                <ui:VisualElement class="live-badge">
+                    <ui:Label text="BATTLE ROYALE" class="live-badge-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Mode Title & Subtitle -->
+            <ui:Label name="ModeTitle" text="RAILBOUND ROYALE" class="mode-title" />
+            <ui:Label name="ModeSubtitle" text="SQUAD DEPLOYMENT" class="mode-subtitle" />
+
+            <!-- Metadata Row -->
+            <ui:VisualElement class="metadata-row">
+                <ui:VisualElement class="tag-badge">
+                    <ui:Label text="30 PLAYERS" class="tag-badge-text" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tag-badge">
+                    <ui:Image class="tag-pin-icon" />
+                    <ui:Label text="IRONLINE VALLEY" class="tag-badge-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Fill Squad Toggle -->
+            <ui:VisualElement class="fill-squad-row">
+                <ui:Label text="FILL SQUAD" class="fill-squad-label" />
+                <ui:Button name="BtnFillSquadToggle" class="toggle-switch-btn">
+                    <ui:VisualElement name="FillSquadKnob" class="toggle-knob" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Tactical Deploy Button -->
+            <ui:Button name="BtnDeploy" class="btn-deploy-tactical">
+                <ui:Image class="deploy-icon-triangle" />
+                <ui:Label name="DeployLabel" text="DEPLOY [SPACE]" class="deploy-label-text" />
+            </ui:Button>
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION E: RIGHT-SIDE SQUAD PANEL                             -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="SquadPanel" class="squad-panel">
+            <ui:VisualElement class="corner-detail-tl" />
+
+            <!-- Squad Header -->
+            <ui:VisualElement class="squad-header-row">
+                <ui:Label text="SQUAD" class="squad-title" />
+                <ui:Label name="SquadCountText" text="3 / 4 PLAYERS" class="squad-count" />
+            </ui:VisualElement>
+            <ui:VisualElement class="squad-divider" />
+
+            <!-- Row 1: Local Player (Leader, Ready) -->
+            <ui:VisualElement name="SquadRow0" class="squad-row-card squad-row-local">
+                <ui:VisualElement class="squad-avatar-box">
+                    <ui:Image name="SquadAvatar0" class="squad-avatar-img" style="background-image: url('project://database/Assets/Project/Resources/UI/YellowHUD/Avatar_Squad_1.png');" />
+                </ui:VisualElement>
+                <ui:VisualElement class="squad-player-meta">
+                    <ui:VisualElement class="squad-nick-row">
+                        <ui:Image class="crown-icon" />
+                        <ui:Label name="SquadNick0" text="KUSHAN" class="squad-nickname" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="squad-sub-row">
+                        <ui:Label name="SquadLevel0" text="LVL. Inexpert" class="squad-level-text" />
+                        <ui:Image class="squad-mic-icon mic-active" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="status-badge-ready">
+                    <ui:Image class="badge-icon-check" />
+                    <ui:Label text="READY" class="badge-text-ready" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Row 2: Teammate 1 (Ready) -->
+            <ui:VisualElement name="SquadRow1" class="squad-row-card">
+                <ui:VisualElement class="squad-avatar-box">
+                    <ui:Image name="SquadAvatar1" class="squad-avatar-img" style="background-image: url('project://database/Assets/Project/Resources/UI/YellowHUD/Avatar_Squad_2.png');" />
+                </ui:VisualElement>
+                <ui:VisualElement class="squad-player-meta">
+                    <ui:VisualElement class="squad-nick-row">
+                        <ui:Label name="SquadNick1" text="VEX_TACTICAL" class="squad-nickname" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="squad-sub-row">
+                        <ui:Label name="SquadLevel1" text="LVL. 48" class="squad-level-text" />
+                        <ui:Image class="squad-mic-icon" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="status-badge-ready">
+                    <ui:Image class="badge-icon-check" />
+                    <ui:Label text="READY" class="badge-text-ready" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Row 3: Teammate 2 (Not Ready) -->
+            <ui:VisualElement name="SquadRow2" class="squad-row-card">
+                <ui:VisualElement class="squad-avatar-box">
+                    <ui:Image name="SquadAvatar2" class="squad-avatar-img" style="background-image: url('project://database/Assets/Project/Resources/UI/YellowHUD/Avatar_Squad_3.png');" />
+                </ui:VisualElement>
+                <ui:VisualElement class="squad-player-meta">
+                    <ui:VisualElement class="squad-nick-row">
+                        <ui:Label name="SquadNick2" text="NOOB_SHENKY" class="squad-nickname" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="squad-sub-row">
+                        <ui:Label name="SquadLevel2" text="LVL. 3" class="squad-level-text" />
+                        <ui:Image class="squad-mic-icon" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="status-badge-notready">
+                    <ui:Image class="badge-icon-close" />
+                    <ui:Label text="NOT READY" class="badge-text-notready" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Row 4: Invite Player Action Slot -->
+            <ui:Button name="BtnInvitePlayer" class="btn-invite-slot">
+                <ui:Image class="invite-plus-icon" />
+                <ui:Label text="INVITE PLAYER" class="invite-text" />
+            </ui:Button>
+
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION F: LOWER-RIGHT SEASON PROMO                           -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="SeasonPromo" class="season-promo-panel">
+            <ui:VisualElement class="corner-detail-tl" />
+            <ui:VisualElement class="season-promo-banner" />
+            <ui:VisualElement class="promo-title-row">
+                <ui:VisualElement>
+                    <ui:Label text="NEW SEASON" class="promo-title" />
+                    <ui:Label text="BATTLE PASS REWARDS" class="promo-sub" />
+                </ui:VisualElement>
+                <ui:Label text="&gt;" class="promo-arrow" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION G: BOTTOM EMOTES BAR                                  -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="BottomEmotes" class="bottom-emotes-bar">
+            <ui:Button name="BtnEmoteSalute" class="btn-emote">
+                <ui:Label text="[1] SALUTE" class="btn-emote-label" />
+            </ui:Button>
+            <ui:Button name="BtnEmoteGreet" class="btn-emote">
+                <ui:Label text="[2] GREET" class="btn-emote-label" />
+            </ui:Button>
+            <ui:Button name="BtnEmoteFlex" class="btn-emote">
+                <ui:Label text="[3] FLEX" class="btn-emote-label" />
+            </ui:Button>
+            <ui:Button name="BtnEmoteVictory" class="btn-emote">
+                <ui:Label text="[4] VICTORY" class="btn-emote-label" />
+            </ui:Button>
+        </ui:VisualElement>
+
+        <!-- ============================================================ -->
+        <!-- REGION H: BOTTOM FOOTER                                      -->
+        <!-- ============================================================ -->
+        <ui:VisualElement name="BottomFooter" class="bottom-footer">
+            
+            <ui:VisualElement class="footer-keybinds">
+                <ui:VisualElement class="keybind-item">
+                    <ui:VisualElement class="keybind-box"><ui:Label text="F1" class="keybind-key-text" /></ui:VisualElement>
+                    <ui:Label text="SOCIAL" class="keybind-action-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="keybind-item">
+                    <ui:VisualElement class="keybind-box"><ui:Label text="TAB" class="keybind-key-text" /></ui:VisualElement>
+                    <ui:Label text="MENU" class="keybind-action-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="keybind-item">
+                    <ui:VisualElement class="keybind-box"><ui:Label text="ESC" class="keybind-key-text" /></ui:VisualElement>
+                    <ui:Label text="BACK" class="keybind-action-text" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="keybind-item">
+                    <ui:VisualElement class="keybind-box"><ui:Label text="SPACE" class="keybind-key-text" /></ui:VisualElement>
+                    <ui:Label text="DEPLOY" class="keybind-action-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label name="FooterTelemetry" text="DATACENTER: SINGAPORE   |   PING: 42ms   |   v1.0.6" class="footer-telemetry" />
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

@@ -64,17 +64,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\TrueShadowEditor.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\SpreadSliderDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\EditorProperty.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\Utility.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InsetToggle.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ProjectSettingsEditor.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\AutoCustomScriptingDefine.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\SpreadSliderDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\PrefabEventHandler.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\KnobPropertyDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InlineToolbar.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\TrueShadowCustomMaterialEditor.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ScenceGizmoAutoDisable.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InsetToggle.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ProjectSettingsEditor.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\AutoCustomScriptingDefine.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\LeTai.TrueShadow.Editor.asmdef" />
@@ -456,6 +456,10 @@
       <HintPath>Assets\Plugins\Demigiant\DemiLib\Core\Editor\DemiEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.IO.Abstractions">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\System.IO.Abstractions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.YamlDotNet">
       <HintPath>Library\PackageCache\com.unity.visualscripting@1.8.0\Editor\VisualScripting.Core\Dependencies\YamlDotNet\Unity.VisualScripting.YamlDotNet.dll</HintPath>
       <Private>False</Private>
@@ -465,7 +469,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">
@@ -504,6 +508,10 @@
       <HintPath>Assets\Plugins\Demigiant\DOTween\Editor\DOTweenEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Interactive.Async">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\ProtoBuffer\System.Interactive.Async.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.Plastic.Newtonsoft.Json">
       <HintPath>Library\PackageCache\com.unity.collab-proxy@2.2.0\Lib\Editor\PlasticSCM\Unity.Plastic.Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
@@ -528,8 +536,16 @@
       <HintPath>Library\PackageCache\com.unity.visualscripting@1.8.0\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Google.Protobuf">
+      <HintPath>Library\PackageCache\com.unity.barracuda@3.0.0\Barracuda\Runtime\Plugins\ProtoBuffer\Google.Protobuf.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="DOTweenPro">
       <HintPath>Assets\Plugins\Demigiant\DOTweenPro\DOTweenPro.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Grpc.Core">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\ProtoBuffer\Grpc.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
@@ -542,6 +558,10 @@
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@1.11.4\Mono.Cecil.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.IO.Abstractions.TestingHelpers">
+      <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.2\Plugins\System.IO.Abstractions.TestingHelpers.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Analytics.StandardEvents">
