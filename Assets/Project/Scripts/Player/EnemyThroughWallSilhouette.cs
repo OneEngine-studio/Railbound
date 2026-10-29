@@ -2,36 +2,41 @@ using System.Collections;
 using System.Collections.Generic;
 using JUTPS;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Railbound.Gameplay
 {
     /// <summary>
     /// Spawns and manages through-wall holographic X-Ray silhouettes on enemies
-    /// when revealed by the Sonar Scan. Allows seeing enemies through walls,
-    /// obstacles, buildings, and terrain like AAA tactical games.
+    /// when revealed by the Sonar Scan.
     /// </summary>
+    [RequireComponent(typeof(JUHealth))]
     public class EnemyThroughWallSilhouette : MonoBehaviour
     {
         [Header("XRay Settings")]
-        public Color silhouetteColor = new Color(1.0f, 0.12f, 0.22f, 1.0f); // Hostile Neon Red
+        public Color silhouetteColor = new Color(1.0f, 0.12f, 0.22f, 1.0f);
         public Color rimColor = new Color(1.0f, 0.45f, 0.55f, 1.0f);
         public float emissionIntensity = 3.6f;
 
         private Material _xrayMaterial;
         private readonly List<GameObject> _overlayObjects = new List<GameObject>();
-        private readonly List<Material> _clonedMaterials = new List<Material>();
+        private readonly List<Renderer> _overlayRenderers = new List<Renderer>();
+        private MaterialPropertyBlock _propertyBlock;
 
         private float _endTime;
         private float _fadeDuration = 0.8f;
         private Coroutine _activeRoutine;
         private JUHealth _health;
 
+        private static readonly int ColorProperty = Shader.PropertyToID("_Color");
+        private static readonly int RimColorProperty = Shader.PropertyToID("_RimColor");
+        private static readonly int EmissionProperty = Shader.PropertyToID("_EmissionIntensity");
+
         public static void RevealEnemy(GameObject enemy, float duration = 10f, Color? customColor = null)
         {
             if (enemy == null) return;
 
-            var silhouette = enemy.GetComponent<EnemyThroughWallSilhouette>();
-            if (silhouette == null)
+            if (!enemy.TryGetComponent<EnemyThroughWallSilhouette>(out var silhouette))
             {
                 silhouette = enemy.AddComponent<EnemyThroughWallSilhouette>();
             }
@@ -47,6 +52,7 @@ namespace Railbound.Gameplay
         private void Awake()
         {
             _health = GetComponent<JUHealth>();
+            _propertyBlock = new MaterialPropertyBlock();
 
             Shader shader = Shader.Find("Railbound/URP_EnemyThroughWallXRay");
             if (shader == null)
@@ -58,9 +64,6 @@ namespace Railbound.Gameplay
             {
                 name = "EnemyThroughWall_RuntimeMat"
             };
-            _xrayMaterial.SetColor("_Color", silhouetteColor);
-            _xrayMaterial.SetColor("_RimColor", rimColor);
-            _xrayMaterial.SetFloat("_EmissionIntensity", emissionIntensity);
         }
 
         public void StartReveal(float duration)
@@ -73,89 +76,76 @@ namespace Railbound.Gameplay
             }
 
             if (_activeRoutine != null) StopCoroutine(_activeRoutine);
-            _activeRoutine = StartCoroutine(RevealRoutine(duration));
+            _activeRoutine = StartCoroutine(RevealRoutine());
         }
 
         private void BuildOverlays()
         {
             CleanupOverlays();
 
-            // 1. Skinned Mesh Renderers (Body, Arms, Torso, Head)
+            // Process Skinned Mesh Renderers
             var skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
             foreach (var smr in skinnedRenderers)
             {
-                if (smr == null || smr.sharedMesh == null) continue;
-                if (smr.name.Contains("XRay")) continue;
+                if (smr == null || smr.sharedMesh == null || smr.name.Contains("XRay")) continue;
 
-                var overlayGO = new GameObject($"XRay_{smr.name}");
-                overlayGO.transform.SetParent(smr.transform, false);
-                overlayGO.transform.localPosition = Vector3.zero;
-                overlayGO.transform.localRotation = Quaternion.identity;
-                overlayGO.transform.localScale = Vector3.one;
-
+                var overlayGO = CreateOverlayObject(smr.name, smr.transform);
                 var cloneSMR = overlayGO.AddComponent<SkinnedMeshRenderer>();
+                
                 cloneSMR.sharedMesh = smr.sharedMesh;
                 cloneSMR.bones = smr.bones;
                 cloneSMR.rootBone = smr.rootBone;
                 cloneSMR.updateWhenOffscreen = true;
-                cloneSMR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                cloneSMR.receiveShadows = false;
-
-                int subMeshCount = Mathf.Max(1, smr.sharedMesh.subMeshCount);
-                Material[] mats = new Material[subMeshCount];
-                for (int i = 0; i < subMeshCount; i++)
-                {
-                    var matInstance = new Material(_xrayMaterial);
-                    _clonedMaterials.Add(matInstance);
-                    mats[i] = matInstance;
-                }
-                cloneSMR.materials = mats;
-
-                _overlayObjects.Add(overlayGO);
+                
+                SetupRenderer(cloneSMR, smr.sharedMesh.subMeshCount);
             }
 
-            // 2. Mesh Renderers (Weapons, Guns, Props)
+            // Process Mesh Renderers
             var meshRenderers = GetComponentsInChildren<MeshRenderer>();
             foreach (var mr in meshRenderers)
             {
-                if (mr == null) continue;
-                if (mr.name.Contains("XRay") || mr.name.Contains("Particle") || mr.name.Contains("Trail")) continue;
+                if (mr == null || mr.name.Contains("XRay") || mr.name.Contains("Particle")) continue;
+                if (!mr.TryGetComponent<MeshFilter>(out var mf) || mf.sharedMesh == null) continue;
 
-                var mf = mr.GetComponent<MeshFilter>();
-                if (mf == null || mf.sharedMesh == null) continue;
-
-                var overlayGO = new GameObject($"XRay_{mr.name}");
-                overlayGO.transform.SetParent(mr.transform, false);
-                overlayGO.transform.localPosition = Vector3.zero;
-                overlayGO.transform.localRotation = Quaternion.identity;
-                overlayGO.transform.localScale = Vector3.one;
-
+                var overlayGO = CreateOverlayObject(mr.name, mr.transform);
+                
                 var cloneMF = overlayGO.AddComponent<MeshFilter>();
                 cloneMF.sharedMesh = mf.sharedMesh;
 
                 var cloneMR = overlayGO.AddComponent<MeshRenderer>();
-                cloneMR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                cloneMR.receiveShadows = false;
-
-                int subMeshCount = Mathf.Max(1, mf.sharedMesh.subMeshCount);
-                Material[] mats = new Material[subMeshCount];
-                for (int i = 0; i < subMeshCount; i++)
-                {
-                    var matInstance = new Material(_xrayMaterial);
-                    _clonedMaterials.Add(matInstance);
-                    mats[i] = matInstance;
-                }
-                cloneMR.materials = mats;
-
-                _overlayObjects.Add(overlayGO);
+                SetupRenderer(cloneMR, mf.sharedMesh.subMeshCount);
             }
         }
 
-        private IEnumerator RevealRoutine(float duration)
+        private GameObject CreateOverlayObject(string originalName, Transform parent)
         {
-            // Rapid fade in
+            var overlayGO = new GameObject($"XRay_{originalName}");
+            overlayGO.transform.SetParent(parent, false);
+            overlayGO.transform.localPosition = Vector3.zero;
+            overlayGO.transform.localRotation = Quaternion.identity;
+            overlayGO.transform.localScale = Vector3.one;
+            _overlayObjects.Add(overlayGO);
+            return overlayGO;
+        }
+
+        private void SetupRenderer(Renderer renderer, int subMeshCount)
+        {
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            int count = Mathf.Max(1, subMeshCount);
+            Material[] mats = new Material[count];
+            for (int i = 0; i < count; i++) mats[i] = _xrayMaterial;
+            
+            renderer.materials = mats;
+            _overlayRenderers.Add(renderer);
+        }
+
+        private IEnumerator RevealRoutine()
+        {
             float fadeInTime = 0.15f;
             float t = 0f;
+
             while (t < fadeInTime)
             {
                 t += Time.deltaTime;
@@ -164,24 +154,17 @@ namespace Railbound.Gameplay
             }
             SetAlphaMultiplier(1f);
 
-            // Wait until near end
             while (Time.time < _endTime - _fadeDuration)
             {
-                if (_health != null && _health.IsDead)
-                {
-                    // If enemy dies while revealed, dissolve immediately
-                    break;
-                }
+                if (_health != null && _health.IsDead) break;
                 yield return null;
             }
 
-            // Smooth fade out
             t = 0f;
             while (t < _fadeDuration)
             {
                 t += Time.deltaTime;
-                float alpha = 1f - Mathf.Clamp01(t / _fadeDuration);
-                SetAlphaMultiplier(alpha);
+                SetAlphaMultiplier(1f - Mathf.Clamp01(t / _fadeDuration));
                 yield return null;
             }
 
@@ -193,13 +176,14 @@ namespace Railbound.Gameplay
         {
             Color curCol = silhouetteColor;
             curCol.a = alpha;
-            foreach (var m in _clonedMaterials)
+
+            _propertyBlock.SetColor(ColorProperty, curCol);
+            _propertyBlock.SetColor(RimColorProperty, rimColor);
+            _propertyBlock.SetFloat(EmissionProperty, emissionIntensity * alpha);
+
+            foreach (var r in _overlayRenderers)
             {
-                if (m != null)
-                {
-                    m.SetColor("_Color", curCol);
-                    m.SetFloat("_EmissionIntensity", emissionIntensity * alpha);
-                }
+                if (r != null) r.SetPropertyBlock(_propertyBlock);
             }
         }
 
@@ -210,12 +194,7 @@ namespace Railbound.Gameplay
                 if (go != null) Destroy(go);
             }
             _overlayObjects.Clear();
-
-            foreach (var m in _clonedMaterials)
-            {
-                if (m != null) Destroy(m);
-            }
-            _clonedMaterials.Clear();
+            _overlayRenderers.Clear();
         }
 
         private void OnDestroy()
@@ -225,4 +204,3 @@ namespace Railbound.Gameplay
         }
     }
 }
-
