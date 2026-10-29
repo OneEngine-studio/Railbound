@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6b0bf36978514f26875da9968ef781b0
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 226420
+  packageName: Simple Mini Map
+  packageVersion: 1.1.0
+  assetPath: Assets/UnitySimpleMiniMap/CHANGELOG.md
+  uploadId: 1000574

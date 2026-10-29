@@ -39,7 +39,7 @@ namespace Project.AI.RL
         [Header("RL Agent Identity & Role")]
         public CombatRole Role = CombatRole.RangedTactical;
         public int TeamId = 1;
-        public string[] TargetTags = new string[] { "Player" };
+        public string[] TargetTags = new string[] { "Player", "Enemy" };
         public LayerMask VisibilityLayerMask = ~0;
 
         [Header("Dynamic Weights & Evolved Profile")]
@@ -134,8 +134,17 @@ namespace Project.AI.RL
         GameObject IAISoundListener.ListenerGameObject => gameObject;
         float IAISoundListener.HearingSensitivityMultiplier => runtimeProfile != null ? runtimeProfile.HearingSensitivity : 1.0f;
 
+        private void EnsureTargetTags()
+        {
+            if (TargetTags == null || TargetTags.Length == 0 || !System.Array.Exists(TargetTags, t => t == "Enemy") || !System.Array.Exists(TargetTags, t => t == "Player"))
+            {
+                TargetTags = new string[] { "Player", "Enemy" };
+            }
+        }
+
         private void Awake()
         {
+            EnsureTargetTags();
             // Remove any duplicate base Unity.MLAgents.Agent components that Unity's RequireComponent
             // may have auto-added before JUCharacterRLAgent, so DecisionRequester always binds to this Agent.
             Agent[] allAgents = GetComponents<Agent>();
@@ -155,6 +164,7 @@ namespace Project.AI.RL
         protected override void OnEnable()
         {
             base.OnEnable();
+            EnsureTargetTags();
             AISoundSensorySystem.RegisterListener(this);
         }
 
@@ -259,6 +269,7 @@ namespace Project.AI.RL
 
         public override void OnEpisodeBegin()
         {
+            EnsureTargetTags();
             ConfigureCharacterAsAI();
 
             CurrentEpisodeReward = 0f;
@@ -321,27 +332,30 @@ namespace Project.AI.RL
         /// </summary>
         public void OnSoundHeard(SoundStimulus stimulus, Vector3 perceivedDirection, float perceivedDistance)
         {
-            if (stimulus.Instigator == gameObject || (selfHealth != null && selfHealth.IsDead))
+            if (stimulus.Instigator == null || stimulus.Instigator == gameObject || stimulus.Instigator.transform.IsChildOf(transform) || transform.IsChildOf(stimulus.Instigator.transform) || (selfHealth != null && selfHealth.IsDead))
             {
                 return;
             }
 
-            // Only react to non-allied tags (e.g. Player)
+            EnsureTargetTags();
+
+            // Only react to non-allied tags (e.g. Player, Enemy)
             bool isEnemy = false;
-            if (stimulus.Instigator != null)
+            foreach (string tag in TargetTags)
             {
-                foreach (string tag in TargetTags)
+                if (stimulus.Instigator.CompareTag(tag))
                 {
-                    if (stimulus.Instigator.CompareTag(tag))
-                    {
-                        isEnemy = true;
-                        break;
-                    }
+                    isEnemy = true;
+                    break;
                 }
             }
-            else
+            if (!isEnemy)
             {
-                isEnemy = true;
+                var h = stimulus.Instigator.GetComponentInParent<JUHealth>();
+                if (h != null && (h.CompareTag("Player") || h.CompareTag("Enemy")))
+                {
+                    isEnemy = true;
+                }
             }
 
             if (!isEnemy) return;
@@ -387,6 +401,11 @@ namespace Project.AI.RL
             else if (matchTracker != null)
             {
                 matchTracker.RecordThreatInvestigated();
+            }
+
+            if (currentTarget == null || !hasTargetLineOfSight)
+            {
+                AcquireBestTarget();
             }
         }
 
@@ -1118,10 +1137,13 @@ namespace Project.AI.RL
 
         private void AcquireBestTarget()
         {
-            float bestDist = float.MaxValue;
+            float bestScore = float.MaxValue;
             Transform bestTransform = null;
             JUHealth bestHealth = null;
             JUCharacterBrain bestBrain = null;
+
+            EnsureTargetTags();
+            Vector3 eyePos = transform.position + Vector3.up * (AimUpOffset + 0.35f);
 
             foreach (string tag in TargetTags)
             {
@@ -1130,18 +1152,33 @@ namespace Project.AI.RL
                 for (int i = 0; i < candidates.Length; i++)
                 {
                     GameObject candidate = candidates[i];
-                    if (candidate == null || candidate == gameObject) continue;
+                    if (candidate == null || candidate == gameObject || candidate.transform.IsChildOf(transform) || transform.IsChildOf(candidate.transform)) continue;
 
-                    JUHealth h = candidate.GetComponent<JUHealth>();
+                    JUHealth h = candidate.GetComponent<JUHealth>() ?? candidate.GetComponentInParent<JUHealth>();
                     if (h != null && h.IsDead) continue;
 
-                    float d = Vector3.Distance(transform.position, candidate.transform.position);
-                    if (d < bestDist)
+                    float dist = Vector3.Distance(transform.position, candidate.transform.position);
+                    if (dist > DetectionRadius * 1.5f && dist > 120f) continue;
+
+                    Vector3 candEye = candidate.transform.position + Vector3.up * AimUpOffset;
+                    Vector3 toCand = candEye - eyePos;
+                    bool hasLos = false;
+                    if (!Physics.Raycast(eyePos, toCand.normalized, out RaycastHit hit, toCand.magnitude, VisibilityLayerMask, QueryTriggerInteraction.Ignore))
                     {
-                        bestDist = d;
+                        hasLos = true;
+                    }
+                    else if (hit.transform == candidate.transform || hit.transform.IsChildOf(candidate.transform) || candidate.transform.IsChildOf(hit.transform))
+                    {
+                        hasLos = true;
+                    }
+
+                    float score = hasLos ? (dist * 0.35f) : dist;
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
                         bestTransform = candidate.transform;
                         bestHealth = h;
-                        bestBrain = candidate.GetComponent<JUCharacterBrain>();
+                        bestBrain = candidate.GetComponent<JUCharacterBrain>() ?? candidate.GetComponentInParent<JUCharacterBrain>();
                     }
                 }
             }
@@ -1234,6 +1271,10 @@ namespace Project.AI.RL
                     float dmgTaken = prevSelfHealth - currentHp;
                     LastDamageTaken += dmgTaken;
                     ProvideReward(-0.03f * dmgTaken);
+                    if (currentTarget == null || !hasTargetLineOfSight)
+                    {
+                        AcquireBestTarget();
+                    }
                 }
                 prevSelfHealth = currentHp;
 
@@ -1260,10 +1301,13 @@ namespace Project.AI.RL
                 }
                 prevTargetHealth = targetHp;
 
-                if (currentTargetHealth.IsDead)
+                if (currentTargetHealth.IsDead || targetHp <= 0f)
                 {
                     ProvideReward(2.0f);
                     if (matchTracker != null) matchTracker.RecordKill();
+                    currentTarget = null;
+                    currentTargetHealth = null;
+                    currentTargetBrain = null;
                     AcquireBestTarget();
                 }
             }

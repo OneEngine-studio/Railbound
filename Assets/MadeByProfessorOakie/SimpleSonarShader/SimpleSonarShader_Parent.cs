@@ -1,4 +1,4 @@
-﻿// SimpleSonarShader scripts and shaders were written by Drew Okenfuss.
+// SimpleSonarShader scripts and shaders were written by Drew Okenfuss.
 
 using System.Collections;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class SimpleSonarShader_Parent : MonoBehaviour
 {
+    public static SimpleSonarShader_Parent Instance { get; private set; }
 
     // All the renderers that will have the sonar data sent to their shaders.
     private Renderer[] ObjectRenderers;
@@ -14,7 +15,7 @@ public class SimpleSonarShader_Parent : MonoBehaviour
     private static readonly Vector4 GarbagePosition = new Vector4(-5000, -5000, -5000, -5000);
 
     // The number of rings that can be rendered at once.
-    // Must be the samve value as the array size in the shader.
+    // Must be the same value as the array size in the shader.
     private static int QueueSize = 20;
 
     // Queue of start positions of sonar rings.
@@ -26,6 +27,10 @@ public class SimpleSonarShader_Parent : MonoBehaviour
     // These are kept in the same order as the positionsQueue.
     private Queue<float> intensityQueue = new Queue<float>(QueueSize);
 
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -47,21 +52,31 @@ public class SimpleSonarShader_Parent : MonoBehaviour
     {
         // Put values into the queue
         position.w = Time.timeSinceLevelLoad;
-        positionsQueue.Dequeue();
+        if (positionsQueue.Count >= QueueSize)
+        {
+            positionsQueue.Dequeue();
+        }
         positionsQueue.Enqueue(position);
 
-        intensityQueue.Dequeue();
+        if (intensityQueue.Count >= QueueSize)
+        {
+            intensityQueue.Dequeue();
+        }
         intensityQueue.Enqueue(intensity);
 
         // Send updated queues to the shaders
+        if (ObjectRenderers == null || ObjectRenderers.Length == 0)
+        {
+            ObjectRenderers = GetComponentsInChildren<Renderer>();
+        }
+
         foreach (Renderer r in ObjectRenderers)
         {
-            if (r)
+            if (r != null)
             {
                 r.material.SetVectorArray("_hitPts", positionsQueue.ToArray());
                 r.material.SetFloatArray("_Intensity", intensityQueue.ToArray());
             }
         }
     }
-
 }

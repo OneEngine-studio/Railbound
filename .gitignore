@@ -14,3 +14,25 @@ Thumbs.db
 
 # Visual Studio cache
 /.vs/
+
+# Visual Studio / Rider / MonoDevelop generated projects
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Heavy demo assets not part of core project
+Assets/TerrainDemoScene_HDRP/
+Assets/TerrainDemoScene_HDRP.meta

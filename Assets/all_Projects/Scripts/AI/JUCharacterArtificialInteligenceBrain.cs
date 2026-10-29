@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -32,7 +32,8 @@ namespace JUTPS.AI
 
                 Vector3 directionToTarget = (targetposition - position).normalized;
 
-                if (Vector3.Angle(forward, directionToTarget) > Angle / 2 || col.gameObject == viewerToIgnore)
+                bool isSelf = viewerToIgnore != null && (col.gameObject == viewerToIgnore || col.transform.IsChildOf(viewerToIgnore.transform) || viewerToIgnore.transform.IsChildOf(col.transform));
+                if (Vector3.Angle(forward, directionToTarget) > Angle / 2 || isSelf)
                 {
                     colliders.Remove(col);
                 }
@@ -64,17 +65,30 @@ namespace JUTPS.AI
                 {
                     //float distanceToEndPoint = Vector3.Distance(hit.point, lineCastEndPosition);
 
-                    //CAN see the target
-                    if (JUCharacterArtificialInteligenceBrain.TagMatches(hit.collider.tag, TagsToConsiderVisible) == false)
+                    //CAN see target if hit target root/bone or matching tag
+                    bool isTargetPart = LookedTarget != null && (hit.collider.transform == LookedTarget || hit.collider.transform.IsChildOf(LookedTarget) || LookedTarget.IsChildOf(hit.collider.transform));
+                    string hitTag = hit.collider.tag;
+                    if (hit.collider.CompareTag("Untagged"))
                     {
-                        //Debug.Log(distanceToEndPoint);
-                        Debug.DrawLine(hit.point, ViewPosition, Color.cyan);
+                        var cb = hit.collider.GetComponentInParent<CharacterBrain.JUCharacterBrain>();
+                        if (cb != null) hitTag = cb.tag;
+                        else
+                        {
+                            var h = hit.collider.GetComponentInParent<JUHealth>();
+                            if (h != null) hitTag = h.tag;
+                            else hitTag = hit.collider.transform.root.tag;
+                        }
+                    }
+                    bool tagMatch = JUCharacterArtificialInteligenceBrain.TagMatches(hitTag, TagsToConsiderVisible);
 
-                        CanSeeTarget = false;
+                    if (isTargetPart || tagMatch)
+                    {
+                        CanSeeTarget = true;
                     }
                     else
                     {
-                        CanSeeTarget = true;
+                        Debug.DrawLine(hit.point, ViewPosition, Color.cyan);
+                        CanSeeTarget = false;
                     }
                 }
 
@@ -366,26 +380,44 @@ namespace JUTPS.AI
 
             foreach (Collider col in targets)
             {
-                if (TagMatches(col.tag, allowedTags))
+                if (col == null) continue;
+                string colTag = col.tag;
+                if (col.CompareTag("Untagged"))
                 {
-                    if (col.TryGetComponent(out JUHealth health))
+                    var cb = col.GetComponentInParent<CharacterBrain.JUCharacterBrain>();
+                    if (cb != null) colTag = cb.tag;
+                    else
+                    {
+                        var h = col.GetComponentInParent<JUHealth>();
+                        if (h != null) colTag = h.tag;
+                        else colTag = col.transform.root.tag;
+                    }
+                }
+                if (TagMatches(colTag, allowedTags))
+                {
+                    JUHealth health = col.GetComponentInParent<JUHealth>();
+                    if (health != null)
                     {
                         if (health.Health > 0 && health.IsDead == false)
                         {
-                            aliveTargets.Add(health.transform);
-                        }
-                        else
-                        {
-                            aliveTargets.Remove(health.transform);
+                            if (!aliveTargets.Contains(health.transform))
+                            {
+                                aliveTargets.Add(health.transform);
+                            }
                         }
                     }
                     else
                     {
-                        target = col.transform;
+                        var cbTarget = col.GetComponentInParent<CharacterBrain.JUCharacterBrain>();
+                        Transform charTr = cbTarget != null ? cbTarget.transform : col.transform.root;
+                        if (!aliveTargets.Contains(charTr))
+                        {
+                            aliveTargets.Add(charTr);
+                        }
                     }
                 }
             }
-            if(aliveTargets.Count > 0)
+            if (aliveTargets.Count > 0)
             {
                 target = aliveTargets[0];
             }

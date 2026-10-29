@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6ddbc21a930e4ccd97ceb14bec92268a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 226420
+  packageName: Simple Mini Map
+  packageVersion: 1.1.0
+  assetPath: Assets/UnitySimpleMiniMap/Runtime/MiniMapMath.cs
+  uploadId: 1000574
