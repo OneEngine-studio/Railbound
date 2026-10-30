@@ -8012,6 +8012,7 @@ GameObject:
   - component: {fileID: 668999647}
   - component: {fileID: 668999648}
   - component: {fileID: 7719652078972149915}
+  - component: {fileID: 2239489582921705219}
   m_Layer: 9
   m_Name: TPS Character
   m_TagString: Player
@@ -8497,11 +8498,11 @@ MonoBehaviour:
   AdvancedMode: 1
   GroundLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 67585
   RaycastMaxDistance: 2
   RaycastHeight: 1
-  FootHeight: 0.1
-  MaxStepHeight: 0.6
+  FootHeight: 0.08
+  MaxStepHeight: 0.4
   UseDynamicFootPlacing: 1
   LeftFootHeightCurveName: LeftFootHeight
   RightFootHeightCurveName: RightFootHeight
@@ -8650,7 +8651,7 @@ MonoBehaviour:
   EnableUngroundedStepUp: 1
   UngroundedStepUpSpeed: 4
   UngroundedStepUpRayDistance: 0.1
-  StoppingTimeOnStepPosition: 0.5
+  StoppingTimeOnStepPosition: 0
   AnimatorParameters:
     _BaseLayerIndex: 0
     _LegsLayerIndex: 1
@@ -8995,6 +8996,12 @@ MonoBehaviour:
   HeightOffset: 0.73
   ProneAndRollCenterY: 0.38
   CenterOffset: {x: 0, y: 0, z: 0}
+  ProneRadius: 0.16
+  ProneCenterY: 0.26
+  ProneCenterZ: -0.05
+  ProneHeight: 1.7
+  RollRadius: 0.35
+  RollCenterY: 0.38
 --- !u!114 &668999647
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9094,6 +9101,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AudioSource: {fileID: 3489979222139667184}
+--- !u!114 &2239489582921705219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4372868026506870464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca07c650beda11468c7294ae144287d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  triggerKey: 105
+  scanRadius: 140
+  scanDuration: 3.8
+  waveSpeed: 40
+  cooldown: 10
+  revealDuration: 14
+  scanWaveColor: {r: 2.8, g: 0.72, b: 0.48, a: 1}
+  audioSource: {fileID: 0}
+  sonarLaunchSfx: {fileID: 8300000, guid: 582181f476c9e3b4d9a63c7d32cc859b, type: 3}
+  enemyAcquiredSfx: {fileID: 0}
+  hudStatusText: {fileID: 0}
+  cooldownFillImage: {fileID: 0}
+  cooldownText: {fileID: 0}
 --- !u!1 &4422377306144402532
 GameObject:
   m_ObjectHideFlags: 0

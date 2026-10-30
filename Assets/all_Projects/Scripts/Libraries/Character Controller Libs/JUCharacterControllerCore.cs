@@ -724,10 +724,21 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDir = transform.forward;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    moveDir = Vector3.ProjectOnPlane(transform.forward, GroundNormal).normalized;
+                }
+
                 var localVelocity = transform.InverseTransformDirection(rb.velocity);
-                rb.velocity = transform.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
-                rb.velocity = rb.velocity;
-                //rb.velocity = transform.forward * SpeedMultiplier * Speed + transform.up * rb.velocity.y;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed;
+                }
+                else
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                }
             }
             else
             {
@@ -738,7 +749,12 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
-                rb.velocity = Movement * SpeedMultiplier * Speed;
+                Vector3 moveDir = Movement;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    moveDir = Vector3.ProjectOnPlane(Movement, GroundNormal).normalized;
+                }
+                rb.velocity = moveDir * SpeedMultiplier * Speed;
             }
             else
             {
@@ -749,8 +765,21 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDir = DirectionMovement.forward;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    moveDir = Vector3.ProjectOnPlane(DirectionMovement.forward, GroundNormal).normalized;
+                }
+
                 var localVelocity = DirectionMovement.InverseTransformDirection(rb.velocity);
-                rb.velocity = DirectionMovement.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed;
+                }
+                else
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                }
             }
             else
             {
@@ -766,9 +795,21 @@ namespace JUTPS.CharacterBrain
         {
             if (SetRigidbodyVelocity)
             {
+                Vector3 moveDir = DirectionTransform.forward;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    moveDir = Vector3.ProjectOnPlane(DirectionTransform.forward, GroundNormal).normalized;
+                }
+
                 var localVelocity = transform.InverseTransformDirection(rb.velocity);
-                rb.velocity = DirectionTransform.forward * SpeedMultiplier * Speed + transform.up * localVelocity.y;
-                //rb.velocity = DirectionTransform.forward * SpeedMultiplier * Speed + transform.up * rb.velocity.y;
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed;
+                }
+                else
+                {
+                    rb.velocity = moveDir * SpeedMultiplier * Speed + transform.up * localVelocity.y;
+                }
             }
             else
             {
@@ -1186,13 +1227,17 @@ namespace JUTPS.CharacterBrain
         {
             if (IsDriving || !CanMove) return;
 
-            if (IsMoving && EnableUngroundedStepUp && IsGrounded == false && LeftFootBone != null && RightFootBone != null && UngroundedStepUpSpeed > 0 && WallAHead == false)
+            // When navigating natural slopes/hills (GroundAngle > 5 and <= MaxWalkableAngle),
+            // bypass stair step-up because the terrain is a smooth continuous incline, not discrete stair curbs!
+            bool isOnNaturalSlope = (GroundAngle > 5f && GroundAngle <= MaxWalkableAngle);
+
+            if (IsMoving && EnableUngroundedStepUp && IsGrounded == false && !isOnNaturalSlope && LeftFootBone != null && RightFootBone != null && UngroundedStepUpSpeed > 0 && WallAHead == false)
             {
                 // Step detection
                 if (Physics.SphereCast(transform.position + transform.up * FootstepHeight + transform.forward * ForwardStepOffset, ((CapsuleCollider)coll).radius / 2, -transform.up, out FootStepHit, UngroundedStepUpRayDistance, WhatIsGround, QueryTriggerInteraction.Ignore) && GoToStepPosition == false) { if (FootStepHit.point.y > GroundPoint.y + StepHeight && FootStepHit.point.y > transform.position.y + StepHeight && Vector3.Angle(transform.up, FootStepHit.normal) < 10) { StepPosition = FootStepHit.point; GoToStepPosition = true; StartStepUpCharacterPosition = transform.position; } }
             }
 
-            if (IsMoving && EnableStepCorrection && IsGrounded == true && WallAHead == false)
+            if (IsMoving && EnableStepCorrection && IsGrounded == true && !isOnNaturalSlope && WallAHead == false)
             {
                 //Step height Correction
                 if (Physics.Raycast(transform.position + transform.up * FootstepHeight + DirectionTransform.forward * ForwardStepOffset, -Vector3.up, out Step_Hit, FootstepHeight - StepHeight, WhatIsGround, QueryTriggerInteraction.Ignore) && AdjustHeight == false)
@@ -1202,17 +1247,7 @@ namespace JUTPS.CharacterBrain
                         AdjustHeight = true;
                     }
                 }
-                //else
-                //{
-                //Step_Hit.point = transform.position;
-                //AdjustHeight = false;
-                //}
             }
-            //else
-            //{
-            //AdjustHeight = false;
-            //Step_Hit.point = transform.position;
-            //}
 
             if (!AdjustHeight) Step_Hit.point = transform.position;
         }
@@ -1226,7 +1261,6 @@ namespace JUTPS.CharacterBrain
                 if (IsJumping == false)
                 {
                     anim.SetBool(AnimatorParameters.Grounded, true);
-                    anim.SetFloat(AnimatorParameters.LandingIntensity, 1.5f);
                 }
                 if (GoingToStepTime >= (1f + StoppingTimeOnStepPosition) || WallAHead || !IsMoving)
                 {
@@ -1234,7 +1268,7 @@ namespace JUTPS.CharacterBrain
                     GoingToStepTime = 0;
                     StartStepUpCharacterPosition = transform.position;
                 }
-                if (GoingToStepTime < (1f + StoppingTimeOnStepPosition))
+                if (StoppingTimeOnStepPosition > 0 && GoingToStepTime < (1f + StoppingTimeOnStepPosition))
                 {
                     VelocityMultiplier = 0;
                 }
@@ -1246,12 +1280,9 @@ namespace JUTPS.CharacterBrain
             {
                 Vector3 playerStepPosition = transform.position; playerStepPosition.y = Step_Hit.point.y;
 
-                //transform.position = Vector3.Lerp(transform.position, playerStepPosition, 8 * UpStepSpeed * Time.deltaTime);
                 transform.position = Vector3.MoveTowards(transform.position, playerStepPosition, UpStepSpeed * Time.deltaTime);
-                //transform.position += transform.up * (UpStepSpeed / 2 + (UpStepSpeed / 2 * VelocityMultiplier)) * Time.fixedDeltaTime;
-                rb.AddForce(transform.up * rb.mass / 8 * UpStepSpeed, ForceMode.Impulse);
+                // Do not AddForce(Impulse) as it repeatedly launches the player off the ground causing jolts!
                 anim.SetBool(AnimatorParameters.Grounded, true);
-                //rb.AddForce(transform.up * rb.mass * UpStepSpeed / 10, ForceMode.Impulse);
 
                 if (transform.position.y >= playerStepPosition.y - 0.02f || WallAHead || !IsMoving)
                 {

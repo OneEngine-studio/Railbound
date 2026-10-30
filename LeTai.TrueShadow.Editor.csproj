@@ -61,17 +61,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\TrueShadowEditor.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\SpreadSliderDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\EditorProperty.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\Utility.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InsetToggle.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ProjectSettingsEditor.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\AutoCustomScriptingDefine.cs" />
-    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\SpreadSliderDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\PrefabEventHandler.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\KnobPropertyDrawer.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InlineToolbar.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\TrueShadowCustomMaterialEditor.cs" />
     <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ScenceGizmoAutoDisable.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\InsetToggle.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\ProjectSettingsEditor.cs" />
+    <Compile Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\AutoCustomScriptingDefine.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Le Tai&apos;s Asset\TrueShadow\Scripts\Editor\LeTai.TrueShadow.Editor.asmdef" />
@@ -466,7 +466,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">

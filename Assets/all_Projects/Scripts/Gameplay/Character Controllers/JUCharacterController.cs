@@ -859,6 +859,7 @@ namespace JUTPS
             {
                 if (!IsGrounded || IsJumping || IsDriving || IsDead || IsRolling || IsRagdolled || IsProne)
                 {
+                    FootPlacerIK.EnableFootPlacement = false;
                     FootPlacerIK.SmoothIKTransition = false;
                     FootPlacerIK.BlockBodyPositioning = true;
                     FootPlacerIK.EnableDynamicBodyPlacing = false;
@@ -866,6 +867,8 @@ namespace JUTPS
                 else
                 {
                     //Enable Foot Placement
+                    FootPlacerIK.EnableFootPlacement = true;
+                    FootPlacerIK.BlockBodyPositioning = false;
                     FootPlacerIK.SmoothIKTransition = true;
                     if (!IsCrouched)
                     {

@@ -2115,7 +2115,6 @@ GameObject:
   - component: {fileID: 1974077701181762744}
   - component: {fileID: 3969465525426402053}
   - component: {fileID: 7209740168963468336}
-  - component: {fileID: 5406397898507189580}
   - component: {fileID: 4836184821207931912}
   - component: {fileID: 5789790664911481938}
   - component: {fileID: 3314761933800662447}
@@ -2123,6 +2122,7 @@ GameObject:
   - component: {fileID: 7266593619015511479}
   - component: {fileID: 4114985013949348418}
   - component: {fileID: 4948564058772963794}
+  - component: {fileID: 3010651595943123578}
   m_Layer: 9
   m_Name: Patrol AI Sample
   m_TagString: Enemy
@@ -2906,18 +2906,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 5406397898507189580}
-        m_TargetAssemblyTypeName: 
-        m_MethodName: InstantiatePrefab
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
   IsDead: 0
 --- !u!208 &650807097
 NavMeshObstacle:
@@ -3073,39 +3061,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SecondsToDestroy: 5
   DestroyOnStart: 0
---- !u!114 &5406397898507189580
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4698248226047294672}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0096f6e233501104390d9b289f66a017, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Prefab: {fileID: 0}
-  StartInstantiateOnAwake: 0
-  TimeToSpawn: 2
-  Repeat: 0
-  RepeatingTime: 1
-  InstanceLifeTime: 15
-  SwitchToRandomInstantiate: 1
-  PrefabsToInstantiate:
-  - {fileID: 6687682940110421504, guid: f0feff2f4bd13aa4c8e09fdee06d883f, type: 3}
-  - {fileID: 3516352575337148050, guid: 07db9bf568242044f9211ec0cd24c092, type: 3}
-  - {fileID: 3516352575337148050, guid: 07db9bf568242044f9211ec0cd24c092, type: 3}
-  - {fileID: 6687682940110421504, guid: f0feff2f4bd13aa4c8e09fdee06d883f, type: 3}
-  SpawnArea: {x: 0, y: 0, z: 0}
-  PositionOffset: {x: 0, y: 0.5, z: 0}
-  RandomRotation: 0
-  Quantity: 1
-  InstancesLimit: 32
-  EmptyInstantiatePorcentage: 30
-  OnInstantiate:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &4836184821207931912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3312,6 +3267,27 @@ MonoBehaviour:
     GunshotsHeard: 0
     SoundThreatsInvestigated: 0
     AverageReactionTimeSeconds: 0
+--- !u!114 &3010651595943123578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4698248226047294672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a98ac2da5c561d41bebe5040ae3073c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dropMode: 0
+  ammoDropChance: 0.5
+  medkitPrefab: {fileID: 6101048664531526246, guid: 8b337522035c9a34194b04f7c8b04bfa,
+    type: 3}
+  ammoBoxPrefab: {fileID: 2329027384387343611, guid: 72d441ea1bd67534e818628ee10eb95b,
+    type: 3}
+  popUpForce: 3.6
+  spreadForce: 1.4
+  randomTorque: 6
 --- !u!1 &4729937517147445236
 GameObject:
   m_ObjectHideFlags: 0
