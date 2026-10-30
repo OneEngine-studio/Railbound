@@ -14,6 +14,7 @@ namespace JUTPS.JUInputSystem
 
 	public class JUInputManager : MonoBehaviour
 	{
+		public const string BINDING_OVERRIDES_KEY = "JU_InputBindingOverrides";
 		private JUTPSInputControlls _inputs;
 
 		public JUTPSInputControlls InputActions
@@ -23,12 +24,39 @@ namespace JUTPS.JUInputSystem
 				if (_inputs == null)
 				{
 					_inputs = new JUTPSInputControlls();
+					LoadSavedBindingOverrides();
 					_inputs.Enable();
 					AddInputUpListeners(InputActions.Player);
 				}
 
 				return _inputs;
 			}
+		}
+
+		public void LoadSavedBindingOverrides()
+		{
+			if (_inputs == null) return;
+			string saved = PlayerPrefs.GetString(BINDING_OVERRIDES_KEY, string.Empty);
+			if (!string.IsNullOrEmpty(saved))
+			{
+				_inputs.asset.LoadBindingOverridesFromJson(saved);
+			}
+		}
+
+		public void SaveCurrentBindingOverrides()
+		{
+			if (_inputs == null) return;
+			string json = _inputs.asset.SaveBindingOverridesAsJson();
+			PlayerPrefs.SetString(BINDING_OVERRIDES_KEY, json);
+			PlayerPrefs.Save();
+		}
+
+		public void ResetAllBindingOverrides()
+		{
+			if (_inputs == null) return;
+			_inputs.asset.RemoveAllBindingOverrides();
+			PlayerPrefs.DeleteKey(BINDING_OVERRIDES_KEY);
+			PlayerPrefs.Save();
 		}
 
 		private bool BlockStandardInputs;

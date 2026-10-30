@@ -43,6 +43,16 @@ namespace Railbound.Gameplay
         public bool IsReady => Time.time >= _lastUsedTime + cooldown;
         public float CooldownRemaining => Mathf.Max(0f, (_lastUsedTime + cooldown) - Time.time);
 
+#if UNITY_EDITOR
+        private void Reset()
+        {
+            if (sonarLaunchSfx == null)
+            {
+                sonarLaunchSfx = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Project/SoundClips/Game_sounds/sonar_sound.mp3");
+            }
+        }
+#endif
+
         private void Start()
         {
             if (audioSource == null)
@@ -58,12 +68,24 @@ namespace Railbound.Gameplay
 
             if (sonarLaunchSfx == null)
             {
-                sonarLaunchSfx = GenerateSubBassPingClip();
+#if UNITY_EDITOR
+                sonarLaunchSfx = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Project/SoundClips/Game_sounds/sonar_sound.mp3");
+#endif
+                if (sonarLaunchSfx == null)
+                {
+                    sonarLaunchSfx = GenerateSubBassPingClip();
+                }
             }
 
             if (enemyAcquiredSfx == null)
             {
                 enemyAcquiredSfx = GenerateAcquiredChirpClip();
+            }
+
+            string savedKey = PlayerPrefs.GetString("Player_Sonar_Key", "");
+            if (!string.IsNullOrEmpty(savedKey) && System.Enum.TryParse<KeyCode>(savedKey, true, out var parsed))
+            {
+                triggerKey = parsed;
             }
 
             CreateOrFindHUD();
@@ -76,7 +98,17 @@ namespace Railbound.Gameplay
 #if ENABLE_INPUT_SYSTEM
             if (!keyPressed && UnityEngine.InputSystem.Keyboard.current != null)
             {
-                keyPressed = UnityEngine.InputSystem.Keyboard.current.iKey.wasPressedThisFrame;
+                try
+                {
+                    var keyControl = UnityEngine.InputSystem.Keyboard.current[triggerKey.ToString().ToLower()] as UnityEngine.InputSystem.Controls.KeyControl;
+                    if (keyControl != null && keyControl.wasPressedThisFrame) keyPressed = true;
+                }
+                catch { }
+
+                if (!keyPressed && triggerKey == KeyCode.I && UnityEngine.InputSystem.Keyboard.current.iKey.wasPressedThisFrame)
+                {
+                    keyPressed = true;
+                }
             }
 #endif
 

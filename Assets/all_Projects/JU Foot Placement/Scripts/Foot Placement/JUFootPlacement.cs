@@ -290,13 +290,14 @@ namespace JUTPS
             }
 
             //>>> Smooth Transition to IK/FK
-            if (SmoothIKTransition)
+            if (EnableFootPlacement && SmoothIKTransition)
             {
                 TransitionIKtoFKWeight = Mathf.Lerp(TransitionIKtoFKWeight, 1, 5 * Time.deltaTime);
             }
             else
             {
-                TransitionIKtoFKWeight = Mathf.Lerp(TransitionIKtoFKWeight, 0, 5 * Time.deltaTime);
+                TransitionIKtoFKWeight = Mathf.Lerp(TransitionIKtoFKWeight, 0, 10 * Time.deltaTime);
+                if (TransitionIKtoFKWeight < 0.01f) TransitionIKtoFKWeight = 0f;
             }
         }
 
@@ -393,7 +394,14 @@ namespace JUTPS
                 FootPlacementPositions();
 
                 Animation_Y_BodyPosition = anim.bodyPosition.y;
-                if (TransitionIKtoFKWeight < 0.1f || GlobalWeight < 0.01f || RightHitPlaceBase.point == Vector3.zero || RightHitPlaceBase.point == Vector3.zero) return;
+                if (!EnableFootPlacement || TransitionIKtoFKWeight < 0.01f || GlobalWeight < 0.01f || RightHitPlaceBase.point == Vector3.zero || LeftHitPlaceBase.point == Vector3.zero)
+                {
+                    anim.SetIKPositionWeight(AvatarIKGoal.LeftFoot, 0f);
+                    anim.SetIKPositionWeight(AvatarIKGoal.RightFoot, 0f);
+                    anim.SetIKRotationWeight(AvatarIKGoal.LeftFoot, 0f);
+                    anim.SetIKRotationWeight(AvatarIKGoal.RightFoot, 0f);
+                    return;
+                }
                 if (EnableFootPlacement == true)
                 {
                     //Get position before IK Correction
@@ -423,6 +431,11 @@ namespace JUTPS
                         anim.SetIKRotationWeight(AvatarIKGoal.LeftFoot, GlobalWeight * TransitionIKtoFKWeight * LeftFootRotationWeight);
                         anim.SetIKRotation(AvatarIKGoal.LeftFoot, SmothedLeftFootRotation * anim.GetIKRotation(AvatarIKGoal.LeftFoot));
                     }
+                    else
+                    {
+                        anim.SetIKPositionWeight(AvatarIKGoal.LeftFoot, 0f);
+                        anim.SetIKRotationWeight(AvatarIKGoal.LeftFoot, 0f);
+                    }
 
                     if (RightHit == true && RightHitPlaceBase.point.y < transform.position.y + RaycastHeight)
                     {
@@ -432,6 +445,11 @@ namespace JUTPS
 
                         anim.SetIKRotationWeight(AvatarIKGoal.RightFoot, GlobalWeight * TransitionIKtoFKWeight * RightFootRotationWeight);
                         anim.SetIKRotation(AvatarIKGoal.RightFoot, SmothedRightFootRotation * anim.GetIKRotation(AvatarIKGoal.RightFoot));
+                    }
+                    else
+                    {
+                        anim.SetIKPositionWeight(AvatarIKGoal.RightFoot, 0f);
+                        anim.SetIKRotationWeight(AvatarIKGoal.RightFoot, 0f);
                     }
 
                 }

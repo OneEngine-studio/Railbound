@@ -73,7 +73,7 @@ namespace JUTPS.PhysicsScripts
 
 
 		//Debbuging
-		public bool RagdollWhenPressKeyG;
+		public bool RagdollWhenPressKeyG = false;
 		public bool ViewHumanBodyBones;
 		public bool ViewBodyPhysics;
 		public bool ViewBodyDirection;
@@ -85,10 +85,13 @@ namespace JUTPS.PhysicsScripts
 		}
 		private void Update()
 		{
-			if (RagdollWhenPressKeyG && Keyboard.current.gKey.isPressed)
+			// Debug G-key ragdoll / kill feature removed per user request
+			/*
+			if (RagdollWhenPressKeyG && Keyboard.current != null && Keyboard.current.gKey.isPressed)
 			{
 				State = RagdollState.Ragdolled;
 			}
+			*/
 			RagdollStatesController();
 		}
 		private void LateUpdate()

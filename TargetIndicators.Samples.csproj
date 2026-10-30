@@ -63,15 +63,15 @@
     <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\MultipleTargetIndicatorCategoriesExample.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\VisualIndicator.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\IndicatorVisibility.cs" />
+    <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\DistanceLabelVisibility.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\CompassTapeVisualIndicator.cs" />
+    <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\SimpleTargetIndicatorSetupExample.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\CompassTapeUIController.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\CompassTapeVisualIndicatorManager.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\AddIndicatorMode.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\VisualIndicatorManager.cs" />
-    <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\Demo Scene Helpers\FocusGame.cs" />
-    <Compile Include="Assets\Target Indicators\Samples\Core Assets\Scripts\DistanceLabelVisibility.cs" />
-    <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\SimpleTargetIndicatorSetupExample.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\Demo Scene Helpers\SimpleCameraController.cs" />
+    <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\Demo Scene Helpers\FocusGame.cs" />
     <Compile Include="Assets\Target Indicators\Samples\Example Assets\Scripts\CompassTapeTargetIndicatorsSetupExample.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -460,7 +460,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
-      <HintPath>Library\PackageCache\com.unity.collections@1.4.0\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <HintPath>Library\PackageCache\com.unity.collections@1.2.4\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="nunit.framework">

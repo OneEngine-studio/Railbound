@@ -5,14 +5,14 @@ using TargetIndicators.Samples;
 using JUTPS;
 using JUTPS.ActionScripts;
 using JUTPS.VehicleSystem;
+using Railbound.BR;
 
 namespace Project.UI
 {
     /// <summary>
-    /// Connects the Player (TPS Character) with both the Off-Screen Target Indicator Manager
-    /// and the Compass Tape Target Indicator Manager, automatically tracking Enemies, Vehicles,
-    /// and Map Points of Interest (POIs), and dynamically updating visibility when enemies die
-    /// or when the player enters/exits a vehicle.
+    /// Connects the Player (TPS Character) with the Off-Screen and Compass Target Indicator Managers.
+    /// Tracks specific locations (POIs), safe zone survival direction, and specific high-value loot.
+    /// Enemy indicators are disabled by default as requested to preserve tactical battle royale stealth.
     /// </summary>
     [AddComponentMenu("Project/UI/Player Target Indicators Controller")]
     public class PlayerTargetIndicatorsController : MonoBehaviour
@@ -23,18 +23,44 @@ namespace Project.UI
         public TargetIndicatorManager CompassCoreManager;
         public CompassTapeVisualIndicatorManager CompassVisualManager;
 
+        [Header("Tracking Filters")]
+        [Tooltip("If false, enemies will NOT be marked with Target Indicators (preserves stealth and realism).")]
+        public bool trackEnemies = false;
+
+        [Tooltip("Track specific Points of Interest (POIs) such as Depot, Radar, Quarry.")]
+        public bool trackPOIs = true;
+
+        [Tooltip("Track vehicles on the map.")]
+        public bool trackVehicles = true;
+
+        [Tooltip("Track Battle Royale Safe Zone direction to guide players to safety when outside.")]
+        public bool trackSafeZone = true;
+
+        [Tooltip("Only show Safe Zone off-screen indicator when player is outside in danger.")]
+        public bool showSafeZoneOnlyWhenOutside = true;
+
+        [Tooltip("Track specific high-value loot items or supply drops.")]
+        public bool trackLoot = true;
+
         [Header("Off-Screen Indicator Prefabs")]
         public VisualIndicator EnemyOffScreenPrefab;
         public VisualIndicator VehicleOffScreenPrefab;
         public VisualIndicator POIOffScreenPrefab;
+        public VisualIndicator SafeZoneOffScreenPrefab;
+        public VisualIndicator LootOffScreenPrefab;
 
         [Header("Compass Tape Indicator Prefabs")]
         public CompassTapeVisualIndicator EnemyCompassPrefab;
         public CompassTapeVisualIndicator VehicleCompassPrefab;
         public CompassTapeVisualIndicator POICompassPrefab;
+        public CompassTapeVisualIndicator SafeZoneCompassPrefab;
+        public CompassTapeVisualIndicator LootCompassPrefab;
 
-        [Header("Tracked Targets")]
+        [Header("Specific Points of Interest (POIs)")]
         public List<Transform> POITargets = new List<Transform>();
+
+        [Header("Specific Loot Targets")]
+        public List<Transform> LootTargets = new List<Transform>();
 
         private struct TrackedEntry
         {
@@ -42,16 +68,20 @@ namespace Project.UI
             public Transform AnchorTransform;
             public JUHealth Health;
             public Vehicle Vehicle;
+            public bool IsSafeZone;
             public bool HasOffScreen;
             public TargetIndicatorId OffScreenId;
             public bool HasCompass;
             public TargetIndicatorId CompassId;
             public bool HiddenWhileDriving;
+            public bool HiddenState;
         }
 
         private readonly List<TrackedEntry> _trackedEntries = new List<TrackedEntry>();
         private DriveVehicles _playerDriveAbility;
         private Camera _mainCamera;
+        private Transform _safeZoneAnchor;
+        private int _safeZoneEntryIndex = -1;
 
         private void Start()
         {
@@ -82,40 +112,108 @@ namespace Project.UI
 
         private void RegisterInitialTargets()
         {
-            // 1. Track all Enemies (tag == "Enemy" or AI characters)
-            JUCharacterController[] characters = FindObjectsOfType<JUCharacterController>();
-            foreach (JUCharacterController ch in characters)
+            // 1. Enemies (DISABLED BY DEFAULT as requested)
+            if (trackEnemies && (EnemyOffScreenPrefab != null || EnemyCompassPrefab != null))
             {
-                if (ch == null || ch.gameObject == gameObject || ch.CompareTag("Player"))
-                    continue;
+                JUCharacterController[] characters = FindObjectsOfType<JUCharacterController>();
+                foreach (JUCharacterController ch in characters)
+                {
+                    if (ch == null || ch.gameObject == gameObject || ch.CompareTag("Player"))
+                        continue;
 
-                JUHealth health = ch.GetComponent<JUHealth>();
-                if (health != null && health.IsDead)
-                    continue;
+                    JUHealth health = ch.GetComponent<JUHealth>();
+                    if (health != null && health.IsDead)
+                        continue;
 
-                Transform anchor = CreateOrGetAnchor(ch.transform, "IndicatorAnchor", new Vector3(0f, 1.35f, 0f));
-                AddTargetEntry(ch.transform, anchor, health, null, EnemyOffScreenPrefab, EnemyCompassPrefab);
+                    Transform anchor = CreateOrGetAnchor(ch.transform, "IndicatorAnchor", new Vector3(0f, 1.35f, 0f));
+                    AddTargetEntry(ch.transform, anchor, health, null, false, EnemyOffScreenPrefab, EnemyCompassPrefab);
+                }
             }
 
-            // 2. Track all Vehicles
-            Vehicle[] vehicles = FindObjectsOfType<Vehicle>();
-            foreach (Vehicle v in vehicles)
+            // 2. Specific Places / Points of Interest (POIs)
+            if (trackPOIs)
             {
-                if (v == null) continue;
-
-                JUHealth health = v.GetComponent<JUHealth>();
-                if (health != null && health.IsDead)
-                    continue;
-
-                Transform anchor = CreateOrGetAnchor(v.transform, "IndicatorAnchor", new Vector3(0f, 1.25f, 0f));
-                AddTargetEntry(v.transform, anchor, health, v, VehicleOffScreenPrefab, VehicleCompassPrefab);
+                foreach (Transform poi in POITargets)
+                {
+                    if (poi == null) continue;
+                    AddTargetEntry(poi, poi, null, null, false, POIOffScreenPrefab, POICompassPrefab);
+                }
             }
 
-            // 3. Track Map POIs
-            foreach (Transform poi in POITargets)
+            // 3. Vehicles
+            if (trackVehicles)
             {
-                if (poi == null) continue;
-                AddTargetEntry(poi, poi, null, null, POIOffScreenPrefab, POICompassPrefab);
+                Vehicle[] vehicles = FindObjectsOfType<Vehicle>();
+                foreach (Vehicle v in vehicles)
+                {
+                    if (v == null) continue;
+
+                    JUHealth health = v.GetComponent<JUHealth>();
+                    if (health != null && health.IsDead)
+                        continue;
+
+                    Transform anchor = CreateOrGetAnchor(v.transform, "IndicatorAnchor", new Vector3(0f, 1.25f, 0f));
+                    AddTargetEntry(v.transform, anchor, health, v, false, VehicleOffScreenPrefab, VehicleCompassPrefab);
+                }
+            }
+
+            // 4. Specific High-Value Loot Targets
+            if (trackLoot)
+            {
+                foreach (Transform loot in LootTargets)
+                {
+                    if (loot == null) continue;
+                    var offPrefab = LootOffScreenPrefab ?? POIOffScreenPrefab;
+                    var compPrefab = LootCompassPrefab ?? POICompassPrefab;
+                    AddTargetEntry(loot, loot, null, null, false, offPrefab, compPrefab);
+                }
+            }
+
+            // 5. Safe Zone Direction Indicator ("zone direction where player need to go to save their life")
+            if (trackSafeZone)
+            {
+                SetupSafeZoneIndicator();
+            }
+        }
+
+        private void SetupSafeZoneIndicator()
+        {
+            if (_safeZoneAnchor == null)
+            {
+                var go = new GameObject("SafeZone_DirectionAnchor");
+                _safeZoneAnchor = go.transform;
+                _safeZoneAnchor.position = transform.position + Vector3.forward * 50f;
+            }
+
+            var offPrefab = SafeZoneOffScreenPrefab ?? POIOffScreenPrefab;
+            var compPrefab = SafeZoneCompassPrefab ?? POICompassPrefab;
+
+            _safeZoneEntryIndex = _trackedEntries.Count;
+            AddTargetEntry(_safeZoneAnchor, _safeZoneAnchor, null, null, true, offPrefab, compPrefab);
+        }
+
+        public void RegisterLootTarget(Transform lootTransform)
+        {
+            if (lootTransform == null) return;
+            if (!LootTargets.Contains(lootTransform)) LootTargets.Add(lootTransform);
+
+            var offPrefab = LootOffScreenPrefab ?? POIOffScreenPrefab;
+            var compPrefab = LootCompassPrefab ?? POICompassPrefab;
+            AddTargetEntry(lootTransform, lootTransform, null, null, false, offPrefab, compPrefab);
+        }
+
+        public void UnregisterLootTarget(Transform lootTransform)
+        {
+            if (lootTransform == null) return;
+            LootTargets.Remove(lootTransform);
+
+            for (int i = _trackedEntries.Count - 1; i >= 0; i--)
+            {
+                if (_trackedEntries[i].RootTransform == lootTransform)
+                {
+                    RemoveTrackedEntryAt(i);
+                    break;
+                }
             }
         }
 
@@ -135,6 +233,7 @@ namespace Project.UI
             Transform anchor,
             JUHealth health,
             Vehicle vehicle,
+            bool isSafeZone,
             VisualIndicator offScreenPrefab,
             CompassTapeVisualIndicator compassPrefab)
         {
@@ -143,7 +242,8 @@ namespace Project.UI
                 RootTransform = root,
                 AnchorTransform = anchor,
                 Health = health,
-                Vehicle = vehicle
+                Vehicle = vehicle,
+                IsSafeZone = isSafeZone
             };
 
             if (OffScreenVisualManager != null && offScreenPrefab != null)
@@ -159,15 +259,32 @@ namespace Project.UI
             _trackedEntries.Add(entry);
         }
 
+        private void RemoveTrackedEntryAt(int index)
+        {
+            var entry = _trackedEntries[index];
+            if (entry.HasOffScreen && OffScreenVisualManager != null)
+                OffScreenVisualManager.RemoveTargetIndicator(entry.OffScreenId);
+
+            if (entry.HasCompass && CompassVisualManager != null)
+                CompassVisualManager.RemoveTargetIndicator(entry.CompassId);
+
+            _trackedEntries.RemoveAt(index);
+        }
+
         private void LateUpdate()
         {
             Vehicle currentDrivenVehicle = (_playerDriveAbility != null && _playerDriveAbility.IsDriving)
                 ? _playerDriveAbility.CurrentVehicle
                 : null;
 
+            // Update Safe Zone Position & Visibility
+            UpdateSafeZoneTracking();
+
             for (int i = _trackedEntries.Count - 1; i >= 0; i--)
             {
                 TrackedEntry entry = _trackedEntries[i];
+
+                if (entry.IsSafeZone) continue; // Managed separately
 
                 // Remove indicator if target was destroyed or died
                 bool isDeadOrMissing = (entry.RootTransform == null) ||
@@ -175,40 +292,78 @@ namespace Project.UI
 
                 if (isDeadOrMissing)
                 {
-                    if (entry.HasOffScreen && OffScreenVisualManager != null)
-                        OffScreenVisualManager.RemoveTargetIndicator(entry.OffScreenId);
-
-                    if (entry.HasCompass && CompassVisualManager != null)
-                        CompassVisualManager.RemoveTargetIndicator(entry.CompassId);
-
-                    _trackedEntries.RemoveAt(i);
+                    RemoveTrackedEntryAt(i);
                     continue;
                 }
 
-                // Hide vehicle indicator while the player is actively driving that vehicle
+                // Hide vehicle indicator while driving it
                 if (entry.Vehicle != null)
                 {
                     bool shouldHide = (currentDrivenVehicle == entry.Vehicle);
                     if (shouldHide != entry.HiddenWhileDriving)
                     {
                         entry.HiddenWhileDriving = shouldHide;
-                        if (shouldHide)
+                        SetIndicatorVisibility(entry, !shouldHide);
+                        _trackedEntries[i] = entry;
+                    }
+                }
+            }
+        }
+
+        private void UpdateSafeZoneTracking()
+        {
+            if (!trackSafeZone || _safeZoneAnchor == null || _safeZoneEntryIndex < 0 || _safeZoneEntryIndex >= _trackedEntries.Count)
+                return;
+
+            var zoneMgr = BRZoneManager.Instance;
+            if (zoneMgr != null)
+            {
+                // Position anchor at the center of the safe zone
+                _safeZoneAnchor.position = zoneMgr.CurrentCenter;
+
+                if (showSafeZoneOnlyWhenOutside)
+                {
+                    bool isInside = zoneMgr.IsPositionInSafeZone(transform.position);
+                    var entry = _trackedEntries[_safeZoneEntryIndex];
+
+                    // If outside safe zone: show indicator to guide player to safety!
+                    // If inside safe zone: hide off-screen indicator so HUD stays clean.
+                    bool shouldShow = !isInside;
+
+                    if (shouldShow == entry.HiddenState)
+                    {
+                        entry.HiddenState = !shouldShow;
+                        if (shouldShow)
                         {
                             if (entry.HasOffScreen && OffScreenVisualManager != null)
-                                OffScreenVisualManager.HideVisualIndicator(entry.OffScreenId);
-                            if (entry.HasCompass && CompassVisualManager != null)
-                                CompassVisualManager.HideVisualIndicator(entry.CompassId);
+                                OffScreenVisualManager.ShowVisualIndicator(entry.OffScreenId);
                         }
                         else
                         {
                             if (entry.HasOffScreen && OffScreenVisualManager != null)
-                                OffScreenVisualManager.ShowVisualIndicator(entry.OffScreenId);
-                            if (entry.HasCompass && CompassVisualManager != null)
-                                CompassVisualManager.ShowVisualIndicator(entry.CompassId);
+                                OffScreenVisualManager.HideVisualIndicator(entry.OffScreenId);
                         }
-                        _trackedEntries[i] = entry;
+                        _trackedEntries[_safeZoneEntryIndex] = entry;
                     }
                 }
+            }
+        }
+
+        private void SetIndicatorVisibility(TrackedEntry entry, bool visible)
+        {
+            if (visible)
+            {
+                if (entry.HasOffScreen && OffScreenVisualManager != null)
+                    OffScreenVisualManager.ShowVisualIndicator(entry.OffScreenId);
+                if (entry.HasCompass && CompassVisualManager != null)
+                    CompassVisualManager.ShowVisualIndicator(entry.CompassId);
+            }
+            else
+            {
+                if (entry.HasOffScreen && OffScreenVisualManager != null)
+                    OffScreenVisualManager.HideVisualIndicator(entry.OffScreenId);
+                if (entry.HasCompass && CompassVisualManager != null)
+                    CompassVisualManager.HideVisualIndicator(entry.CompassId);
             }
         }
     }
