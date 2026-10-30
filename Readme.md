@@ -59,3 +59,4 @@ This project is set up for agent-assisted development:
 - Branch on structured tool results (`{success, code, error}`), not free-form text
 - Resolve objects by `instanceId` after the first lookup instead of re-resolving by name
 - Save only the scenes/prefabs intentionally modified, then read values back
+- Keep commits focused, atomic, and verified.
