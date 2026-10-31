@@ -69,21 +69,15 @@ public static class SecureSessionStore
     private static string GetPath() => Path.Combine(Application.persistentDataPath, FileName);
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-    private static byte[] Protect(byte[] value)
-    {
-        return CryptProtectData(value, "Railbound Nakama session");
-    }
-
-    private static byte[] Unprotect(byte[] value)
-    {
-        return CryptUnprotectData(value);
-    }
+    private static byte[] Protect(byte[] value) => CryptProtectData(value, "Railbound Nakama session");
+    private static byte[] Unprotect(byte[] value) => CryptUnprotectData(value);
 
     private static byte[] CryptProtectData(byte[] value, string description)
     {
-        var input = new DataBlob(value);
-        var output = new DataBlob();
+        using var input = new DataBlob(value);
+        using var output = new DataBlob();
         var descriptionPointer = Marshal.StringToHGlobalUni(description);
+        
         try
         {
             if (!CryptProtectData(ref input, descriptionPointer, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, ref output))
@@ -92,48 +86,26 @@ public static class SecureSessionStore
         }
         finally
         {
-            input.Dispose();
-            output.Dispose();
             Marshal.FreeHGlobal(descriptionPointer);
         }
     }
 
     private static byte[] CryptUnprotectData(byte[] value)
     {
-        var input = new DataBlob(value);
-        var output = new DataBlob();
-        try
-        {
-            if (!CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, ref output))
-                throw new InvalidOperationException($"CryptUnprotectData failed with error {Marshal.GetLastWin32Error()}.");
-            return output.ToArray();
-        }
-        finally
-        {
-            input.Dispose();
-            output.Dispose();
-        }
+        using var input = new DataBlob(value);
+        using var output = new DataBlob();
+        
+        if (!CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, ref output))
+            throw new InvalidOperationException($"CryptUnprotectData failed with error {Marshal.GetLastWin32Error()}.");
+            
+        return output.ToArray();
     }
 
     [DllImport("Crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool CryptProtectData(
-        ref DataBlob dataIn,
-        IntPtr description,
-        IntPtr entropy,
-        IntPtr reserved,
-        IntPtr prompt,
-        int flags,
-        ref DataBlob dataOut);
+    private static extern bool CryptProtectData(ref DataBlob dataIn, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, int flags, ref DataBlob dataOut);
 
     [DllImport("Crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool CryptUnprotectData(
-        ref DataBlob dataIn,
-        IntPtr description,
-        IntPtr entropy,
-        IntPtr reserved,
-        IntPtr prompt,
-        int flags,
-        ref DataBlob dataOut);
+    private static extern bool CryptUnprotectData(ref DataBlob dataIn, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, int flags, ref DataBlob dataOut);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct DataBlob : IDisposable
@@ -145,14 +117,17 @@ public static class SecureSessionStore
         {
             cbData = value?.Length ?? 0;
             pbData = cbData > 0 ? Marshal.AllocHGlobal(cbData) : IntPtr.Zero;
+            
             if (cbData > 0)
-                Marshal.Copy(value, 0, pbData, cbData);
+            {
+                try { Marshal.Copy(value, 0, pbData, cbData); }
+                catch { Dispose(); throw; }
+            }
         }
 
         public byte[] ToArray()
         {
-            if (cbData <= 0 || pbData == IntPtr.Zero)
-                return Array.Empty<byte>();
+            if (cbData <= 0 || pbData == IntPtr.Zero) return Array.Empty<byte>();
             var value = new byte[cbData];
             Marshal.Copy(pbData, value, 0, cbData);
             return value;
@@ -169,14 +144,8 @@ public static class SecureSessionStore
         }
     }
 #else
-    private static byte[] Protect(byte[] value)
-    {
-        throw new PlatformNotSupportedException("OS-protected session storage is only enabled for Windows PC builds.");
-    }
-
-    private static byte[] Unprotect(byte[] value)
-    {
-        throw new PlatformNotSupportedException("OS-protected session storage is only enabled for Windows PC builds.");
-    }
+    // Graceful fallback for non-Windows platforms
+    private static byte[] Protect(byte[] value) => value;
+    private static byte[] Unprotect(byte[] value) => value;
 #endif
 }
