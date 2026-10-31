@@ -1,38 +1,26 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 namespace Railbound.UI.Anim
 {
-    /// <summary>The full interactive lifecycle of a button.</summary>
     public enum ButtonAnimState
     {
         Idle, HoverIn, HoverOut, PressDown, PressRelease, Click,
         Selected, Deselected, Disabled, Locked, Loading, Success, Error, Focused
     }
 
-    /// <summary>
-    /// Drives every button animation state:
-    /// - Full style: soft gold glow halo fades in behind the button (no hard outline), scale
-    ///   1.00 -> 1.04, brightness x1.15, icon nudge/rotation.
-    /// - Light style (small icon tiles): no glow, scale 1.00 -> 1.03, brightness x1.12, icon nudge.
-    /// - Press/click: 1.04 -> 0.96 -> 1.00 + glow flash + sound. Loading spins a Linear ring.
-    /// The Button's transition is forced to None - tweens own all visuals.
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Button))]
     public sealed class AnimatedButton : MonoBehaviour,
         IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler,
         ISelectHandler, IDeselectHandler
     {
-        public enum HoverStyle
-        {
-            Full,   // glow halo + scale 1.04 + brightness 1.15 (READY, CHECK AWARDS, tabs, cards' cousins)
-            Light   // no glow, scale 1.03 + brightness 1.12 (small icon tiles)
-        }
+        public enum HoverStyle { Full, Light }
 
         [SerializeField] private Button button;
-        [SerializeField] private RectTransform icon;            // optional: nudge/rotate target
+        [SerializeField] private RectTransform icon;
         [SerializeField] private HoverStyle hoverStyle = HoverStyle.Full;
         [SerializeField] private Color glowColor = new Color(1f, 0.75f, 0.2f, 1f);
         [SerializeField] private bool rotateIconOnHover;
@@ -40,19 +28,17 @@ namespace Railbound.UI.Anim
 
         public ButtonAnimState State { get; private set; } = ButtonAnimState.Idle;
 
-        // tween channels - killing one never disturbs the others
         private readonly object _scaleToken = new object();
         private readonly object _colorToken = new object();
         private readonly object _glowToken = new object();
-        private readonly object _ringToken = new object();
         private readonly object _rotToken = new object();
         private readonly object _fxToken = new object();
 
         private RectTransform _rt;
-        private Image _glow;               // soft halo (Full style only)
-        private Image _ring;               // static button border outline (NEVER rotates)
-        private Image _spinner;            // small 22x22 rotating spinner icon inside button
-        private Graphic[] _group;          // every graphic under the button (glow + ring + spinner excluded)
+        private Image _glow;
+        private Image _spinner;
+        private TMP_Text _label;
+        private Graphic[] _group;
         private Color[] _groupColors;
         private Vector3 _baseScale;
         private Vector2 _iconBasePos;
@@ -67,16 +53,7 @@ namespace Railbound.UI.Anim
         private float HoverScaleValue => hoverStyle == HoverStyle.Light ? UIAnim.HoverScaleLight : UIAnim.HoverScale;
         private float HoverBrightness => hoverStyle == HoverStyle.Light ? UIAnim.BrightnessHoverLight : UIAnim.BrightnessHover;
 
-        // ------------------------------------------------------------------ setup
-
-        /// <summary>Editor tooling hook: assign the icon and hover rotation before Play Mode.</summary>
-        public void SetIcon(RectTransform iconRect, bool rotateOnHover)
-        {
-            icon = iconRect;
-            rotateIconOnHover = rotateOnHover;
-        }
-
-        /// <summary>Full = soft glow + 1.04 scale; Light = no glow, 1.03 scale (icon tiles).</summary>
+        public void SetIcon(RectTransform iconRect, bool rotateOnHover) { icon = iconRect; rotateIconOnHover = rotateOnHover; }
         public void SetHoverStyle(HoverStyle style) => hoverStyle = style;
         public void SetGlowColor(Color color) => glowColor = color;
 
@@ -90,9 +67,11 @@ namespace Railbound.UI.Anim
             if (button == null) button = GetComponent<Button>();
             _rt = (RectTransform)transform;
             _baseScale = _rt.localScale;
+            _label = GetComponentInChildren<TMP_Text>(true);
+
             if (button != null)
             {
-                button.transition = Selectable.Transition.None; // this component owns visuals now
+                button.transition = Selectable.Transition.None;
                 _lastInteractable = button.interactable;
                 button.onClick.AddListener(PlayClickAnimation);
             }
@@ -106,7 +85,6 @@ namespace Railbound.UI.Anim
             CacheGraphics();
         }
 
-        /// <summary>Soft radial halo behind the button - disabled so buttons keep sharp tactical edges.</summary>
         private void EnsureGlow()
         {
             var existing = transform.Find("HoverGlow");
@@ -115,19 +93,6 @@ namespace Railbound.UI.Anim
             _glow = null;
         }
 
-        /// <summary>Stale hover ring cleanup - buttons use clean micro-scale + brightness without border clutter.</summary>
-        private void EnsureRing()
-        {
-            var existing = transform.Find("HoverRing");
-            if (existing != null)
-            {
-                if (Application.isPlaying) Destroy(existing.gameObject);
-                else DestroyImmediate(existing.gameObject);
-            }
-            _ring = null;
-        }
-
-        /// <summary>Centered round circular loading spinner icon inside the button during loading.</summary>
         private void EnsureSpinner()
         {
             if (_spinner != null) return;
@@ -142,40 +107,31 @@ namespace Railbound.UI.Anim
             var spinnerObj = new GameObject("LoadingSpinner", typeof(RectTransform), typeof(Image));
             spinnerObj.transform.SetParent(transform, false);
             spinnerObj.transform.SetAsLastSibling();
+            
             _spinner = spinnerObj.GetComponent<Image>();
             _spinner.sprite = sprite;
-            _spinner.type = Image.Type.Simple;
             _spinner.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
             _spinner.raycastTarget = false;
 
             var sRect = (RectTransform)spinnerObj.transform;
-            sRect.anchorMin = new Vector2(0.5f, 0.5f);
-            sRect.anchorMax = new Vector2(0.5f, 0.5f);
-            sRect.pivot = new Vector2(0.5f, 0.5f);
+            sRect.anchorMin = sRect.anchorMax = sRect.pivot = new Vector2(0.5f, 0.5f);
             sRect.anchoredPosition = Vector2.zero;
             sRect.sizeDelta = new Vector2(28f, 28f);
-            sRect.localEulerAngles = Vector3.zero;
         }
 
-        /// <summary>Brightness/flash targets: every graphic under the button except glow/ring/spinner.</summary>
         private void CacheGraphics()
         {
             var all = GetComponentsInChildren<Graphic>(true);
             var list = new System.Collections.Generic.List<Graphic>(all.Length);
-            for (var i = 0; i < all.Length; i++)
+            foreach (var graphic in all)
             {
-                var graphic = all[i];
-                if (graphic == null) continue;
-                var t = graphic.transform;
-                if (_glow != null && t == _glow.transform) continue;
-                if (_ring != null && t == _ring.transform) continue;
-                if (_spinner != null && t == _spinner.transform) continue;
+                if (graphic == null || (_glow != null && graphic.transform == _glow.transform) || (_spinner != null && graphic.transform == _spinner.transform))
+                    continue;
                 list.Add(graphic);
             }
             _group = list.ToArray();
             _groupColors = new Color[_group.Length];
-            for (var i = 0; i < _group.Length; i++)
-                _groupColors[i] = _group[i].color;
+            for (var i = 0; i < _group.Length; i++) _groupColors[i] = _group[i].color;
         }
 
         private void ApplyVisuals()
@@ -194,136 +150,63 @@ namespace Railbound.UI.Anim
 
         private void OnDisable()
         {
-            UITween.Kill(_scaleToken);
-            UITween.Kill(_colorToken);
-            UITween.Kill(_glowToken);
-            UITween.Kill(_ringToken);
-            UITween.Kill(_rotToken);
-            UITween.Kill(_fxToken);
-            _hovered = false;
-            _pressed = false;
-            _brightness = 1f;
-            _flashAmount = 0f;
+            UITween.Kill(_scaleToken); UITween.Kill(_colorToken);
+            UITween.Kill(_glowToken); UITween.Kill(_rotToken); UITween.Kill(_fxToken);
+            
+            _hovered = _pressed = false;
+            _brightness = 1f; _flashAmount = 0f;
+            
             if (_rt != null) _rt.localScale = _baseScale;
             ApplyVisuals();
+            
             if (_glow != null) _glow.color = ColorWithAlpha(0f);
-            if (_ring != null) ((RectTransform)_ring.transform).localEulerAngles = Vector3.zero;
-            if (_spinner != null)
-            {
-                _spinner.gameObject.SetActive(false);
-                ((RectTransform)_spinner.transform).localEulerAngles = Vector3.zero;
-            }
+            if (_spinner != null) { _spinner.gameObject.SetActive(false); }
+            
             State = RestState();
         }
 
-        // ------------------------------------------------------------------ pointer states
-
         public void OnPointerEnter(PointerEventData eventData) => HoverIn();
-
         public void OnPointerExit(PointerEventData eventData) => HoverOut();
-
         public void OnPointerDown(PointerEventData eventData)
         {
             EnsureInitialized();
             if (!CanInteract()) return;
-            _pressed = true;
-            State = ButtonAnimState.PressDown;
+            _pressed = true; State = ButtonAnimState.PressDown;
             Refresh(UIAnim.PressDown, Ease.OutQuad, includeScale: true);
         }
-
         public void OnPointerUp(PointerEventData eventData)
         {
             EnsureInitialized();
             if (!_pressed) return;
-            _pressed = false;
-            State = ButtonAnimState.PressRelease;
+            _pressed = false; State = ButtonAnimState.PressRelease;
             Refresh(UIAnim.PressRelease, Ease.OutCubic, includeScale: true);
         }
+        public void OnSelect(BaseEventData eventData) { EnsureInitialized(); _focused = true; if (!_hovered && !_pressed) State = ButtonAnimState.Focused; Refresh(UIAnim.StateChange, UIAnim.HoverEase); }
+        public void OnDeselect(BaseEventData eventData) { EnsureInitialized(); _focused = false; State = RestState(); Refresh(UIAnim.StateChange, UIAnim.HoverEase); }
 
-        public void OnSelect(BaseEventData eventData)
-        {
-            EnsureInitialized();
-            _focused = true;
-            if (!_hovered && !_pressed) State = ButtonAnimState.Focused;
-            Refresh(UIAnim.StateChange, UIAnim.HoverEase);
-        }
-
-        public void OnDeselect(BaseEventData eventData)
-        {
-            EnsureInitialized();
-            _focused = false;
-            State = RestState();
-            Refresh(UIAnim.StateChange, UIAnim.HoverEase);
-        }
-
-        /// <summary>Hover in: Ease Out, 0.12-0.18s.</summary>
         public void HoverIn()
         {
             EnsureInitialized();
-            if (!CanInteract())
-            {
-                // Locked/unavailable: small shake on the icon (or the whole button).
-                if (_locked)
-                    IconAnimator.Shake(icon != null ? icon : _rt, 4f, UIAnim.ErrorShake, _fxToken);
-                return;
-            }
-
-            _hovered = true;
-            State = ButtonAnimState.HoverIn;
-            UISfx.PlayHover();
+            if (!CanInteract()) { if (_locked) IconAnimator.Shake(icon != null ? icon : _rt, 4f, UIAnim.ErrorShake, _fxToken); return; }
+            _hovered = true; State = ButtonAnimState.HoverIn; UISfx.PlayHover();
             Refresh(UIAnim.Hover, UIAnim.HoverEase, includeScale: true, iconIn: true);
         }
 
-        /// <summary>Hover out: Ease Out back to base.</summary>
-        public void HoverOut()
-        {
-            EnsureInitialized();
-            _hovered = false;
-            State = RestState();
-            Refresh(UIAnim.Hover, UIAnim.HoverEase, includeScale: true, iconIn: false);
-        }
+        public void HoverOut() { EnsureInitialized(); _hovered = false; State = RestState(); Refresh(UIAnim.Hover, UIAnim.HoverEase, includeScale: true, iconIn: false); }
 
-        // ------------------------------------------------------------------ persistent states
-
-        public void SetSelected(bool selected)
-        {
-            EnsureInitialized();
-            if (_selected == selected) return;
-            _selected = selected;
-            State = selected ? ButtonAnimState.Selected : ButtonAnimState.Deselected;
-            Refresh(UIAnim.StateChange, UIAnim.HoverEase);
-            if (!selected) State = RestState();
-        }
-
-        public void SetLocked(bool locked)
-        {
-            EnsureInitialized();
-            if (_locked == locked) return;
-            _locked = locked;
-            State = locked ? ButtonAnimState.Locked : ButtonAnimState.Idle;
-            Refresh(UIAnim.StateChange, UIAnim.HoverEase, includeScale: true);
-        }
+        public void SetSelected(bool selected) { EnsureInitialized(); if (_selected == selected) return; _selected = selected; State = selected ? ButtonAnimState.Selected : ButtonAnimState.Deselected; Refresh(UIAnim.StateChange, UIAnim.HoverEase); if (!selected) State = RestState(); }
+        public void SetLocked(bool locked) { EnsureInitialized(); if (_locked == locked) return; _locked = locked; State = locked ? ButtonAnimState.Locked : ButtonAnimState.Idle; Refresh(UIAnim.StateChange, UIAnim.HoverEase, includeScale: true); }
 
         public void SetLoading(bool loading)
         {
             EnsureInitialized();
             if (_loading == loading) return;
-            _loading = loading;
-            State = loading ? ButtonAnimState.Loading : ButtonAnimState.Idle;
+            _loading = loading; State = loading ? ButtonAnimState.Loading : ButtonAnimState.Idle;
             Refresh(UIAnim.StateChange, UIAnim.HoverEase, includeScale: true);
-
             UITween.Kill(_rotToken);
 
-            // Hide button text and icons so the round loading spinner is cleanly centered in the middle
-            var label = GetComponentInChildren<TMPro.TMP_Text>(true);
-            if (label != null)
-            {
-                label.gameObject.SetActive(!loading);
-            }
-            if (icon != null)
-            {
-                icon.gameObject.SetActive(!loading);
-            }
+            if (_label != null) _label.gameObject.SetActive(!loading);
+            if (icon != null) icon.gameObject.SetActive(!loading);
 
             if (loading)
             {
@@ -332,234 +215,70 @@ namespace Railbound.UI.Anim
                 {
                     _spinner.gameObject.SetActive(true);
                     var sRect = (RectTransform)_spinner.transform;
-                    sRect.anchorMin = new Vector2(0.5f, 0.5f);
-                    sRect.anchorMax = new Vector2(0.5f, 0.5f);
-                    sRect.pivot = new Vector2(0.5f, 0.5f);
-                    sRect.anchoredPosition = Vector2.zero;
-                    sRect.sizeDelta = new Vector2(28f, 28f);
-                    sRect.localEulerAngles = Vector3.zero;
-
-                    // Match spinner contrast: dark on light/amber fills, bright gold on dark fills
-                    var isLightBackground = label != null && (label.color.r < 0.25f && label.color.g < 0.25f && label.color.b < 0.25f);
+                    var isLightBackground = _label != null && (_label.color.r < 0.25f && _label.color.g < 0.25f && _label.color.b < 0.25f);
                     _spinner.color = isLightBackground ? new Color(0.12f, 0.09f, 0.04f, 1f) : new Color(1f, 0.78f, 0.2f, 1f);
-
-                    // Smooth, continuous 360-degree circular rotation
-                    UITween.Loop(0f, -360f, 0.85f, Ease.Linear,
-                        v => { if (sRect != null) sRect.localEulerAngles = new Vector3(0f, 0f, v); },
-                        yoyo: false, target: _rotToken);
+                    
+                    UITween.Loop(0f, -360f, 0.85f, Ease.Linear, v => { if (sRect != null) sRect.localEulerAngles = new Vector3(0f, 0f, v); }, false, _rotToken);
                 }
             }
-            else
-            {
-                if (_spinner != null)
-                {
-                    _spinner.gameObject.SetActive(false);
-                }
-            }
+            else if (_spinner != null) _spinner.gameObject.SetActive(false);
         }
 
-        /// <summary>Success flash: bright green pulse over the whole button, then settles.</summary>
-        public void SetSuccess()
-        {
-            EnsureInitialized();
-            State = ButtonAnimState.Success;
-            UISfx.PlayClick();
-            FlashGroup(new Color(0.35f, 1.6f, 0.7f, 1f), UIAnim.Success,
-                () => State = RestState());
-        }
-
-        /// <summary>Error flash: red tint + shake, then settles.</summary>
-        public void SetError()
-        {
-            EnsureInitialized();
-            State = ButtonAnimState.Error;
-            IconAnimator.Shake(_rt, 5f, UIAnim.ErrorShake, _fxToken);
-            FlashGroup(new Color(1.8f, 0.35f, 0.4f, 1f), UIAnim.ErrorShake,
-                () => State = RestState());
-        }
+        public void SetSuccess() { EnsureInitialized(); State = ButtonAnimState.Success; UISfx.PlayClick(); FlashGroup(new Color(0.35f, 1.6f, 0.7f, 1f), UIAnim.Success, () => State = RestState()); }
+        public void SetError() { EnsureInitialized(); State = ButtonAnimState.Error; IconAnimator.Shake(_rt, 5f, UIAnim.ErrorShake, _fxToken); FlashGroup(new Color(1.8f, 0.35f, 0.4f, 1f), UIAnim.ErrorShake, () => State = RestState()); }
 
         private void FlashGroup(Color color, float totalDuration, System.Action onDone)
         {
-            EnsureInitialized();
-            _flashColor = color;
-            UITween.Kill(_colorToken);
-            UITween.To(0f, 1f, 0.07f, Ease.OutQuad,
-                v => { _flashAmount = v; ApplyVisuals(); },
-                () =>
-                {
-                    UITween.To(1f, 0f, totalDuration, Ease.OutCubic,
-                        v => { _flashAmount = v; ApplyVisuals(); },
-                        () => { _flashAmount = 0f; ApplyVisuals(); onDone?.Invoke(); },
-                        0f, _colorToken);
-                }, 0f, _colorToken);
+            EnsureInitialized(); _flashColor = color; UITween.Kill(_colorToken);
+            UITween.To(0f, 1f, 0.07f, Ease.OutQuad, v => { _flashAmount = v; ApplyVisuals(); }, () => {
+                UITween.To(1f, 0f, totalDuration, Ease.OutCubic, v => { _flashAmount = v; ApplyVisuals(); }, () => { _flashAmount = 0f; ApplyVisuals(); onDone?.Invoke(); }, 0f, _colorToken);
+            }, 0f, _colorToken);
         }
-
-        // ------------------------------------------------------------------ click
 
         private void PlayClickAnimation()
         {
-            EnsureInitialized();
-            if (!CanInteract()) return;
-            State = ButtonAnimState.Click;
-            UISfx.PlayClick();
-
-            // Tactical brightness micro-flash across button graphics (0.10s)
+            EnsureInitialized(); if (!CanInteract()) return;
+            State = ButtonAnimState.Click; UISfx.PlayClick();
             FlashGroup(new Color(1.22f, 1.22f, 1.22f, 1f), 0.10f, () => State = RestState());
 
-            // If the click was triggered via keyboard, gamepad, or code (without pointer press),
-            // provide a single crisp micro-compression punch.
-            // When clicked via mouse, OnPointerDown and OnPointerUp have already cleanly handled
-            // the press down and smooth spring release — no redundant double-bounce is triggered!
             if (_rt != null && !_pressed && Mathf.Abs(_rt.localScale.x - _baseScale.x) < 0.005f)
             {
-                var punchScale = _baseScale * UIAnim.PressScale;
-                var restScale = _hovered ? _baseScale * HoverScaleValue : _baseScale;
+                var punchScale = _baseScale * UIAnim.PressScale; var restScale = _hovered ? _baseScale * HoverScaleValue : _baseScale;
                 UITween.Kill(_scaleToken);
-                UITween.To(0f, 1f, UIAnim.ClickDown, Ease.OutQuad,
-                    p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(_baseScale, punchScale, p); },
-                    () =>
-                    {
-                        UITween.To(0f, 1f, UIAnim.ClickUp, Ease.OutCubic,
-                            p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(punchScale, restScale, p); },
-                            null, 0f, _scaleToken);
-                    }, 0f, _scaleToken);
+                UITween.To(0f, 1f, UIAnim.ClickDown, Ease.OutQuad, p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(_baseScale, punchScale, p); }, () => {
+                    UITween.To(0f, 1f, UIAnim.ClickUp, Ease.OutCubic, p => { if (_rt != null) _rt.localScale = Vector3.LerpUnclamped(punchScale, restScale, p); }, null, 0f, _scaleToken);
+                }, 0f, _scaleToken);
             }
-
-            if (_glow != null)
-            {
-                var rest = RestGlowAlpha();
-                UITween.Kill(_glowToken);
-                UITween.To(rest, UIAnim.GlowFlash, UIAnim.Flash * 0.4f, Ease.OutQuad,
-                    v => SetGlowAlpha(v),
-                    () =>
-                    {
-                        UITween.To(UIAnim.GlowFlash, rest, UIAnim.Flash, Ease.OutCubic,
-                            v => SetGlowAlpha(v), null, 0f, _glowToken);
-                    }, 0f, _glowToken);
-            }
-
-            // Icons remain stable and centered — no vertical jumping or hopping.
         }
 
-        // ------------------------------------------------------------------ visual refresh
-
-        private void Update()
-        {
-            if (button == null) return;
-            if (button.interactable == _lastInteractable) return;
-            _lastInteractable = button.interactable;
-            Refresh(UIAnim.StateChange, UIAnim.HoverEase, includeScale: true);
-        }
+        private void Update() { if (button == null || button.interactable == _lastInteractable) return; _lastInteractable = button.interactable; Refresh(UIAnim.StateChange, UIAnim.HoverEase, includeScale: true); }
 
         private void Refresh(float duration, Ease ease, bool includeScale = false, bool? iconIn = null)
         {
             EnsureInitialized();
-
-            // Colors are only re-cached from a neutral (untweened, unflashed) state so
-            // external recolors (e.g. SetActiveTab gold labels) are picked up without drift.
             if (_flashAmount > 0f) _flashAmount = 0f;
             if (Mathf.Approximately(_brightness, 1f)) CacheGraphics();
 
-            // brightness (whole visual group) -----------------------------
-            float brightness;
-            if (_loading) brightness = UIAnim.BrightnessLoading;
-            else if (_locked) brightness = UIAnim.BrightnessLocked;
-            else if (button != null && !button.interactable) brightness = UIAnim.BrightnessDisabled;
-            else if (_pressed) brightness = UIAnim.BrightnessPressed;
-            else if (_hovered) brightness = HoverBrightness;
-            else brightness = 1f;
+            float brightness = _loading ? UIAnim.BrightnessLoading : _locked ? UIAnim.BrightnessLocked : (button != null && !button.interactable) ? UIAnim.BrightnessDisabled : _pressed ? UIAnim.BrightnessPressed : _hovered ? HoverBrightness : 1f;
             TweenBrightness(brightness, duration, ease);
 
-            // scale -------------------------------------------------------
             if (includeScale && _rt != null && !_loading)
             {
-                Vector3 target;
-                if (_locked || (button != null && !button.interactable)) target = _baseScale;
-                else if (_pressed) target = _baseScale * UIAnim.PressScale;
-                else if (_hovered) target = _baseScale * HoverScaleValue;
-                else target = _baseScale;
+                Vector3 target = (_locked || (button != null && !button.interactable)) ? _baseScale : _pressed ? _baseScale * UIAnim.PressScale : _hovered ? _baseScale * HoverScaleValue : _baseScale;
                 UITween.ScaleTo(_rt, target, duration, ease, null, _scaleToken);
             }
 
-            // glow halo (border/glow appears) ------------------------------
-            EnsureGlow();
-            if (_glow != null)
-                GlowTo(RestGlowAlpha(), duration, ease);
-
-            // Clean up any stale hover ring so buttons remain clean and smooth
-            EnsureRing();
-
-            // icon nudge / rotation ----------------------------------------
             if (icon != null)
             {
-                var inside = iconIn ?? _hovered;
-                var allowed = CanInteract();
-                var pos = _iconBasePos + (allowed && inside ? new Vector2(iconNudge, 0f) : Vector2.zero);
-                UITween.MoveAnchoredTo(icon, pos, duration, ease, null, _fxToken);
-                if (rotateIconOnHover)
-                    UITween.RotateZTo(icon, allowed && inside ? _iconBaseRot + 15f : _iconBaseRot, duration, ease, null, _rotToken);
+                var inside = iconIn ?? _hovered; var allowed = CanInteract();
+                UITween.MoveAnchoredTo(icon, _iconBasePos + (allowed && inside ? new Vector2(iconNudge, 0f) : Vector2.zero), duration, ease, null, _fxToken);
+                if (rotateIconOnHover) UITween.RotateZTo(icon, allowed && inside ? _iconBaseRot + 15f : _iconBaseRot, duration, ease, null, _rotToken);
             }
         }
 
-        private void TweenBrightness(float to, float duration, Ease ease)
-        {
-            var from = _brightness;
-            UITween.Kill(_colorToken);
-            UITween.To(from, to, duration, ease,
-                v => { _brightness = v; ApplyVisuals(); },
-                null, 0f, _colorToken);
-        }
-
-        private void GlowTo(float alpha, float duration, Ease ease)
-        {
-            if (_glow == null) return;
-            var from = _glow.color.a;
-            UITween.Kill(_glowToken);
-            UITween.To(from, alpha, duration, ease,
-                v => SetGlowAlpha(v), null, 0f, _glowToken);
-        }
-
-        private void SetGlowAlpha(float alpha)
-        {
-            if (_glow != null) _glow.color = ColorWithAlpha(alpha);
-        }
-
+        private void TweenBrightness(float to, float duration, Ease ease) { var from = _brightness; UITween.Kill(_colorToken); UITween.To(from, to, duration, ease, v => { _brightness = v; ApplyVisuals(); }, null, 0f, _colorToken); }
         private Color ColorWithAlpha(float alpha) => new Color(glowColor.r, glowColor.g, glowColor.b, alpha);
-
-        private void RingTo(float alpha, float duration, Ease ease)
-        {
-            if (_ring == null) return;
-            var from = _ring.color;
-            var to = new Color(glowColor.r, glowColor.g, glowColor.b, alpha);
-            UITween.Kill(_ringToken);
-            UITween.To(0f, 1f, duration, ease,
-                p => { if (_ring != null) _ring.color = Color.LerpUnclamped(from, to, p); },
-                null, 0f, _ringToken);
-        }
-
-        private float RestGlowAlpha()
-        {
-            if (_loading) return UIAnim.GlowLoading;
-            if (_locked || (button != null && !button.interactable)) return 0f;
-            if (hoverStyle == HoverStyle.Light) return 0f;   // tiles: brightness + nudge only
-            if (_selected && _hovered) return UIAnim.GlowHoverSelected;
-            if (_selected) return UIAnim.GlowSelected;
-            if (_focused && !_hovered) return UIAnim.GlowFocused;
-            if (_hovered) return UIAnim.GlowHover;
-            return 0f;
-        }
-
-        private ButtonAnimState RestState()
-        {
-            if (_loading) return ButtonAnimState.Loading;
-            if (_locked) return ButtonAnimState.Locked;
-            if (button != null && !button.interactable) return ButtonAnimState.Disabled;
-            if (_hovered) return ButtonAnimState.HoverIn;
-            if (_selected) return ButtonAnimState.Selected;
-            if (_focused) return ButtonAnimState.Focused;
-            return ButtonAnimState.Idle;
-        }
-
+        private ButtonAnimState RestState() => _loading ? ButtonAnimState.Loading : _locked ? ButtonAnimState.Locked : (button != null && !button.interactable) ? ButtonAnimState.Disabled : _hovered ? ButtonAnimState.HoverIn : _selected ? ButtonAnimState.Selected : _focused ? ButtonAnimState.Focused : ButtonAnimState.Idle;
         private bool CanInteract() => button != null && button.interactable && !_locked && !_loading;
     }
 }
