@@ -92,9 +92,10 @@ namespace WSMGameStudio.RailroadSystem
 
         private void Update()
         {
-            float masterSpeed = Master != null? Master.GetConvertedSpeedUnit() : 0f;
-            TrainPhysics.UpdateWheels(_wheelsScripts, 0, masterSpeed);
-            _trainAudio.UpdateSFX(Speed.Convert_MPS_To_KPH(masterSpeed), 0, false, true);
+            if (_trainAudio == null) InitializeSFX();
+            float masterSpeed = Master != null ? Master.GetConvertedSpeedUnit() : 0f;
+            if (_wheelsScripts != null) TrainPhysics.UpdateWheels(_wheelsScripts, 0, masterSpeed);
+            if (_trainAudio != null) _trainAudio.UpdateSFX(Speed.Convert_MPS_To_KPH(masterSpeed), 0, false, true);
         }
 
         #endregion

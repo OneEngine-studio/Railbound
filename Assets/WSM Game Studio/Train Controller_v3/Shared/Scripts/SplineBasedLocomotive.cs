@@ -220,9 +220,9 @@ namespace WSMGameStudio.RailroadSystem
                 convertedSpeed = 0f;
             }
 
-            _trainAudio.UpdateSFX(_currentSpeed, _brake, _enginesOn, true);
-            _trainParticles.UpdateVFX(convertedSpeed, _acceleration, _brake, _enginesOn, _enableSmoke, _enableBrakingSparks, LocalDirection);
-            TrainPhysics.UpdateWheels(_wheelsScripts, _brake, convertedSpeed);
+            if (_trainAudio != null) _trainAudio.UpdateSFX(_currentSpeed, _brake, _enginesOn, true);
+            if (_trainParticles != null) _trainParticles.UpdateVFX(convertedSpeed, _acceleration, _brake, _enginesOn, _enableSmoke, _enableBrakingSparks, LocalDirection);
+            if (_wheelsScripts != null) TrainPhysics.UpdateWheels(_wheelsScripts, _brake, convertedSpeed);
         }
 
         #endregion
