@@ -30,10 +30,15 @@ namespace Project.Character
         public Transform SourceHips;
         public Transform TargetHips;
         public Transform TargetSkinRoot;
+        public JUTPS.JUCharacterController CharacterController;
 
         [Header("Hips Position Offset")]
         [Tooltip("Vertical and local offset for the target hips to compensate for mesh height and leg proportion differences.")]
         public Vector3 HipsPositionOffset = new Vector3(0, 0.12f, 0);
+
+        [Header("Prone Stance Adjustments")]
+        [Tooltip("Target hips offset applied when character is prone so the mesh lies flat on terrain.")]
+        public Vector3 ProneHipsOffset = Vector3.zero;
 
         [Header("Leg IK Alignment (Prevents Terrain & Shin Clipping)")]
         public bool AlignLegsToFootPlacement = true;
@@ -163,8 +168,43 @@ namespace Project.Character
             if (SourceHips == null || TargetHips == null || BoneMappings == null || BoneMappings.Count == 0)
                 return;
 
+            if (CharacterController == null)
+            {
+                CharacterController = GetComponent<JUTPS.JUCharacterController>();
+                if (CharacterController == null)
+                {
+                    CharacterController = GetComponentInParent<JUTPS.JUCharacterController>();
+                }
+            }
+
+            bool isProne = false;
+            if (CharacterController != null && CharacterController.IsProne)
+            {
+                isProne = true;
+            }
+            else
+            {
+                var anim = GetComponent<Animator>();
+                if (anim == null) anim = GetComponentInParent<Animator>();
+                if (anim != null)
+                {
+                    var state = anim.GetCurrentAnimatorStateInfo(0);
+                    if (state.IsName("Prone Free Locomotion BlendTree") ||
+                        state.IsName("CrouchToProne") ||
+                        state.IsName("Prone FireMode BlendTree") ||
+                        state.IsName("Prone To Crouch") ||
+                        state.IsName("Prone Idle BlendTree") ||
+                        state.IsName("Prone Directional BlendTree") ||
+                        state.IsName("Prone BlendTree"))
+                    {
+                        isProne = true;
+                    }
+                }
+            }
+
             // 1. Sync Hips world position with vertical/proportional offset
-            TargetHips.position = SourceHips.position + transform.TransformDirection(HipsPositionOffset);
+            Vector3 effectiveHipsOffset = isProne ? ProneHipsOffset : HipsPositionOffset;
+            TargetHips.position = SourceHips.position + transform.TransformDirection(effectiveHipsOffset);
 
             // 2. Sync primary body/limb bone rotations in hierarchy order (parent -> child)
             int count = BoneMappings.Count;
@@ -192,7 +232,8 @@ namespace Project.Character
             }
 
             // 4. Analytical 2-Bone Leg IK alignment so Target feet and shins rest naturally on terrain
-            if (AlignLegsToFootPlacement)
+            // Note: Disabled when prone to preserve natural mocap prone animations and prevent reversed knee bending
+            if (AlignLegsToFootPlacement && !isProne)
             {
                 SolveLegTwoBoneIK(
                     SourceLeftUpperLeg, SourceLeftLowerLeg, SourceLeftFoot,

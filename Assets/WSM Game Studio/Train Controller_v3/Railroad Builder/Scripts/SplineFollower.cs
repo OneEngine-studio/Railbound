@@ -180,6 +180,12 @@ namespace WSMGameStudio.Splines
             if (splines == null || splines.Count == 0)
                 return;
 
+            if (_normalizedOrientedPoints == null || _normalizedOrientedPoints.Length == 0)
+                NormalizeOrientedPoints();
+
+            if (_normalizedOrientedPoints == null || _normalizedOrientedPoints.Length == 0)
+                return;
+
             _goingForward = (speed >= 0);
 
             if (SpeedChanged)
@@ -204,8 +210,11 @@ namespace WSMGameStudio.Splines
             //Avoid getting stuck on high speeds
             if (followerBehaviour == SplineFollowerBehaviour.Loop)
             {
-                int splinesCount = _normalizedOrientedPoints.Length;
-                _splineProgress = (_goingForward && _splineProgress > splinesCount) ? (_splineProgress % splinesCount) : ((!_goingForward && _splineProgress < -splinesCount) ? (_splineProgress % -splinesCount) : _splineProgress);
+                int splinesCount = _normalizedOrientedPoints != null ? _normalizedOrientedPoints.Length : 0;
+                if (splinesCount > 0)
+                {
+                    _splineProgress = (_goingForward && _splineProgress > splinesCount) ? (_splineProgress % splinesCount) : ((!_goingForward && _splineProgress < -splinesCount) ? (_splineProgress % -splinesCount) : _splineProgress);
+                }
             }
 
             // Reached end of spline
@@ -251,6 +260,9 @@ namespace WSMGameStudio.Splines
             }
 
             _lastFramePointIndex = _currentPointIndex;
+
+            if (_normalizedOrientedPoints == null || _currentSplineIndex >= _normalizedOrientedPoints.Length || _normalizedOrientedPoints[_currentSplineIndex] == null || _normalizedOrientedPoints[_currentSplineIndex].Length <= 1)
+                return;
 
             _currentPointIndex = CalculateStartPointIndex();
             CalculateSegmentPositionsAndDirection(!_goingForward);

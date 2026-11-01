@@ -16,9 +16,9 @@ namespace JUTPS.PhysicsScripts
         public Vector3 CenterOffset;
 
         [JUSubHeader("Prone Collider Settings")]
-        public float ProneRadius = 0.16f;
-        public float ProneCenterY = 0.26f;
-        public float ProneCenterZ = -0.05f;
+        public float ProneRadius = 0.18f;
+        public float ProneCenterY = 0.18f;
+        public float ProneCenterZ = 0.0f;
         public float ProneHeight = 1.70f;
 
         [JUSubHeader("Roll Collider Settings")]

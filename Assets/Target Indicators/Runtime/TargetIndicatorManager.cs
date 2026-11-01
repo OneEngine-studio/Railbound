@@ -437,6 +437,8 @@ namespace TargetIndicators
 
         void Update()
         {
+            EnsureInitialized();
+
             var hasValidReference = TryUpdateReference(out var referencePosition, out var referenceForward);
 
             ProcessTargets(hasValidReference, referencePosition, referenceForward);
@@ -449,7 +451,7 @@ namespace TargetIndicators
         // The compass override is a complete reference on its own; every other case requires the camera.
         bool TryUpdateReference(out Vector3 referencePosition, out Vector3 referenceForward)
         {
-            if (UsesCompassForwardOverride)
+            if (UsesCompassForwardOverride && _compassForwardReferenceOverride != null)
             {
                 referencePosition = _compassForwardReferenceOverride.position;
                 referenceForward = _compassForwardReferenceOverride.forward;
@@ -457,8 +459,17 @@ namespace TargetIndicators
             else if (_camera != null)
             {
                 var cameraTransform = _camera.transform;
-                referencePosition = cameraTransform.position;
-                referenceForward = cameraTransform.forward;
+                if (cameraTransform != null)
+                {
+                    referencePosition = cameraTransform.position;
+                    referenceForward = cameraTransform.forward;
+                }
+                else
+                {
+                    referencePosition = Vector3.zero;
+                    referenceForward = Vector3.forward;
+                    return false;
+                }
             }
             else
             {
@@ -467,7 +478,8 @@ namespace TargetIndicators
                 return false;
             }
 
-            if (_boundaryType == BoundaryType.CompassTape)
+            if (_compassTapeScreenPose == null) _compassTapeScreenPose = new();
+            if (_boundaryType == BoundaryType.CompassTape && _compassTapeScreenPose != null)
                 _compassTapeScreenPose.UpdateReferenceState(referencePosition, referenceForward);
 
             return true;
