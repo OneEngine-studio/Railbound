@@ -34,18 +34,25 @@ public class LoginPolish : MonoBehaviour
 
     private void Awake()
     {
-        _sfx = GetComponent<AudioSource>();
-        if (_sfx == null) _sfx = gameObject.AddComponent<AudioSource>();
-        _sfx.playOnAwake = false;
-        _sfx.loop = false;
-        _sfx.spatialBlend = 0f;
+        InitializeAudioSource();
     }
 
     private void Start()
     {
         if (clickClip == null)
-            clickClip = UnityEngine.Resources.Load<AudioClip>("SciFi_Select2");
+            clickClip = Resources.Load<AudioClip>("SciFi_Select2");
+            
         AutoWire();
+    }
+
+    private void InitializeAudioSource()
+    {
+        _sfx = GetComponent<AudioSource>();
+        if (_sfx == null) _sfx = gameObject.AddComponent<AudioSource>();
+        
+        _sfx.playOnAwake = false;
+        _sfx.loop = false;
+        _sfx.spatialBlend = 0f;
     }
 
     private void AutoWire()
@@ -54,30 +61,38 @@ public class LoginPolish : MonoBehaviour
         foreach (var b in buttons)
         {
             if (b == null || _baseScale.ContainsKey(b)) continue;
+            
             _baseScale[b] = b.transform.localScale;
-            var btn = b;
-            btn.onClick.AddListener(() => PlayClick());
+            
+            // Local copy for closure
+            var btn = b; 
+            btn.onClick.AddListener(PlayClick);
             AddHover(btn);
         }
 
-        // Accent bars default: MoreAccent + GuestAccent.
-        // Skip any bar driven by Reach UI ImagePulse to avoid fighting over alpha.
+        ConfigureAccentBars();
+    }
+
+    private void ConfigureAccentBars()
+    {
         if (accentBars.Count == 0)
         {
-            foreach (var n in new[] { "Canvas/LoginPanel/MoreButton/MoreAccent", "Canvas/LoginPanel/GuestButton/GuestAccent" })
+            string[] paths = { "Canvas/LoginPanel/MoreButton/MoreAccent", "Canvas/LoginPanel/GuestButton/GuestAccent" };
+            foreach (var path in paths)
             {
-                var go = GameObject.Find(n);
-                if (go != null)
+                var go = GameObject.Find(path);
+                if (go == null) continue;
+
+                var img = go.GetComponent<Image>();
+                if (img != null && img.GetComponent<Michsky.UI.Reach.ImagePulse>() == null && !accentBars.Contains(img))
                 {
-                    var img = go.GetComponent<Image>();
-                    if (img != null && img.GetComponent<Michsky.UI.Reach.ImagePulse>() == null && !accentBars.Contains(img))
-                        accentBars.Add(img);
+                    accentBars.Add(img);
                 }
             }
         }
         else
         {
-            accentBars.RemoveAll(img => img != null && img.GetComponent<Michsky.UI.Reach.ImagePulse>() != null);
+            accentBars.RemoveAll(img => img == null || img.GetComponent<Michsky.UI.Reach.ImagePulse>() != null);
         }
     }
 
@@ -85,6 +100,9 @@ public class LoginPolish : MonoBehaviour
     {
         var trigger = btn.GetComponent<EventTrigger>();
         if (trigger == null) trigger = btn.gameObject.AddComponent<EventTrigger>();
+
+        // Clear existing triggers to avoid duplicates if AutoWire is called again
+        trigger.triggers.Clear();
 
         var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
         enter.callback.AddListener(_ => { _hovered.Add(btn); PlayHover(); });
@@ -100,26 +118,45 @@ public class LoginPolish : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
         _hoverCooldown -= dt;
 
+        UpdateHoverScale(dt);
+        UpdateAccentBars();
+    }
+
+    private void UpdateHoverScale(float dt)
+    {
         foreach (var kv in _baseScale)
         {
             if (kv.Key == null) continue;
+            
             Vector3 target = kv.Value;
             if (_hovered.Contains(kv.Key) && kv.Key.interactable)
+            {
                 target = kv.Value * hoverScale;
+            }
+            
             kv.Key.transform.localScale = Vector3.Lerp(kv.Key.transform.localScale, target, Mathf.Clamp01(hoverLerp * dt));
         }
+    }
 
-        if (accentBars.Count > 0)
+    private void UpdateAccentBars()
+    {
+        if (accentBars.Count == 0) return;
+
+        float k = (Mathf.Sin(Time.unscaledTime * pulseSpeed) + 1f) * 0.5f;
+        float a = Mathf.Lerp(pulseMin, pulseMax, k);
+
+        for (int i = accentBars.Count - 1; i >= 0; i--)
         {
-            float k = (Mathf.Sin(Time.unscaledTime * pulseSpeed) + 1f) * 0.5f;
-            float a = Mathf.Lerp(pulseMin, pulseMax, k);
-            foreach (var img in accentBars)
+            var img = accentBars[i];
+            if (img == null)
             {
-                if (img == null) continue;
-                var c = img.color;
-                c.a = a;
-                img.color = c;
+                accentBars.RemoveAt(i);
+                continue;
             }
+
+            var c = img.color;
+            c.a = a;
+            img.color = c;
         }
     }
 
@@ -133,6 +170,7 @@ public class LoginPolish : MonoBehaviour
     {
         if (_hoverCooldown > 0f) return;
         _hoverCooldown = 0.08f;
+        
         if (_sfx != null && hoverClip != null)
             _sfx.PlayOneShot(hoverClip, hoverVolume);
     }
