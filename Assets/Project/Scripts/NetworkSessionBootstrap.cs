@@ -8,6 +8,7 @@ using UnityEngine;
 /// Authentication remains owned by AuthenticationService; this component only
 /// starts the configured Netcode client or dedicated server.
 /// </summary>
+[RequireComponent(typeof(NetworkManager), typeof(UnityTransport))]
 public sealed class NetworkSessionBootstrap : MonoBehaviour
 {
     [Header("Transport")]
@@ -25,9 +26,10 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
     private void Awake()
     {
         _networkManager = GetComponent<NetworkManager>();
-        if (_networkManager == null)
+        
+        // Fail fast if critical components are missing
+        if (!ConfigureTransport())
         {
-            Debug.LogError("[NetworkSessionBootstrap] NetworkManager component is missing.");
             enabled = false;
             return;
         }
@@ -35,7 +37,6 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
         if (persistNetworkManager)
             DontDestroyOnLoad(gameObject);
 
-        ConfigureTransport();
         SubscribeToAuthentication();
     }
 
@@ -48,7 +49,9 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
     private void OnDestroy()
     {
         if (_subscribed && AuthenticationService.Instance != null)
+        {
             AuthenticationService.Instance.OnLoginSuccess -= HandleLoginSuccess;
+        }
     }
 
     private void SubscribeToAuthentication()
@@ -83,49 +86,21 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
             Debug.Log($"[NetworkSessionBootstrap] Netcode client started for {serverAddress}:{serverPort}.");
     }
 
-    private void ConfigureTransport()
+    private bool ConfigureTransport()
     {
         var transport = GetComponent<UnityTransport>();
         if (transport == null)
         {
             Debug.LogError("[NetworkSessionBootstrap] UnityTransport component is missing.");
-            enabled = false;
-            return;
+            return false;
         }
 
         transport.SetConnectionData(serverAddress, serverPort, listenAddress);
+        return true;
     }
 
     private void StartDedicatedModeFromCommandLine()
     {
         string[] args = Environment.GetCommandLineArgs();
         bool isServer = HasArgument(args, "-server");
-        bool isHost = HasArgument(args, "-host");
-
-        if (!isServer && !isHost)
-            return;
-
-        if (_networkManager.IsClient || _networkManager.IsServer)
-            return;
-
-        bool started = isServer
-            ? _networkManager.StartServer()
-            : _networkManager.StartHost();
-
-        if (!started)
-            Debug.LogError($"[NetworkSessionBootstrap] Failed to start {(isServer ? "server" : "host")} mode.");
-        else
-            Debug.Log($"[NetworkSessionBootstrap] Started {(isServer ? "dedicated server" : "host")} mode.");
-    }
-
-    private static bool HasArgument(string[] args, string expected)
-    {
-        for (int i = 0; i < args.Length; i++)
-        {
-            if (string.Equals(args[i], expected, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
-}
+        bool isHost
