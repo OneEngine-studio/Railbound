@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using JUTPS;
+using JUTPS.CharacterBrain;
 
 namespace Project.AI.Learning
 {
@@ -47,6 +48,8 @@ namespace Project.AI.Learning
         [SerializeField] private AIMatchMetrics currentMetrics = new AIMatchMetrics();
 
         private JUHealth selfHealth;
+        private JUCharacterBrain selfBrain;
+        
         private float matchStartTime;
         private float totalReactionTimeAccum;
         private int reactionTimeCount;
@@ -57,6 +60,7 @@ namespace Project.AI.Learning
         private void Awake()
         {
             selfHealth = GetComponent<JUHealth>();
+            selfBrain = GetComponent<JUCharacterBrain>();
             matchStartTime = Time.time;
         }
 
@@ -84,14 +88,19 @@ namespace Project.AI.Learning
             currentMetrics.MatchNumber = matchNumber;
             currentMetrics.MatchDurationSeconds = 0f;
             currentMetrics.SurvivedMatch = true;
+            
             matchStartTime = Time.time;
             hasEndedMatch = false;
+            
+            // Reset accumulators
+            totalReactionTimeAccum = 0f;
+            reactionTimeCount = 0;
         }
 
-        public void RecordShotFired()
-        {
-            currentMetrics.ShotsFired++;
-        }
+        public void RecordShotFired() => currentMetrics.ShotsFired++;
+        public void RecordKill() => currentMetrics.Kills++;
+        public void RecordThreatInvestigated() => currentMetrics.SoundThreatsInvestigated++;
+        public void RecordCoverEntered() => currentMetrics.TimesEnteredCover++;
 
         public void RecordShotHit(float damage)
         {
@@ -99,27 +108,16 @@ namespace Project.AI.Learning
             currentMetrics.DamageDealt += damage;
         }
 
-        public void RecordKill()
-        {
-            currentMetrics.Kills++;
-        }
-
         public void RecordSoundHeard(float reactionLatencySeconds)
         {
             currentMetrics.GunshotsHeard++;
             totalReactionTimeAccum += reactionLatencySeconds;
             reactionTimeCount++;
-            currentMetrics.AverageReactionTimeSeconds = totalReactionTimeAccum / reactionTimeCount;
-        }
-
-        public void RecordThreatInvestigated()
-        {
-            currentMetrics.SoundThreatsInvestigated++;
-        }
-
-        public void RecordCoverEntered()
-        {
-            currentMetrics.TimesEnteredCover++;
+            
+            if (reactionTimeCount > 0)
+            {
+                currentMetrics.AverageReactionTimeSeconds = totalReactionTimeAccum / reactionTimeCount;
+            }
         }
 
         private void HandleDamageReceived(float damage, Vector3 hitPosition)
@@ -130,7 +128,8 @@ namespace Project.AI.Learning
             if (hitPosition != Vector3.zero)
             {
                 Vector3 damageDir = (hitPosition - transform.position).normalized;
-                damageDir.y = 0f;
+                damageDir.y = 0f; // Flatten to horizontal plane
+                
                 float angle = Vector3.Angle(transform.forward, damageDir);
                 if (angle > 75f)
                 {
@@ -138,9 +137,8 @@ namespace Project.AI.Learning
                 }
             }
 
-            // Estimate whether agent was in cover
-            var brain = GetComponent<JUTPS.CharacterBrain.JUCharacterBrain>();
-            bool isCrouched = brain != null && brain.IsCrouched;
+            // Estimate whether agent was in cover based on crouch state
+            bool isCrouched = selfBrain != null && selfBrain.IsCrouched;
             if (isCrouched)
             {
                 currentMetrics.DamageTakenWhileInCover += damage;
@@ -155,7 +153,6 @@ namespace Project.AI.Learning
         {
             currentMetrics.SurvivedMatch = false;
 
-            // If majority of recent hits or last hit was from flank/behind, count as flank kill
             if (currentMetrics.HitsReceivedFromBehindOrSide > 0)
             {
                 currentMetrics.TimesKilledByFlank++;
