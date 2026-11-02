@@ -58,10 +58,11 @@ namespace Railbound.Gameplay
             Shader shader = Shader.Find("Project/URP_WorldScanFX");
             if (shader == null)
             {
-                shader = Shader.Find("Universal Render Pipeline/Unlit");
+                shader = Shader.Find("HDRP/Particles/Unlit") ?? Shader.Find("HDRP/Unlit");
             }
 
             _material = new Material(shader);
+            _material.renderQueue = 3080; // Inside HDRP's [2900..3100] Transparent queue range
             _meshRenderer.sharedMaterial = _material;
             _meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _meshRenderer.receiveShadows = false;
@@ -80,9 +81,10 @@ namespace Railbound.Gameplay
             var mr = ringGO.AddComponent<MeshRenderer>();
 
             Shader ringShader = Shader.Find("MadeByProfessorOakie/URP_SonarWaveRing");
-            if (ringShader == null) ringShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (ringShader == null) ringShader = Shader.Find("HDRP/Particles/Unlit") ?? Shader.Find("HDRP/Unlit");
 
             _groundRingMat = new Material(ringShader);
+            _groundRingMat.renderQueue = 3040; // Inside HDRP's [2900..3100] Transparent queue range
             _groundRingMat.SetColor("_Color", new Color(1.0f, 0.5f, 0.35f, 0.85f));
             _groundRingMat.SetFloat("_Emission", 2.8f);
 

@@ -57,12 +57,13 @@ namespace Railbound.Gameplay
             Shader shader = Shader.Find("Railbound/URP_EnemyThroughWallXRay");
             if (shader == null)
             {
-                shader = Shader.Find("Universal Render Pipeline/Unlit");
+                shader = Shader.Find("HDRP/Particles/Unlit") ?? Shader.Find("HDRP/Unlit");
             }
 
             _xrayMaterial = new Material(shader)
             {
-                name = "EnemyThroughWall_RuntimeMat"
+                name = "EnemyThroughWall_RuntimeMat",
+                renderQueue = 3090 // Inside HDRP's [2900..3100] Transparent queue range
             };
         }
 
