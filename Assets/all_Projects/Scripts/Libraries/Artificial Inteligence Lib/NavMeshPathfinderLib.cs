@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -48,12 +48,12 @@ namespace JUTPS.AI
             {
                 //Get valid source position
                 NavMeshHit hit;
-                NavMesh.SamplePosition(SourcePosition, out hit, 5, NavmeshArea);
+                if (!NavMesh.SamplePosition(SourcePosition, out hit, 50f, NavmeshArea)) NavMesh.SamplePosition(SourcePosition, out hit, 100f, NavMesh.AllAreas);
                 //Get valid END position
                 NavMeshHit hitEnd;
-                NavMesh.SamplePosition(TargetPosition, out hitEnd, 5, NavmeshArea);
+                if (!NavMesh.SamplePosition(TargetPosition, out hitEnd, 50f, NavmeshArea)) NavMesh.SamplePosition(TargetPosition, out hitEnd, 100f, NavMesh.AllAreas);
 
-                if (!hit.hit || !hitEnd.hit) { Debug.LogWarning("Could not calculate NavMesh path, invalid target/source position"); return new Vector3[0] { }; }
+                if (!hit.hit || !hitEnd.hit) { return new Vector3[0] { }; }
 
                 //Set position
                 NavMesh.CalculatePath(hit.position, hitEnd.position, NavmeshArea, navmesh_path);

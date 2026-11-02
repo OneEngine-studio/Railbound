@@ -72,7 +72,7 @@ namespace Michsky.UI.Reach
             InitializeSelector();
             UpdateContentLayout();
 
-            if (invokeOnAwake == true)
+            if (invokeOnAwake == true && items.Count > 0 && index >= 0 && index < items.Count)
             {
                 items[index].onItemSelect.Invoke();
                 onValueChanged.Invoke(index);
@@ -84,7 +84,7 @@ namespace Michsky.UI.Reach
         void OnEnable()
         {
             if (gameObject.activeInHierarchy == true) { StartCoroutine("DisableAnimator"); }
-            if (useLocalization == true && !string.IsNullOrEmpty(items[index].localizationKey) && localizedObject.CheckLocalizationStatus() == true) 
+            if (useLocalization == true && items.Count > 0 && index >= 0 && index < items.Count && !string.IsNullOrEmpty(items[index].localizationKey) && localizedObject != null && localizedObject.CheckLocalizationStatus() == true) 
             { 
                 label.text = localizedObject.GetKeyOutput(items[index].localizationKey); 
             }
@@ -99,6 +99,11 @@ namespace Michsky.UI.Reach
             {
                 if (PlayerPrefs.HasKey("HorizontalSelector_" + saveKey) == true) { defaultIndex = PlayerPrefs.GetInt("HorizontalSelector_" + saveKey); }
                 else { PlayerPrefs.SetInt("HorizontalSelector_" + saveKey, defaultIndex); }
+            }
+
+            if (defaultIndex < 0 || defaultIndex >= items.Count)
+            {
+                defaultIndex = Mathf.Clamp(defaultIndex, 0, items.Count - 1);
             }
 
             label.text = items[defaultIndex].itemTitle;

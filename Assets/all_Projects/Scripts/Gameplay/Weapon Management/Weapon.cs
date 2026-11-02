@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using JUTPS.ItemSystem;
 
@@ -225,7 +225,7 @@ namespace JUTPS.WeaponSystem
 				if (BulletsAmounts <= 0)
 				{
 					WeaponRotationCenter.WeaponPositionTransform[ItemWieldPositionID].Rotate(0, 2, 0);
-					if (mAudioSource != null && EmptyMagazineAudio != null)
+					if (mAudioSource != null && mAudioSource.isActiveAndEnabled && EmptyMagazineAudio != null)
 					{
 						mAudioSource.PlayOneShot(EmptyMagazineAudio);
 					}
@@ -234,7 +234,7 @@ namespace JUTPS.WeaponSystem
 
 			if (BulletsAmounts <= 0)
 			{
-				if (mAudioSource != null && EmptyMagazineAudio != null && PlayedEmptySound == false && IsInvoking("enableEmptyGunSound") == false)
+				if (mAudioSource != null && mAudioSource.isActiveAndEnabled && EmptyMagazineAudio != null && PlayedEmptySound == false && IsInvoking("enableEmptyGunSound") == false)
 				{
 					mAudioSource.PlayOneShot(EmptyMagazineAudio);
 					PlayedEmptySound = true;
@@ -324,7 +324,7 @@ namespace JUTPS.WeaponSystem
 
 
 					//Audio
-					if (ShootAudio != null)
+					if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
 					{
 						mAudioSource.pitch = Random.Range(0.7f, 1.3f);
 						mAudioSource.PlayOneShot(ShootAudio);
@@ -341,7 +341,7 @@ namespace JUTPS.WeaponSystem
 
 
 					//Audio
-					if (ShootAudio != null && mAudioSource != null)
+					if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
 					{
 						mAudioSource.pitch = Random.Range(0.7f, 1.1f);
 						mAudioSource.PlayOneShot(ShootAudio);
@@ -424,7 +424,7 @@ namespace JUTPS.WeaponSystem
 				}
 
 				//Audio
-				if (ShootAudio != null)
+				if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
 				{
 					mAudioSource.pitch = Random.Range(0.7f, 1.1f);
 					mAudioSource.PlayOneShot(ShootAudio);
@@ -536,7 +536,7 @@ namespace JUTPS.WeaponSystem
 				}
 			}
 			//Play reloading audio
-			mAudioSource.PlayOneShot(ReloadAudio);
+			if (ReloadAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled) mAudioSource.PlayOneShot(ReloadAudio);
 		}
 
 #if UNITY_EDITOR

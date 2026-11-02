@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using JUTPS.FX;
 using JUTPS.ArmorSystem;
 
@@ -45,6 +45,7 @@ namespace JUTPS.WeaponSystem
 
 		public SurfaceFX[] ImpactFX;
 
+		void Awake() { rb = GetComponent<Rigidbody>(); if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode.Continuous; OldPosition = transform.position; }
 		void Start()
 		{
 			rb = GetComponent<Rigidbody>();
@@ -55,7 +56,8 @@ namespace JUTPS.WeaponSystem
 			//If movement is physic type
 			if (MovementType == BulletMovementType.Physics)
 			{
-				rb.velocity = transform.forward * BulletVelocity;
+				if (rb == null) rb = GetComponent<Rigidbody>();
+			if (rb != null) rb.velocity = transform.forward * BulletVelocity;
 			}
 			else
 			{
@@ -105,7 +107,8 @@ namespace JUTPS.WeaponSystem
 
 		private void MovePhysically()
 		{
-			rb.velocity = transform.forward * BulletVelocity;
+			if (rb == null) rb = GetComponent<Rigidbody>();
+			if (rb != null) rb.velocity = transform.forward * BulletVelocity;
 		}
 		private void MoveForward()
 		{
@@ -172,7 +175,8 @@ namespace JUTPS.WeaponSystem
 				{
 					if (col.gameObject.TryGetComponent(out Rigidbody other))
 					{
-						other.AddForce(transform.forward * BulletVelocity * rb.mass, ForceMode.Impulse);
+						float bulletMass = rb != null ? rb.mass : 0.1f;
+						other.AddForce(transform.forward * BulletVelocity * bulletMass, ForceMode.Impulse);
 					}
 				}
 
