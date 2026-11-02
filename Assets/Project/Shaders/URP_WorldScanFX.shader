@@ -18,8 +18,8 @@ Shader "Project/URP_WorldScanFX"
         Tags
         {
             "RenderType" = "Transparent"
-            "Queue" = "Transparent+500"
-            "RenderPipeline" = "UniversalPipeline"
+            "Queue" = "Transparent+80"
+            "RenderPipeline" = "HDRenderPipeline"
         }
         LOD 200
 
@@ -30,15 +30,17 @@ Shader "Project/URP_WorldScanFX"
 
         Pass
         {
-            Name "WorldScanForwardPass"
-            Tags { "LightMode" = "UniversalForward" }
+            Name "ForwardOnly"
+            Tags { "LightMode" = "ForwardOnly" }
 
             HLSLPROGRAM
+            #pragma target 4.5
+            #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
 
             struct Attributes
             {
@@ -48,7 +50,6 @@ Shader "Project/URP_WorldScanFX"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float4 screenPos  : TEXCOORD0;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -67,26 +68,22 @@ Shader "Project/URP_WorldScanFX"
             Varyings vert(Attributes input)
             {
                 Varyings output;
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                output.positionCS = vertexInput.positionCS;
-                output.screenPos = ComputeScreenPos(vertexInput.positionCS);
+                float3 positionRWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(positionRWS);
                 return output;
             }
 
-            half4 frag(Varyings input) : SV_Target
+            float4 frag(Varyings input) : SV_Target
             {
-                float2 screenUV = input.screenPos.xy / input.screenPos.w;
+                uint2 pixelCoord = uint2(input.positionCS.xy);
 
-                // Sample Scene Depth
-                float rawDepth = SampleSceneDepth(screenUV);
-                #if UNITY_REVERSED_Z
-                if (rawDepth <= 0.00002) discard; // Skybox / far clip
-                #else
-                if (rawDepth >= 0.99998) discard;
-                #endif
+                // Sample HDRP Scene Depth Pyramid
+                float rawDepth = LoadCameraDepth(pixelCoord);
+                if (IsSky(rawDepth)) discard;
 
-                // Reconstruct World Space Position
-                float3 worldPos = ComputeWorldSpacePosition(screenUV, rawDepth, UNITY_MATRIX_I_VP);
+                // Reconstruct Camera-Relative World Position, then convert to Absolute World Position
+                PositionInputs posInput = GetPositionInput(input.positionCS.xy, _ScreenSize.zw, rawDepth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+                float3 worldPos = GetAbsolutePositionWS(posInput.positionWS);
 
                 float dist = distance(worldPos, _ScanCenter.xyz);
 
@@ -106,11 +103,11 @@ Shader "Project/URP_WorldScanFX"
                 trailing = pow(trailing, 1.8);
 
                 // Depth-edge detection: samples 4 neighbor depth taps to detect silhouette edges
-                float2 texel = _ScreenParams.zw - 1.0;
-                float depthRight = SampleSceneDepth(screenUV + float2(texel.x * 2.0, 0.0));
-                float depthLeft  = SampleSceneDepth(screenUV - float2(texel.x * 2.0, 0.0));
-                float depthUp    = SampleSceneDepth(screenUV + float2(0.0, texel.y * 2.0));
-                float depthDown  = SampleSceneDepth(screenUV - float2(0.0, texel.y * 2.0));
+                uint2 maxPixel = uint2(max(float2(1.0, 1.0), _ScreenSize.xy - 1.0));
+                float depthRight = LoadCameraDepth(min(pixelCoord + uint2(2, 0), maxPixel));
+                float depthLeft  = LoadCameraDepth(uint2(max(int2(0, 0), int2(pixelCoord) - int2(2, 0))));
+                float depthUp    = LoadCameraDepth(min(pixelCoord + uint2(0, 2), maxPixel));
+                float depthDown  = LoadCameraDepth(uint2(max(int2(0, 0), int2(pixelCoord) - int2(0, 2))));
 
                 float depthDiff = abs(rawDepth - depthRight) + abs(rawDepth - depthLeft) +
                                   abs(rawDepth - depthUp)    + abs(rawDepth - depthDown);
@@ -125,11 +122,7 @@ Shader "Project/URP_WorldScanFX"
                 float rangeFade = saturate(1.0 - (_CurrentRadius / max(_MaxRadius, 0.001)));
                 rangeFade = pow(rangeFade, 0.45);
 
-                // Combine components:
-                // 1. Highlighted geometry edges on barrels, crates, stairs, obstacles
-                // 2. Main wave crest with white-hot core
-                // 3. Trailing surface wash with ripples
-                half3 col = half3(0, 0, 0);
+                float3 col = float3(0, 0, 0);
 
                 // Edge outline glow on intersected geometry
                 col += _WaveColor.rgb * edgeFactor * leading * 3.5;
@@ -145,12 +138,12 @@ Shader "Project/URP_WorldScanFX"
                 float alpha = saturate((leading * 1.5 + edgeFactor * leading * 2.0 + trailing * 0.5) * rangeFade);
                 if (alpha < 0.005) discard;
 
-                col *= rangeFade;
+                // Pre-expose for HDRP camera buffer
+                col *= rangeFade * GetCurrentExposureMultiplier();
 
-                return half4(col, alpha);
+                return float4(col, alpha);
             }
             ENDHLSL
         }
     }
 }
-

@@ -215,7 +215,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AORemapMax: 1
-    - _AORemapMin: 0
+    - _AORemapMin: 1
     - _ATDistance: 1
     - _AddPrecomputedVelocity: 0
     - _AlbedoAffectEmissive: 0
@@ -286,8 +286,8 @@ Material:
     - _LinkDetailsWithBase: 1
     - _METALNESS: 0.09836066
     - _MaterialID: 1
-    - _Metallic: 0.4
-    - _MetallicRemapMax: 0.4
+    - _Metallic: 0.35
+    - _MetallicRemapMax: 0.35
     - _MetallicRemapMin: 0
     - _Mode: 3
     - _NormalMapSpace: 0
@@ -312,8 +312,8 @@ Material:
     - _SPECULAR_IOR: 1.5
     - _SPECULAR_ROUGHNESS: 1
     - _Smoothness: 0.5
-    - _SmoothnessRemapMax: 1
-    - _SmoothnessRemapMin: 0
+    - _SmoothnessRemapMax: 0.65
+    - _SmoothnessRemapMin: 0.1
     - _SmoothnessTextureChannel: 0
     - _SpecularAAScreenSpaceVariance: 0.1
     - _SpecularAAThreshold: 0.2
@@ -358,15 +358,15 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BASE_COLOR: {r: 0.8729508, g: 0.8729508, b: 0.8729508, a: 1}
-    - _BaseColor: {r: 0.11999995, g: 0.13999996, b: 0.17999998, a: 1}
+    - _BaseColor: {r: 0.11999983, g: 0.13999984, b: 0.17999986, a: 1}
     - _BaseColorMap_MipInfo: {r: 0, g: 0, b: 0, a: 0}
-    - _Color: {r: 0.11999992, g: 0.13999993, b: 0.17999995, a: 1}
+    - _Color: {r: 0.1199998, g: 0.1399998, b: 0.17999983, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EMISSION_COLOR: {r: 0.45, g: 0.45, b: 0.45, a: 0.45}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissiveColor: {r: 0.05, g: 0.08, b: 0.12, a: 1}
-    - _EmissiveColorLDR: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissiveColorLDR: {r: 0.05, g: 0.08, b: 0.12, a: 1}
     - _InvPrimScale: {r: 1, g: 1, b: 0, a: 0}
     - _IridescenceThicknessRemap: {r: 0, g: 1, b: 0, a: 0}
     - _SPECULAR_COLOR: {r: 0.084337346, g: 0.084337346, b: 0.084337346, a: 0.084337346}

@@ -24,7 +24,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: SmokeParticle
-  m_Shader: {fileID: 4800000, guid: c4edd00ff2db5b24391a4fcb1762e459, type: 3}
+  m_Shader: {fileID: 4800000, guid: 620fba6a2134fe1489f7c0f5d3984019, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -128,7 +128,7 @@ Material:
     - _CameraNearFadeDistance: 1
     - _ColorMode: 0
     - _Cull: 2
-    - _CullMode: 2
+    - _CullMode: 0
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DistortionBlend: 0.5
@@ -150,7 +150,7 @@ Material:
     - _DistortionStrengthScaled: 0
     - _DistortionVectorBias: -1
     - _DistortionVectorScale: 2
-    - _DoubleSidedEnable: 0
+    - _DoubleSidedEnable: 1
     - _DoubleSidedGIMode: 0
     - _DstBlend: 10
     - _DstBlendAlpha: 10
@@ -168,6 +168,7 @@ Material:
     - _IncludeIndirectLighting: 1
     - _InvFade: 3
     - _LightingEnabled: 1
+    - _LuminanceToAlpha: 0
     - _Metallic: 0
     - _Mode: 2
     - _OcclusionStrength: 1
@@ -196,6 +197,7 @@ Material:
     - _TransparentZWrite: 0
     - _UVSec: 0
     - _UseEmissiveIntensity: 0
+    - _UseVertexColor: 1
     - _ZTestDepthEqualForOpaque: 4
     - _ZTestModeDistortion: 4
     - _ZTestTransparent: 4
@@ -204,7 +206,7 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 0.7}
     - _BaseColorAddSubDiff: {r: 0, g: 0, b: 0, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
-    - _Color: {r: 1, g: 1, b: 1, a: 0.7}
+    - _Color: {r: 1, g: 1, b: 1, a: 0.55}
     - _ColorAddSubDiff: {r: 1, g: 0, b: 0, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissiveColor: {r: 0, g: 0, b: 0, a: 1}
@@ -212,7 +214,7 @@ Material:
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _SoftParticleFadeParams: {r: 0, g: 1, b: 0, a: 0}
     - _TintColor: {r: 0.5943396, g: 0.5943396, b: 0.5943396, a: 0.44705883}
-    - _UnlitColor: {r: 1, g: 1, b: 1, a: 0.7}
+    - _UnlitColor: {r: 1, g: 1, b: 1, a: 0.55}
     - _UnlitColorMap_MipInfo: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &7507516691953892482

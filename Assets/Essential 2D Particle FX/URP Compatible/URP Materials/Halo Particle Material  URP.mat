@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Halo Particle Material  URP
-  m_Shader: {fileID: 4800000, guid: c4edd00ff2db5b24391a4fcb1762e459, type: 3}
+  m_Shader: {fileID: 4800000, guid: 620fba6a2134fe1489f7c0f5d3984019, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -67,7 +67,7 @@ Material:
     - _AlphaRemapMin: 0
     - _AlphaSrcBlend: 1
     - _BlendMode: 0
-    - _CullMode: 2
+    - _CullMode: 0
     - _Cutoff: 0.5
     - _DistortionBlendMode: 0
     - _DistortionBlurBlendMode: 0
@@ -84,7 +84,7 @@ Material:
     - _DistortionSrcBlend: 1
     - _DistortionVectorBias: -1
     - _DistortionVectorScale: 2
-    - _DoubleSidedEnable: 0
+    - _DoubleSidedEnable: 1
     - _DoubleSidedGIMode: 0
     - _DstBlend: 10
     - _EmissiveExposureWeight: 1
@@ -93,6 +93,7 @@ Material:
     - _EnableExternalAlpha: 0
     - _EnableFogOnTransparent: 0
     - _IncludeIndirectLighting: 1
+    - _LuminanceToAlpha: 0
     - _OpaqueCullMode: 2
     - _SrcBlend: 1
     - _StencilRef: 0
@@ -108,6 +109,7 @@ Material:
     - _TransparentSortPriority: 0
     - _TransparentZWrite: 0
     - _UseEmissiveIntensity: 0
+    - _UseVertexColor: 1
     - _ZTestDepthEqualForOpaque: 4
     - _ZTestModeDistortion: 4
     - _ZTestTransparent: 4

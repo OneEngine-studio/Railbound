@@ -30,8 +30,8 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
         Tags
         {
             "RenderType" = "Transparent"
-            "Queue" = "Transparent+200"
-            "RenderPipeline" = "UniversalPipeline"
+            "Queue" = "Transparent+90"
+            "RenderPipeline" = "HDRenderPipeline"
             "DisableBatching" = "True"
         }
 
@@ -43,15 +43,18 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
 
         Pass
         {
-            Name "XRayHologramPass"
-            Tags { "LightMode" = "UniversalForward" }
+            Name "ForwardOnly"
+            Tags { "LightMode" = "ForwardOnly" }
 
             HLSLPROGRAM
+            #pragma target 4.5
+            #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
 
             struct Attributes
             {
@@ -64,7 +67,7 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
             struct Varyings
             {
                 float4 positionCS   : SV_POSITION;
-                float3 positionWS   : TEXCOORD0;
+                float3 positionRWS  : TEXCOORD0;
                 float3 normalWS     : TEXCOORD1;
                 float2 uv           : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -90,47 +93,44 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS);
-
-                output.positionCS = vertexInput.positionCS;
-                output.positionWS = vertexInput.positionWS;
-                output.normalWS = normalInput.normalWS;
+                float3 positionRWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(positionRWS);
+                output.positionRWS = positionRWS;
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = input.uv;
 
                 return output;
             }
 
-            half4 frag(Varyings input) : SV_Target
+            float4 frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
 
                 float3 normalWS = normalize(input.normalWS);
-                float3 viewDirWS = normalize(GetCameraPositionWS() - input.positionWS);
+                float3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionRWS);
+                float3 absWorldPos = GetAbsolutePositionWS(input.positionRWS);
 
                 // 1. Fresnel Rim Outline
                 float NdotV = saturate(dot(normalWS, viewDirWS));
                 float fresnel = pow(1.0 - NdotV, _FresnelPower);
 
                 // 2. Holographic Horizontal Scanlines
-                float scanline = sin(input.positionWS.y * _ScanlineDensity - _Time.y * _ScanlineSpeed) * 0.5 + 0.5;
+                float scanline = sin(absWorldPos.y * _ScanlineDensity - _Time.y * _ScanlineSpeed) * 0.5 + 0.5;
                 float scanMod = 1.0 - (_ScanlineStrength * (1.0 - scanline));
 
                 // 3. Heartbeat / Sonar Pulse
                 float pulse = 1.0 + _PulseAmplitude * sin(_Time.y * _PulseSpeed);
 
                 // 4. Color & Alpha Blending
-                half3 baseCol = _Color.rgb;
-                half3 rimCol = _RimColor.rgb;
-                half3 finalColor = lerp(baseCol, rimCol, fresnel) * (_EmissionIntensity * pulse * scanMod);
+                float3 baseCol = _Color.rgb;
+                float3 rimCol = _RimColor.rgb;
+                float3 finalColor = lerp(baseCol, rimCol, fresnel) * (_EmissionIntensity * pulse * scanMod) * GetCurrentExposureMultiplier();
 
                 float alpha = lerp(_InnerAlpha, _RimAlpha, fresnel) * _Color.a * scanMod;
 
-                return half4(finalColor * alpha, alpha);
+                return float4(finalColor * alpha, alpha);
             }
             ENDHLSL
         }
     }
-    FallBack "Hidden/Universal Render Pipeline/FallbackError"
 }
-
