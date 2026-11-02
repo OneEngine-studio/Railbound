@@ -15,14 +15,44 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI loadingText;
     public string sceneToLoad = "NextScene";
 
-    private void Awake(){
+    private bool isSceneLoading;
+    private string activeSceneLoadName;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
     }
-    
-    
 
     public void LoadSceneAsync(string sceneName)
     {
+        if (string.IsNullOrWhiteSpace(sceneName))
+        {
+            Debug.LogWarning("GameManager.LoadSceneAsync called with an empty scene name.");
+            return;
+        }
+
+        if (isSceneLoading)
+        {
+            Debug.LogWarning($"Scene load already in progress for '{activeSceneLoadName}'. Ignoring request to load '{sceneName}'.");
+            return;
+        }
+
+        if (!SceneExistsInBuildSettings(sceneName))
+        {
+            Debug.LogError($"Scene '{sceneName}' was not found in the build settings. Verify the scene name or add it to Build Settings.");
+            return;
+        }
+
+        sceneToLoad = sceneName;
+        activeSceneLoadName = sceneName;
+        isSceneLoading = true;
+
         if (loadingSlider != null)
         {
             loadingSlider.minValue = 0f;
@@ -38,41 +68,68 @@ public class GameManager : MonoBehaviour
         StartCoroutine(LoadSceneCoroutine(sceneName));
     }
 
+    private bool SceneExistsInBuildSettings(string sceneName)
+    {
+        for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+        {
+            string scenePath = SceneUtility.GetScenePathByBuildIndex(i);
+            string buildSceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+
+            if (string.Equals(buildSceneName, sceneName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+
+        if (asyncLoad == null)
+        {
+            Debug.LogError($"Failed to start scene load for '{sceneName}'.");
+            FinishSceneLoad();
+            yield break;
+        }
+
         asyncLoad.allowSceneActivation = false;
 
         while (!asyncLoad.isDone)
         {
             float progress = Mathf.Clamp01(asyncLoad.progress / 0.9f);
-
-            if (loadingSlider != null)
-            {
-                loadingSlider.value = progress;
-            }
-
-            if (loadingText != null)
-            {
-                loadingText.text = Mathf.RoundToInt(progress * 100) + "%";
-            }
+            UpdateLoadingUI(progress);
 
             if (asyncLoad.progress >= 0.9f)
             {
-                if (loadingSlider != null)
-                {
-                    loadingSlider.value = 1f;
-                }
-
-                if (loadingText != null)
-                {
-                    loadingText.text = "100%";
-                }
-
                 asyncLoad.allowSceneActivation = true;
             }
 
             yield return null;
         }
+
+        UpdateLoadingUI(1f);
+        FinishSceneLoad();
+    }
+
+    private void UpdateLoadingUI(float progress)
+    {
+        if (loadingSlider != null)
+        {
+            loadingSlider.value = progress;
+        }
+
+        if (loadingText != null)
+        {
+            loadingText.text = Mathf.RoundToInt(progress * 100f) + "%";
+        }
+    }
+
+    private void FinishSceneLoad()
+    {
+        isSceneLoading = false;
+        activeSceneLoadName = null;
     }
 }
