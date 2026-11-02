@@ -90,7 +90,7 @@ namespace Project.AI.Learning
                 File.WriteAllText(filePath, json);
 
 #if UNITY_EDITOR
-                UnityEditor.AssetDatabase.Refresh(UnityEditor.ImportAssetOptions.ForceUpdate);
+                if (!UnityEngine.Application.isPlaying) UnityEditor.AssetDatabase.Refresh(UnityEditor.ImportAssetOptions.ForceUpdate);
 #endif
 
                 Debug.Log($"[AIEvolution] Saved Gen {profile.EvolutionGeneration} profile '{profile.ProfileId}' to {filePath}");

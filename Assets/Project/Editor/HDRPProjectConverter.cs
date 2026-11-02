@@ -11,7 +11,7 @@ namespace Project.Editor
     /// <summary>
     /// Automated project-wide converter to migrate Railbound from URP to HDRP.
     /// Converts Render Pipeline Assets, Quality Settings, Materials, Terrain Layers,
-    /// Lights, Cameras, and Scene Volumes.
+    /// Terrains, Tree Colliders, Lights, Cameras, and Scene Volumes.
     /// </summary>
     public static class HDRPProjectConverter
     {
@@ -19,7 +19,22 @@ namespace Project.Editor
         private const string HdrpUltraAssetPath = "Assets/TerrainDemoScene_HDRP/Settings/HDRP/HDRP Ultra Quality.asset";
         private const string HdrpMediumAssetPath = "Assets/TerrainDemoScene_HDRP/Settings/HDRP/HDRP Medium Quality.asset";
         private const string HdrpLowAssetPath = "Assets/TerrainDemoScene_HDRP/Settings/HDRP/HDRP Low Quality.asset";
-        private const string HdrpGlobalSettingsPath = "Assets/TerrainDemoScene_HDRP/Settings/HDRP/HDRenderPipelineGlobalSettings.asset";
+        private const string HdrpTerrainMatPath = "Assets/TerrainDemoScene_HDRP/Terrain/Materials/TerrainLit.mat";
+
+        [InitializeOnLoadMethod]
+        private static void EnsureLocalHDRPMaterialsConverted()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+                var terrainMat = AssetDatabase.LoadAssetAtPath<Material>(HdrpTerrainMatPath);
+                if (terrainMat != null && terrainMat.shader != null && terrainMat.shader.name.Contains("Universal Render Pipeline"))
+                {
+                    Debug.Log("[HDRPConverter] Detected unconverted local TerrainDemoScene_HDRP materials; auto-upgrading to HDRP...");
+                    ConvertWholeProjectToHDRP();
+                }
+            };
+        }
 
         [MenuItem("Tools/Railbound/Convert Project to HDRP")]
         public static void ConvertWholeProjectToHDRP()
@@ -82,6 +97,12 @@ namespace Project.Editor
             Shader hdrpLit = Shader.Find("HDRP/Lit");
             Shader hdrpUnlit = Shader.Find("HDRP/Unlit");
             Shader hdrpTerrain = Shader.Find("HDRP/TerrainLit");
+            Shader hdrpAutodesk = Shader.Find("HDRP/AutodeskInteractive") ?? hdrpLit;
+            Shader sgRock = Shader.Find("Shader Graphs/Rock") ?? hdrpLit;
+            Shader sgTerrainGrass = Shader.Find("Shader Graphs/TerrainGrass") ?? hdrpLit;
+            Shader sgWater = Shader.Find("Shader Graphs/WaterDepthBased") ?? hdrpLit;
+            Shader sgSpeedTreeBark = Shader.Find("HDRP/Nature/SpeedTree_Bark") ?? Shader.Find("HDRP/Nature/SpeedTree8") ?? hdrpLit;
+            Shader sgSpeedTreeBranch = Shader.Find("HDRP/Nature/SpeedTree_Branch") ?? Shader.Find("HDRP/Nature/SpeedTree8") ?? hdrpLit;
 
             if (hdrpLit == null)
             {
@@ -95,20 +116,92 @@ namespace Project.Editor
             for (int i = 0; i < matGuids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(matGuids[i]);
-                if (path.StartsWith("Assets/TerrainDemoScene_HDRP"))
-                    continue; // Already HDRP
-
                 Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
                 if (mat == null || mat.shader == null) continue;
 
-                string sName = mat.shader.name;
-                bool isUrpLit = sName.Contains("Universal Render Pipeline/Lit") || sName.Contains("Universal Render Pipeline/Simple Lit");
-                bool isStandard = sName == "Standard" || sName == "Standard (Specular setup)";
-                bool isUrpUnlit = sName.Contains("Universal Render Pipeline/Unlit");
-                bool isTerrainLit = sName.Contains("Terrain/Lit") || sName == "Nature/Terrain/Standard";
-
-                if (isUrpLit || isStandard)
+                // 1. Restore TerrainDemoScene_HDRP materials to their original HDRP shaders
+                if (path.StartsWith("Assets/TerrainDemoScene_HDRP"))
                 {
+                    Shader targetDemoShader = null;
+                    string fileName = Path.GetFileNameWithoutExtension(path);
+
+                    if (path.Contains("/Details/Materials/"))
+                    {
+                        targetDemoShader = sgTerrainGrass;
+                    }
+                    else if (fileName.StartsWith("Rock_Overgrown"))
+                    {
+                        targetDemoShader = sgRock;
+                    }
+                    else if (fileName.Contains("WaterDepthBased"))
+                    {
+                        targetDemoShader = sgWater;
+                    }
+                    else if (fileName == "TerrainLit")
+                    {
+                        targetDemoShader = hdrpTerrain;
+                    }
+                    else if (path.Contains("/Trees/"))
+                    {
+                        if (fileName.EndsWith("_Bark") || fileName.EndsWith("_Cap"))
+                            targetDemoShader = sgSpeedTreeBark;
+                        else
+                            targetDemoShader = sgSpeedTreeBranch;
+                    }
+                    else if (mat.shader.name.Contains("Universal Render Pipeline") || mat.shader.name == "Hidden/InternalErrorShader")
+                    {
+                        targetDemoShader = hdrpLit;
+                    }
+
+                    if (targetDemoShader != null && mat.shader != targetDemoShader)
+                    {
+                        mat.shader = targetDemoShader;
+                        EditorUtility.SetDirty(mat);
+                        count++;
+                    }
+                    continue;
+                }
+
+                string sName = mat.shader.name;
+                bool isUrpLit = sName.Contains("Universal Render Pipeline/Lit") || sName.Contains("Universal Render Pipeline/Simple Lit") || sName.Contains("Universal Render Pipeline/Baked Lit");
+                bool isStandard = sName == "Standard" || sName == "Standard (Specular setup)" || sName == "Standard-DoubleSided";
+                bool isAutodesk = sName == "Autodesk Interactive" || sName == "Universal Render Pipeline/Autodesk Interactive";
+                bool isUnlitOrParticle = sName.Contains("Universal Render Pipeline/Unlit")
+                    || sName.Contains("Universal Render Pipeline/Particles/")
+                    || sName.Contains("Particles/Standard")
+                    || sName.Contains("Sprite-Unlit")
+                    || sName == "Unlit/GridShader"
+                    || sName == "Unlit/Texture"
+                    || sName == "Unlit/Color"
+                    || sName == "Unlit/Transparent";
+                bool isTerrainLit = sName.Contains("Terrain/Lit") || sName == "Nature/Terrain/Standard";
+                bool isSpeedTree = sName.Contains("SpeedTree");
+
+                if (isAutodesk && hdrpAutodesk != null)
+                {
+                    Texture baseMap = mat.HasProperty("_MainTex") ? mat.GetTexture("_MainTex") : (mat.HasProperty("_BaseColorMap") ? mat.GetTexture("_BaseColorMap") : null);
+                    Color baseColor = mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.white;
+                    Texture normalMap = mat.HasProperty("_BumpMap") ? mat.GetTexture("_BumpMap") : null;
+                    Texture metallicMap = mat.HasProperty("_MetallicGlossMap") ? mat.GetTexture("_MetallicGlossMap") : null;
+                    Texture roughnessMap = mat.HasProperty("_SpecGlossMap") ? mat.GetTexture("_SpecGlossMap") : null;
+
+                    mat.shader = hdrpAutodesk;
+                    if (baseMap != null)
+                    {
+                        if (mat.HasProperty("_BaseColorMap")) mat.SetTexture("_BaseColorMap", baseMap);
+                        if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", baseMap);
+                    }
+                    if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
+                    if (normalMap != null && mat.HasProperty("_NormalMap")) mat.SetTexture("_NormalMap", normalMap);
+                    if (metallicMap != null && mat.HasProperty("_MetallicMap")) mat.SetTexture("_MetallicMap", metallicMap);
+                    if (roughnessMap != null && mat.HasProperty("_RoughnessMap")) mat.SetTexture("_RoughnessMap", roughnessMap);
+
+                    EditorUtility.SetDirty(mat);
+                    count++;
+                }
+                else if (isUrpLit || isStandard)
+                {
+                    bool doubleSided = sName == "Standard-DoubleSided" || (mat.HasProperty("_Cull") && mat.GetFloat("_Cull") == 0f);
                     Texture baseMap = mat.HasProperty("_BaseMap") ? mat.GetTexture("_BaseMap") : (mat.HasProperty("_MainTex") ? mat.GetTexture("_MainTex") : null);
                     Color baseColor = mat.HasProperty("_BaseColor") ? mat.GetColor("_BaseColor") : (mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.white);
                     Texture normalMap = mat.HasProperty("_BumpMap") ? mat.GetTexture("_BumpMap") : null;
@@ -123,7 +216,6 @@ namespace Project.Editor
 
                     mat.shader = hdrpLit;
 
-                    // Assign HDRP properties
                     if (baseMap != null)
                     {
                         mat.SetTexture("_BaseColorMap", baseMap);
@@ -146,6 +238,12 @@ namespace Project.Editor
                     mat.SetFloat("_Metallic", metallic);
                     mat.SetFloat("_Smoothness", smoothness);
 
+                    if (doubleSided)
+                    {
+                        if (mat.HasProperty("_DoubleSidedEnable")) mat.SetFloat("_DoubleSidedEnable", 1f);
+                        mat.EnableKeyword("_DOUBLESIDED_ON");
+                    }
+
                     if (emissionMap != null || (emissionColor.maxColorComponent > 0.001f))
                     {
                         if (emissionMap != null) mat.SetTexture("_EmissiveColorMap", emissionMap);
@@ -157,8 +255,9 @@ namespace Project.Editor
                     EditorUtility.SetDirty(mat);
                     count++;
                 }
-                else if (isUrpUnlit && hdrpUnlit != null)
+                else if (isUnlitOrParticle && hdrpUnlit != null)
                 {
+                    bool isTransparent = sName.Contains("Particles") || sName.Contains("Transparent") || sName.Contains("Sprite") || (mat.HasProperty("_Surface") && mat.GetFloat("_Surface") == 1f);
                     Texture baseMap = mat.HasProperty("_BaseMap") ? mat.GetTexture("_BaseMap") : (mat.HasProperty("_MainTex") ? mat.GetTexture("_MainTex") : null);
                     Color color = mat.HasProperty("_BaseColor") ? mat.GetColor("_BaseColor") : (mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.white);
 
@@ -166,12 +265,25 @@ namespace Project.Editor
                     if (baseMap != null) mat.SetTexture("_UnlitColorMap", baseMap);
                     mat.SetColor("_UnlitColor", color);
 
+                    if (isTransparent)
+                    {
+                        if (mat.HasProperty("_SurfaceType")) mat.SetFloat("_SurfaceType", 1f);
+                        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                        mat.renderQueue = (int)RenderQueue.Transparent;
+                    }
+
                     EditorUtility.SetDirty(mat);
                     count++;
                 }
                 else if (isTerrainLit && hdrpTerrain != null)
                 {
                     mat.shader = hdrpTerrain;
+                    EditorUtility.SetDirty(mat);
+                    count++;
+                }
+                else if (isSpeedTree && sgSpeedTreeBranch != null)
+                {
+                    mat.shader = sgSpeedTreeBranch;
                     EditorUtility.SetDirty(mat);
                     count++;
                 }
@@ -191,7 +303,6 @@ namespace Project.Editor
                 var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
                 if (layer != null)
                 {
-                    // Ensure normal scale is valid
                     if (layer.normalMapTexture != null && layer.normalScale <= 0.01f)
                     {
                         layer.normalScale = 1.0f;
@@ -207,7 +318,95 @@ namespace Project.Editor
         {
             int count = 0;
 
-            // 1. Upgrade Cameras
+            // 1. Upgrade Terrains and Tree Colliders
+            Material hdrpTerrainMat = AssetDatabase.LoadAssetAtPath<Material>(HdrpTerrainMatPath);
+            if (hdrpTerrainMat == null)
+            {
+                hdrpTerrainMat = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipelineResources/Material/DefaultHDTerrainMaterial.mat");
+            }
+
+            Terrain[] terrains = UnityEngine.Object.FindObjectsOfType<Terrain>(true);
+            foreach (var terrain in terrains)
+            {
+                if (hdrpTerrainMat != null && terrain.materialTemplate != hdrpTerrainMat)
+                {
+                    terrain.materialTemplate = hdrpTerrainMat;
+                    EditorUtility.SetDirty(terrain);
+                    count++;
+                }
+
+                // Fix TerrainCollider: MeshCollider is not supported on terrain at the moment
+                if (terrain.terrainData != null && terrain.terrainData.treePrototypes != null)
+                {
+                    foreach (var proto in terrain.terrainData.treePrototypes)
+                    {
+                        if (proto.prefab == null) continue;
+                        MeshCollider[] meshCols = proto.prefab.GetComponentsInChildren<MeshCollider>(true);
+                        if (meshCols != null && meshCols.Length > 0)
+                        {
+                            // Ensure a CapsuleCollider exists on root if we remove MeshCollider
+                            if (proto.prefab.GetComponent<CapsuleCollider>() == null)
+                            {
+                                var cap = proto.prefab.AddComponent<CapsuleCollider>();
+                                var mf = proto.prefab.GetComponentInChildren<MeshFilter>();
+                                if (mf != null && mf.sharedMesh != null)
+                                {
+                                    var b = mf.sharedMesh.bounds;
+                                    cap.center = b.center;
+                                    cap.radius = Mathf.Max(b.extents.x, b.extents.z);
+                                    cap.height = b.size.y;
+                                }
+                                else
+                                {
+                                    cap.radius = 0.35f;
+                                    cap.height = 6f;
+                                    cap.center = new Vector3(0f, 3f, 0f);
+                                }
+                            }
+                            foreach (var mc in meshCols)
+                            {
+                                UnityEngine.Object.DestroyImmediate(mc, true);
+                            }
+                            EditorUtility.SetDirty(proto.prefab);
+                            PrefabUtility.SavePrefabAsset(proto.prefab);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            // 2. Replace any built-in URP package materials referenced directly on scene Renderers
+            Material defaultHdMat = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipelineResources/Material/DefaultHDMaterial.mat");
+            Renderer[] renderers = UnityEngine.Object.FindObjectsOfType<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                var mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (mats[i] != null && mats[i].shader != null)
+                    {
+                        string sn = mats[i].shader.name;
+                        if (sn.Contains("Universal Render Pipeline") || sn == "Hidden/InternalErrorShader")
+                        {
+                            string matPath = AssetDatabase.GetAssetPath(mats[i]);
+                            if (matPath.StartsWith("Packages/com.unity.render-pipelines.universal") && defaultHdMat != null)
+                            {
+                                mats[i] = defaultHdMat;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+                if (changed)
+                {
+                    r.sharedMaterials = mats;
+                    EditorUtility.SetDirty(r);
+                    count++;
+                }
+            }
+
+            // 3. Upgrade Cameras
             Camera[] cameras = UnityEngine.Object.FindObjectsOfType<Camera>(true);
             foreach (var cam in cameras)
             {
@@ -220,7 +419,7 @@ namespace Project.Editor
                 }
             }
 
-            // 2. Upgrade Lights
+            // 4. Upgrade Lights
             Light[] lights = UnityEngine.Object.FindObjectsOfType<Light>(true);
             foreach (var light in lights)
             {
@@ -233,10 +432,9 @@ namespace Project.Editor
 
                 if (light.type == LightType.Directional)
                 {
-                    // Directional Sunlight in HDRP needs physical lux (typically 20,000 - 50,000 Lux for daylight)
                     if (light.intensity < 100f)
                     {
-                        light.intensity = 25000f; // 25,000 Lux daylight
+                        light.intensity = 25000f;
                     }
                     hdLight.lightUnit = LightUnit.Lux;
                 }
@@ -244,7 +442,7 @@ namespace Project.Editor
                 {
                     if (light.intensity < 10f)
                     {
-                        light.intensity = 800f; // 800 Lumens
+                        light.intensity = 800f;
                     }
                     hdLight.lightUnit = LightUnit.Lumen;
                 }
@@ -252,7 +450,7 @@ namespace Project.Editor
                 EditorUtility.SetDirty(light.gameObject);
             }
 
-            // 3. Ensure Global HDRP Sky & Post Volume exists
+            // 5. Ensure Global HDRP Sky & Post Volume exists
             Volume[] volumes = UnityEngine.Object.FindObjectsOfType<Volume>(true);
             bool hasGlobalSkyVolume = false;
             foreach (var v in volumes)
@@ -277,28 +475,23 @@ namespace Project.Editor
                 var profile = ScriptableObject.CreateInstance<VolumeProfile>();
                 profile.name = "HDRP_Default_Environment_Profile";
 
-                // Visual Environment
                 var visualEnv = profile.Add<VisualEnvironment>(true);
                 visualEnv.skyType.overrideState = true;
                 visualEnv.skyType.value = (int)SkyType.PhysicallyBased;
 
-                // Physically Based Sky
                 var sky = profile.Add<PhysicallyBasedSky>(true);
                 sky.planetaryRadius.overrideState = true;
 
-                // Exposure
                 var exposure = profile.Add<Exposure>(true);
                 exposure.mode.overrideState = true;
                 exposure.mode.value = ExposureMode.Fixed;
                 exposure.fixedExposure.overrideState = true;
                 exposure.fixedExposure.value = 12.5f;
 
-                // Bloom
                 var bloom = profile.Add<Bloom>(true);
                 bloom.intensity.overrideState = true;
                 bloom.intensity.value = 0.25f;
 
-                // Tonemapping
                 var tonemapping = profile.Add<Tonemapping>(true);
                 tonemapping.mode.overrideState = true;
                 tonemapping.mode.value = TonemappingMode.ACES;
