@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Nakama;
+using UnityEngine;
 
 public enum PlayerExperienceLevel
 {
