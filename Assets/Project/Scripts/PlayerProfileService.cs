@@ -44,12 +44,27 @@ public static class PlayerProfileService
             if (string.IsNullOrWhiteSpace(storageObject.Value))
                 return null;
 
-            var profile = UnityEngine.JsonUtility.FromJson<PlayerProfile>(storageObject.Value);
-            if (profile == null || !profile.isComplete || string.IsNullOrWhiteSpace(profile.username))
-                return null;
+            try
+            {
+                var profile = UnityEngine.JsonUtility.FromJson<PlayerProfile>(storageObject.Value);
+                if (profile == null)
+                    return null;
 
-            profile.userId = authentication.CurrentUserId;
-            return profile;
+                profile.username = profile.username?.Trim();
+                if (string.IsNullOrWhiteSpace(profile.username))
+                    return null;
+
+                if (!profile.isComplete)
+                    return null;
+
+                profile.userId = authentication.CurrentUserId;
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PlayerProfileService] Failed to parse profile JSON: {ex.Message}");
+                return null;
+            }
         }
 
         return null;
@@ -61,9 +76,16 @@ public static class PlayerProfileService
         if (authentication == null || !authentication.IsAuthenticated)
             throw new InvalidOperationException("AuthenticationService is not authenticated.");
 
+        var cleanUsername = username?.Trim();
+        if (string.IsNullOrWhiteSpace(cleanUsername))
+            throw new InvalidOperationException("Username cannot be empty.");
+
+        if (cleanUsername.Length < 3 || cleanUsername.Length > 16)
+            throw new InvalidOperationException("Username must be between 3 and 16 characters.");
+
         var profile = new PlayerProfile
         {
-            username = username,
+            username = cleanUsername,
             experienceLevel = experienceLevel,
             userId = authentication.CurrentUserId,
             isComplete = isComplete,
@@ -72,8 +94,8 @@ public static class PlayerProfileService
 
         await authentication.Client.UpdateAccountAsync(
             authentication.Session,
-            username: username,
-            displayName: username);
+            username: cleanUsername,
+            displayName: cleanUsername);
 
         var writeObject = new WriteStorageObject
         {
