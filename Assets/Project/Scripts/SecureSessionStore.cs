@@ -9,12 +9,23 @@ public static class SecureSessionStore
 
     public static bool TrySave(string token)
     {
-        if (string.IsNullOrEmpty(token) || !IsSupported)
+        if (string.IsNullOrEmpty(token))
             return false;
 
         try
         {
-            var protectedBytes = Protect(System.Text.Encoding.UTF8.GetBytes(token));
+            byte[] protectedBytes;
+
+            if (IsSupported)
+            {
+                protectedBytes = Protect(System.Text.Encoding.UTF8.GetBytes(token));
+            }
+            else
+            {
+                protectedBytes = System.Text.Encoding.UTF8.GetBytes(token);
+                ApplyFallbackFilePermissions(GetPath());
+            }
+
             File.WriteAllBytes(GetPath(), protectedBytes);
             return true;
         }
@@ -28,18 +39,31 @@ public static class SecureSessionStore
     public static bool TryLoad(out string token)
     {
         token = null;
-        if (!IsSupported || !File.Exists(GetPath()))
+
+        if (!File.Exists(GetPath()))
             return false;
 
         try
         {
-            var bytes = Unprotect(File.ReadAllBytes(GetPath()));
+            byte[] bytes = File.ReadAllBytes(GetPath());
+
+            if (IsSupported)
+            {
+                bytes = Unprotect(bytes);
+            }
+
             token = System.Text.Encoding.UTF8.GetString(bytes);
-            return !string.IsNullOrEmpty(token);
+            if (string.IsNullOrEmpty(token))
+            {
+                Delete();
+                return false;
+            }
+
+            return true;
         }
         catch (Exception exception)
         {
-            Debug.LogWarning($"[SecureSessionStore] Load failed; secure session will be discarded: {exception.Message}");
+            Debug.LogWarning($"[SecureSessionStore] Load failed; session will be discarded: {exception.Message}");
             Delete();
             return false;
         }
@@ -67,6 +91,29 @@ public static class SecureSessionStore
 #endif
 
     private static string GetPath() => Path.Combine(Application.persistentDataPath, FileName);
+
+    private static void ApplyFallbackFilePermissions(string path)
+    {
+        try
+        {
+#if !UNITY_EDITOR_WIN && !UNITY_STANDALONE_WIN
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Exists)
+                {
+                    UnixFileMode mode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+                    File.SetUnixFileMode(path, mode);
+                }
+            }
+#endif
+        }
+        catch
+        {
+            // Ignore permission issues; the session is still restored in a fallback path.
+        }
+    }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
     private static byte[] Protect(byte[] value)
