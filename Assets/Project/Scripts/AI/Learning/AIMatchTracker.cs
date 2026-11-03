@@ -78,12 +78,18 @@ namespace Project.AI.Learning
             }
         }
 
-        public void Initialize(string profileId, int matchNumber)
-        {
-            currentMetrics.ProfileId = profileId;
-            currentMetrics.MatchNumber = matchNumber;
-            currentMetrics.MatchDurationSeconds = 0f;
-            currentMetrics.SurvivedMatch = true;
+       public void Initialize(string profileId, int matchNumber)
+       {
+            currentMetrics = new AIMatchMetrics
+             {
+               ProfileId = profileId,
+               MatchNumber = matchNumber,
+               MatchDurationSeconds = 0f,
+               SurvivedMatch = true
+             };
+
+            totalReactionTimeAccum = 0f;
+            reactionTimeCount = 0;
             matchStartTime = Time.time;
             hasEndedMatch = false;
         }
