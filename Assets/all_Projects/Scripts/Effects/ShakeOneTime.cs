@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 namespace JUTPS.FX
@@ -16,6 +16,7 @@ namespace JUTPS.FX
         [Range(0, 20)] public float MaxAngle = 15f;
         [Range(0, 20)] public float ShakeDuration = 1f;
         public float ShakeRadious = 50;
+
         void Start()
         {
             if (ShakeOnAwake)
@@ -23,21 +24,37 @@ namespace JUTPS.FX
                 Shake(ShakeRadious);
             }
         }
+
         public void Shake(float Radious = 10)
         {
             if (ShakerToShake == null)
             {
-                if (Shaker.GetCurrentCameraInstance() != null)
-                {
-                    Shaker shakerToShake = Shaker.GetCurrentCameraInstance();
+                Shaker shakerToShake = Shaker.GetCurrentCameraInstance();
+                if (shakerToShake == null)
+                    return;
 
-                    float ShakeIntensityByDistance = Mathf.Lerp(1, 0, Vector3.Distance(shakerToShake.transform.position, transform.position) / Radious);
-                    shakerToShake.Shake(ShakeSpeed, ShakeDuration, ShakeStartIntensity, ShakeEndIntensity, MaxAngle, ShakeIntensityByDistance * ShakeIntensity);
-                }
+                float distance = Vector3.Distance(shakerToShake.transform.position, transform.position);
+                float intensityByDistance = Radious > 0f
+                    ? Mathf.Lerp(1f, 0f, distance / Radious)
+                    : (distance <= 0f ? 1f : 0f);
+
+                shakerToShake.Shake(
+                    ShakeSpeed,
+                    ShakeDuration,
+                    ShakeStartIntensity,
+                    ShakeEndIntensity,
+                    MaxAngle,
+                    intensityByDistance * ShakeIntensity);
             }
             else
             {
-                ShakerToShake.Shake(ShakeSpeed, ShakeDuration, ShakeStartIntensity, ShakeEndIntensity, MaxAngle, ShakeIntensity);
+                ShakerToShake.Shake(
+                    ShakeSpeed,
+                    ShakeDuration,
+                    ShakeStartIntensity,
+                    ShakeEndIntensity,
+                    MaxAngle,
+                    ShakeIntensity);
             }
         }
     }
