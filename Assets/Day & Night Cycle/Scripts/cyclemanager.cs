@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 
 public class CycleManager : MonoBehaviour
 {
@@ -39,7 +40,8 @@ public class CycleManager : MonoBehaviour
     public Light sunLight;
     [Range(0f, 90f)] public float sunLatitude = 20f;
     [Range(-180f, 180f)] public float sunLongitude = -90f;
-    public float sunIntensity = 1.5f;
+    public float sunIntensity = 120000f;
+    [Range(0f, 1f)] public float sunShadowDimmer = 0.78f;
     public AnimationCurve sunIntensityMultiplier;
     public AnimationCurve sunTemperatureCurve;
 
@@ -48,7 +50,8 @@ public class CycleManager : MonoBehaviour
     public Light moonLight;
     [Range(0f, 90f)] public float moonLatitude = 40f;
     [Range(-180f, 180f)] public float moonLongitude = 90f;
-    public float moonIntensity = 0.35f;
+    public float moonIntensity = 1.2f;
+    [Range(0f, 1f)] public float moonShadowDimmer = 0.78f;
     public AnimationCurve moonIntensityMultiplier;
     public AnimationCurve moonTemperatureCurve;
 
@@ -75,8 +78,12 @@ public class CycleManager : MonoBehaviour
 
     void NormalizeLegacyHdrpValues()
     {
-        if (sunIntensity > 10f) sunIntensity = 1.5f;
-        if (moonIntensity > 5f) moonIntensity = 0.35f;
+        // HDRP uses physical units (Lux for directional lights).
+        // Daylight direct sun is 100,000 - 130,000 Lux.
+        // Full moon is ~0.5 - 1.2 Lux.
+        // If legacy URP values (<= 10) are present, calibrate to physical HDRP Lux:
+        if (sunIntensity <= 10f) sunIntensity = 120000f;
+        if (moonIntensity <= 0.1f) moonIntensity = 1.2f;
     }
 
     void SyncDayNightState()
@@ -148,10 +155,25 @@ public class CycleManager : MonoBehaviour
         if (sunLight != null)
         {
             sunLight.useColorTemperature = true;
-            sunLight.intensity = sunCurve * sunIntensity;
+            float val = Mathf.Max(0.01f, sunCurve * sunIntensity);
+            sunLight.intensity = val;
+
+            var hdSun = sunLight.GetComponent<HDAdditionalLightData>();
+            if (hdSun != null)
+            {
+                hdSun.lightUnit = LightUnit.Lux;
+                hdSun.intensity = val;
+                hdSun.shadowDimmer = sunShadowDimmer;
+                hdSun.volumetricShadowDimmer = 0.85f;
+            }
+
             if (sunTemperatureCurve != null && sunTemperatureCurve.length > 0)
             {
                 sunLight.colorTemperature = Mathf.Clamp(sunTemperatureCurve.Evaluate(normalizedTime) * 10000f, 1500f, 20000f);
+            }
+            else
+            {
+                sunLight.colorTemperature = Mathf.Lerp(3200f, 5600f, sunCurve);
             }
         }
 
@@ -159,10 +181,25 @@ public class CycleManager : MonoBehaviour
         {
             moonLight.useColorTemperature = true;
             float phaseMultiplier = Mathf.Max(Mathf.Sin((float)lunarDay / 30f * Mathf.PI), 0.15f);
-            moonLight.intensity = moonCurve * moonIntensity * phaseMultiplier;
+            float val = Mathf.Max(0.001f, moonCurve * moonIntensity * phaseMultiplier);
+            moonLight.intensity = val;
+
+            var hdMoon = moonLight.GetComponent<HDAdditionalLightData>();
+            if (hdMoon != null)
+            {
+                hdMoon.lightUnit = LightUnit.Lux;
+                hdMoon.intensity = val;
+                hdMoon.shadowDimmer = moonShadowDimmer;
+                hdMoon.volumetricShadowDimmer = 0.85f;
+            }
+
             if (moonTemperatureCurve != null && moonTemperatureCurve.length > 0)
             {
                 moonLight.colorTemperature = Mathf.Clamp(moonTemperatureCurve.Evaluate(normalizedTime) * 10000f, 1500f, 20000f);
+            }
+            else
+            {
+                moonLight.colorTemperature = 7500f;
             }
         }
 

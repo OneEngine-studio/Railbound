@@ -23,7 +23,7 @@ namespace Railbound.Gameplay
         public float waveSpeed = 40f;     // Expansion speed
         public float cooldown = 10f;
         public float revealDuration = 14f; // Enemies visible through walls for 14 seconds
-        public Color scanWaveColor = new Color(2.8f, 0.72f, 0.48f, 1.0f); // Neon Coral / Sunset Glow
+        public Color scanWaveColor = new Color(0.0f, 1.8f, 2.8f, 1.0f); // Vibrant Tactical Cyan / Azure Glow
 
         [Header("Audio")]
         public AudioSource audioSource;

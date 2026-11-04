@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 <!-- KitWright Unity managed project skills -->
-<!-- KitWright Unity project skill versions: unity-mcp-workflow@1.0.0 -->
+<!-- KitWright Unity project skill versions: unity-mcp-workflow@1.0.1 -->
 
 # KitWright MCP for Unity Project Guidance
 
@@ -9,7 +9,7 @@ This section is managed by KitWright MCP for Unity for Claude Code. Everything b
 
 ## Installed skills
 
-- `unity-mcp-workflow` v1.0.0 - Efficient workflow for using Unity MCP to edit, import, compile, inspect, and test Unity projects.
+- `unity-mcp-workflow` v1.0.1 - Efficient workflow for using Unity MCP to edit, import, compile, inspect, and test Unity projects.
 
 ## Preferred workflow
 
@@ -26,14 +26,16 @@ This section is managed by KitWright MCP for Unity for Claude Code. Everything b
 - `execute_code` refreshes assets and waits for compilation before running. For other tools that depend on freshly compiled code, still call `request_recompile` after external script edits.
 - In `execute_code`, null-guard every lookup and return explicit missing path/object/component messages; do not run self-healing fallback loops.
 - For Unity object references, do not use `??=` for lazy rebinding; use explicit `if (field == null) field = Resolve();`.
-- After code or resource edits, exit Play Mode if needed, call `request_recompile`, `wait_for_compilation`, then read compilation or console errors.
+- After code or resource edits, exit Play Mode if needed and call `request_recompile` first; it returns the compile errors unless it reports that Unity started importing or recompiling. Only then call `wait_for_compilation(force_refresh=false)`, which returns them too. Do not follow either with `get_compilation_errors`, and never use `force_refresh=false` without a `request_recompile` before it: on its own it reads the state from before the edits.
+- Editing several `.cs` files: write them with your own file tools, then call `request_recompile` once. `create_script`, `edit_script`, `patch_script`, `edit_script_members` and `write_file` each refresh the asset database.
+- Group independent reads into one `batch_execute` call instead of one round-trip each.
 - `request_recompile` is rejected while Unity is in Play Mode. Call `exit_play_mode` first, then retry.
-- After `enter_play_mode`, the HTTP server briefly drops while Unity reloads the domain. Poll `tools/list` or `get_reload_recovery_status` until it responds again before issuing the next tool call.
+- `enter_play_mode` and a recompile reload the domain. In broker mode (the default) requests are held across the reload, so make the next call directly, with no poll loop. If the connection is refused instead (direct mode), poll the JSON-RPC `ping` method over HTTP (with native tools only, `get_reload_recovery_status`) until it answers. Never probe with `tools/list`: it returns the whole tool catalog.
 - If domain reload interrupts a request, treat the result as unknown until `get_reload_recovery_status`, compilation checks, and MCP readback confirm it.
 - Additional installed skills are available under `.claude/skills/`.
 
 ## Project
 
-- Project root: `C:\Users\kushan\Railbound`
+- Project root: the folder that contains `Assets/` and `ProjectSettings/`.
 - Product name: `Railbound`
 <!-- /KitWright Unity managed project skills -->

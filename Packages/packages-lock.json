@@ -10,7 +10,7 @@
       "hash": "81ca60235430d2ada404d8423a2e908b96101682"
     },
     "com.kitwright.unity.mcp": {
-      "version": "https://github.com/kitwright/unity-mcp.git",
+      "version": "https://github.com/kitwright/unity-mcp.git#v1.0.2",
       "depth": 0,
       "source": "git",
       "dependencies": {
@@ -21,7 +21,7 @@
         "com.unity.modules.uielements": "1.0.0",
         "com.unity.modules.unitywebrequest": "1.0.0"
       },
-      "hash": "79d34abff644e08373ea4ea7b9f5d9cffa8e8141"
+      "hash": "63890d80c0a5fd2b563a78e19abf06ee37b49cea"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",

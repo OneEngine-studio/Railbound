@@ -27,8 +27,7 @@ Shader "MadeByProfessorOakie/SimpleSonarShader"
 
             HLSLPROGRAM
             #pragma target 4.5
-            #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
-            #pragma vertex vert
+                        #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
 
@@ -108,7 +107,7 @@ Shader "MadeByProfessorOakie/SimpleSonarShader"
                     }
                 }
 
-                return float4(finalCol * GetCurrentExposureMultiplier(), albedo.a);
+                return float4(finalCol, albedo.a);
             }
             ENDHLSL
         }

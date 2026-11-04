@@ -1,10 +1,10 @@
 ---
 description: Efficient workflow for using Unity MCP to edit, import, compile, inspect, and test Unity projects.
 alwaysApply: true
-version: 1.0.0
+version: 1.0.1
 ---
 <!-- KitWright Unity managed project skills -->
-<!-- KitWright Unity skill version: unity-mcp-workflow@1.0.0 -->
+<!-- KitWright Unity skill version: unity-mcp-workflow@1.0.1 -->
 
 # Unity MCP Workflow
 
@@ -30,9 +30,11 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
 - For `execute_code`, prefer the IKitWrightCommand template over the legacy `static string Run()`: include `using KitWright.Editor.Tools.Scripting;`, implement `IKitWrightCommand`, and use `ctx.RegisterObjectCreation`, `ctx.RegisterObjectModification`, `ctx.DestroyObject` so created/modified objects participate in editor Undo automatically. Use `ctx.Log` / `ctx.LogWarning` / `ctx.LogError` for traceable output that comes back in the response (without polluting the Unity console).
 - Batch related Unity-side changes in one guarded `execute_code` snippet. Null-guard every lookup, return explicit missing path/object/component messages, and include concise before/after values.
 - `execute_code` now refreshes the asset database and waits for compilation to finish before compiling the snippet, so external file edits are picked up automatically. For other tools that depend on the latest assemblies (e.g. `get_compilation_errors`), still call `request_recompile` after external file edits.
-- After code or resource edits, exit Play Mode if needed, call `request_recompile`, call `wait_for_compilation`, then read compilation errors or console errors before claiming success.
+- After code or resource edits, exit Play Mode if needed and call `request_recompile` first: it is the call that imports the edits, and unless it reports that Unity started importing or recompiling, its answer already carries the compile errors. Only when it reports that, call `wait_for_compilation(force_refresh=false)`, whose answer carries them too. Do not follow either call with `get_compilation_errors`. Never call `wait_for_compilation(force_refresh=false)` without a `request_recompile` before it: on its own it reads the state from before the edits.
+- When editing several `.cs` files, write them all with your own file tools, then call `request_recompile` once. `create_script`, `edit_script`, `patch_script`, `edit_script_members` and `write_file` each refresh the asset database, so writing N files through them starts up to N imports and compiles.
+- Group independent reads into one `batch_execute` call (`commands`: a JSON array of `{"name", "params"}` objects) instead of one round-trip per read.
 - Call `wait_for_compilation` before Play Mode, screenshots, or conclusions when a previous edit has not yet been confirmed.
-- After `enter_play_mode`, the MCP HTTP server briefly drops while Unity reloads the domain. Before the next tool call, poll a cheap tool such as `tools/list` or `get_reload_recovery_status` until the server responds again — do not assume the connection is immediately ready.
+- `enter_play_mode` and a recompile both reload the domain. In broker mode (the default) the broker holds requests across the reload and delivers them once Unity is back, so make the next call directly — no poll loop; a call answered with "Unity is recompiling scripts, so this tool did not run" is simply repeated. If the connection is refused instead (direct mode), poll the JSON-RPC `ping` method over HTTP (with native tools only, `get_reload_recovery_status`) until it answers. Never probe with `tools/list`: it returns the whole tool catalog, tens of KB per probe.
 - `request_recompile` is rejected while Unity is in Play Mode — Unity does not process script compilation or domain reloads while playing. Call `exit_play_mode` first, then retry `request_recompile`.
 - If a request is interrupted by script recompilation or domain reload, treat the result as unknown until `get_reload_recovery_status`, compilation checks, and MCP readback confirm the final state.
 - Read back exact values from Unity after changes, not only success messages.
@@ -45,6 +47,6 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
 ## Metadata
 
 - Skill id: `unity-mcp-workflow`
-- Skill version: `1.0.0`
+- Skill version: `1.0.1`
 - Built-in: `True`
 - Source: `https://github.com/kitwright/unity-mcp`
