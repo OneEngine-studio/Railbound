@@ -109,6 +109,7 @@
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\AdvancedRagdollControllerEditor.cs" />
     <Compile Include="Assets\all_Projects\Editor\Editor Scripts\Components Editor\TPSControllerEditor.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainDoorsControllerInspector.cs" />
+    <Compile Include="Assets\Project\Editor\BRVillageBuilder.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\TrainControllerInspector.cs" />
     <Compile Include="Assets\WSM Game Studio\Train Controller_v3\Shared\Scripts\Editor\RouteManagerInspector.cs" />
     <Compile Include="Assets\SlimUI\Editor\SlimUIWindow.cs" />

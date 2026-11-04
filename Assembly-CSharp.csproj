@@ -220,6 +220,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Additionals\ShootTargetMovement.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\FeedNotificationEditor.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay Settings\JUGameSettings.cs" />
+    <Compile Include="Assets\Project\Scripts\BR\BRLootPoint.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\NewsSliderEditor.cs" />
     <Compile Include="Assets\Project\Scripts\Gameplay\AmmoBoxPickup.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Utilities\TargetFrameRate.cs" />
@@ -269,6 +270,7 @@
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\SwitchManager.cs" />
     <Compile Include="Assets\all_Projects\Scripts\AI\JUCharacterArtificialInteligenceBrain.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\Localization\LocalizationLanguageEditor.cs" />
+    <Compile Include="Assets\Project\Scripts\Audio\WeaponShotAudio.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\Weapon.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Armor System\Armor.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\UI Elements\TimerBarEditor.cs" />
