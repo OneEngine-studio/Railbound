@@ -21,6 +21,11 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     private static GameObject s_deactivatedOfflinePlayer;
 
+    // Item held in the right hand (JUInventory switch ID, -1 = bare hands). Written by the owner,
+    // applied on every other peer so remote players show the weapon that player is really holding.
+    private readonly NetworkVariable<int> rightHandItem = new NetworkVariable<int>(
+        -1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
     private void Awake()
     {
         characterController = GetComponent<JUCharacterController>();
@@ -37,6 +42,12 @@ public class JUNetworkPlayer : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         SuppressDummyMannequinMeshes();
+
+        if (!IsOwner)
+        {
+            rightHandItem.OnValueChanged += OnRightHandItemChanged;
+            ApplyRemoteItem(rightHandItem.Value);
+        }
 
         if (IsOwner)
         {
@@ -68,6 +79,13 @@ public class JUNetworkPlayer : NetworkBehaviour
                     transform.position = new Vector3(0f, 0.5f, 0f);
                     transform.rotation = Quaternion.identity;
                 }
+            }
+
+            // Test helper: "-spawnat x,y,z" places this client at exact world coordinates (to put two test clients side by side).
+            if (TryGetSpawnOverride(out Vector3 testSpawn))
+            {
+                transform.position = testSpawn;
+                if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
 
             // 2. Disable offline player placeholder so this networked player is primary
@@ -160,6 +178,27 @@ public class JUNetworkPlayer : NetworkBehaviour
         }
     }
 
+    private static bool TryGetSpawnOverride(out Vector3 position)
+    {
+        position = default;
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (!string.Equals(args[i], "-spawnat", StringComparison.OrdinalIgnoreCase)) continue;
+            string[] parts = args[i + 1].Split(',');
+            if (parts.Length != 3) return false;
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            if (float.TryParse(parts[0], System.Globalization.NumberStyles.Float, ci, out float x) &&
+                float.TryParse(parts[1], System.Globalization.NumberStyles.Float, ci, out float y) &&
+                float.TryParse(parts[2], System.Globalization.NumberStyles.Float, ci, out float z))
+            {
+                position = new Vector3(x, y, z);
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void SuppressDummyMannequinMeshes()
     {
         string[] dummyNames = new string[] {
@@ -196,8 +235,36 @@ public class JUNetworkPlayer : NetworkBehaviour
         return null;
     }
 
+    private void OnRightHandItemChanged(int previous, int current)
+    {
+        ApplyRemoteItem(current);
+    }
+
+    private void ApplyRemoteItem(int id)
+    {
+        if (inventory == null || inventory.HoldableItensRightHand == null) return;
+        if (id >= 0)
+        {
+            foreach (var item in inventory.HoldableItensRightHand)
+            {
+                if (item != null && item.ItemSwitchID == id)
+                {
+                    item.Unlocked = true;
+                    if (item.ItemQuantity <= 0) item.ItemQuantity = 1;
+                    break;
+                }
+            }
+        }
+        inventory.SwitchToItem(id, true);
+    }
+
     private void Update()
     {
+        if (IsOwner && IsSpawned && inventory != null && rightHandItem.Value != inventory.CurrentRightHandItemID)
+        {
+            rightHandItem.Value = inventory.CurrentRightHandItemID;
+        }
+
         if (IsOwner)
         {
             // Restore locked cursor on left click if user alt-tabbed or clicked outside
@@ -211,6 +278,7 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        rightHandItem.OnValueChanged -= OnRightHandItemChanged;
         if (IsOwner && s_deactivatedOfflinePlayer != null)
         {
             s_deactivatedOfflinePlayer.SetActive(true);

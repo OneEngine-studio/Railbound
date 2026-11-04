@@ -99,7 +99,7 @@ namespace Michsky.UI.Reach
             InitializeItem();
         }
 
-        private bool TryGetActiveTable(out LocalizationTable activeTable)
+        private bool TryGetActiveTable(out LocalizationLanguage.TableList activeTable)
         {
             activeTable = null;
 

@@ -1,0 +1,155 @@
+name: Build & push dedicated server
+
+# On every push to main: build the Linux dedicated server (MAP-1) with Unity,
+# pack it into the Docker image and push it to Docker Hub.
+#
+# Runs on a SELF-HOSTED Windows runner (your PC) so no Unity license secret is needed:
+# the Unity Editor installed and activated on that machine is used directly.
+#
+# One-time setup:
+#   1. GitHub repo -> Settings -> Actions -> Runners -> New self-hosted runner (Windows),
+#      install it and add the label "unity" when configuring (./config.cmd ... --labels unity).
+#      Tip: use a SHORT folder such as C:\r so Windows paths stay under the length limit.
+#   2. Unity 2023.1.22f1 with "Linux Build Support (Mono)" + "Linux Dedicated Server Build Support".
+#      Open Unity Hub once and stay signed in so the Personal license is active.
+#   3. Docker Desktop installed on the same PC.
+#   4. Repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (Docker Hub access token, write access).
+#   Optional repo variables: UNITY_PATH (default below), DEPLOY_GITOPS=true + secret GITOPS_TOKEN
+#   to also bump the image tag in the railbound-gitops repo.
+#
+# Note: the first run imports the whole project into a fresh Library folder and is slow;
+# later runs reuse it (the runner workspace is kept between runs).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - "ProjectSettings/**"
+      - "Dockerfile"
+      - ".github/workflows/build-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-server
+  cancel-in-progress: false
+
+env:
+  IMAGE: kushanrandika/railbound-server
+  UNITY_DEFAULT_PATH: C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Unity.exe
+  GITOPS_REPO: OneEngine-studio/railbound-gitops
+  GITOPS_VALUES: charts/game-server/values.yaml
+
+jobs:
+  build-and-push:
+    runs-on: [self-hosted, windows, unity]
+    timeout-minutes: 180
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          clean: false   # keep the imported Library folder between runs
+
+      - name: Build Linux dedicated server (Unity batch mode)
+        shell: powershell
+        run: |
+          $unity = if ($env:UNITY_PATH) { $env:UNITY_PATH } elseif ("${{ vars.UNITY_PATH }}") { "${{ vars.UNITY_PATH }}" } else { $env:UNITY_DEFAULT_PATH }
+          if (-not (Test-Path $unity)) { throw "Unity not found at $unity (set repo variable UNITY_PATH)" }
+          if (Test-Path Builds/Server/Linux) { Remove-Item -Recurse -Force Builds/Server/Linux }
+          $log = Join-Path $PWD "unity-build.log"
+          & $unity -batchmode -nographics -projectPath "$PWD" `
+            -executeMethod Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI `
+            -logFile $log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Get-Content $log -Tail 80
+            throw "Unity build failed with exit code $code"
+          }
+          if (-not (Test-Path Builds/Server/Linux/RailboundServer.x86_64)) { throw "Server binary missing" }
+          Get-ChildItem Builds/Server/Linux | Select-Object -First 10
+
+      - name: Upload Unity log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-build-log
+          path: unity-build.log
+
+      - name: Compute image tag
+        id: meta
+        shell: bash
+        run: echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      - name: Make sure Docker is running
+        shell: powershell
+        run: |
+          docker info *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $dd = "$env:LOCALAPPDATA\Programs\DockerDesktop\Docker Desktop.exe"
+            if (-not (Test-Path $dd)) { $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe" }
+            Start-Process $dd
+            for ($i = 0; $i -lt 60; $i++) {
+              Start-Sleep 5
+              docker info *> $null
+              if ($LASTEXITCODE -eq 0) { break }
+            }
+          }
+          docker info *> $null
+          if ($LASTEXITCODE -ne 0) { throw "Docker daemon is not running" }
+
+      - name: Docker Hub login
+        shell: powershell
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          $env:DH_TOKEN | docker login -u $env:DH_USER --password-stdin
+          if ($LASTEXITCODE -ne 0) { throw "docker login failed" }
+
+      - name: Build and push image
+        shell: powershell
+        run: |
+          # Small build context: only the Dockerfile and the server build.
+          $ctx = Join-Path $env:RUNNER_TEMP "docker-ctx"
+          if (Test-Path $ctx) { Remove-Item -Recurse -Force $ctx }
+          New-Item -ItemType Directory -Path "$ctx\Builds\Server" | Out-Null
+          Copy-Item -Recurse Builds/Server/Linux "$ctx\Builds\Server\Linux"
+          Copy-Item Dockerfile $ctx
+          $tag = "${{ steps.meta.outputs.tag }}"
+          docker build -t "$env:IMAGE`:$tag" -t "$env:IMAGE`:latest" $ctx
+          if ($LASTEXITCODE -ne 0) { throw "docker build failed" }
+          docker push "$env:IMAGE`:$tag"
+          if ($LASTEXITCODE -ne 0) { throw "docker push (tag) failed" }
+          docker push "$env:IMAGE`:latest"
+          if ($LASTEXITCODE -ne 0) { throw "docker push (latest) failed" }
+
+  deploy-gitops:
+    needs: build-and-push
+    if: vars.DEPLOY_GITOPS == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          ref: main
+
+      # A unique tag (not "latest") makes Kubernetes pull the new image;
+      # ArgoCD (automated sync) then rolls the pod.
+      - name: Bump image tag in values.yaml
+        run: |
+          sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$GITOPS_VALUES"
+          git --no-pager diff -- "$GITOPS_VALUES"
+
+      - name: Commit and push
+        run: |
+          git config user.name "railbound-ci"
+          git config user.email "ci@railbound.invalid"
+          git add "$GITOPS_VALUES"
+          git diff --cached --quiet && { echo "No change"; exit 0; }
+          git commit -m "ci(game-server): deploy ${{ needs.build-and-push.outputs.tag }}"
+          git push origin HEAD:main

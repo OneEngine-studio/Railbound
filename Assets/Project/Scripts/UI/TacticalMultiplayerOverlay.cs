@@ -23,6 +23,50 @@ namespace Railbound.UI
         private GUIStyle _pingLabelStyle;
         private bool _stylesInitialized = false;
 
+        private void OnEnable()
+        {
+            StartCoroutine(HookConnectionLogs());
+        }
+
+        private void OnDisable()
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null) return;
+            nm.OnClientConnectedCallback -= LogClientConnected;
+            nm.OnClientDisconnectCallback -= LogClientDisconnected;
+        }
+
+        private System.Collections.IEnumerator HookConnectionLogs()
+        {
+            while (NetworkManager.Singleton == null) yield return null;
+            var nm = NetworkManager.Singleton;
+            nm.OnClientConnectedCallback -= LogClientConnected;
+            nm.OnClientDisconnectCallback -= LogClientDisconnected;
+            nm.OnClientConnectedCallback += LogClientConnected;
+            nm.OnClientDisconnectCallback += LogClientDisconnected;
+        }
+
+        private static void LogClientConnected(ulong clientId)
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null) return;
+            if (nm.IsServer)
+                Debug.Log($"[Net] Client {clientId} connected. Players online: {nm.ConnectedClientsIds.Count}");
+            else
+                Debug.Log($"[Net] Connected to server as client {clientId}.");
+        }
+
+        private static void LogClientDisconnected(ulong clientId)
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null) return;
+            // ConnectedClientsIds is server-only; clients would throw NotServerException here.
+            if (nm.IsServer)
+                Debug.Log($"[Net] Client {clientId} disconnected. Players online: {nm.ConnectedClientsIds.Count}");
+            else
+                Debug.Log($"[Net] Disconnected from server (client {clientId}).");
+        }
+
         private System.Collections.IEnumerator Start()
         {
             ApplyCommandLineArgs();
