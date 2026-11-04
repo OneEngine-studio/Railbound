@@ -58,7 +58,7 @@ namespace Michsky.UI.Reach
             if (isInitialized)
                 return;
 
-            if (localizationManager == null) 
+            if (localizationManager == null)
             {
                 bool locManagerFound = false;
 
@@ -99,25 +99,39 @@ namespace Michsky.UI.Reach
             InitializeItem();
         }
 
+        private bool TryGetActiveTable(out LocalizationTable activeTable)
+        {
+            activeTable = null;
+
+            if (!isInitialized || localizationManager == null || localizationManager.currentLanguageAsset == null)
+                return false;
+
+            if (tableIndex < 0 || tableIndex >= localizationManager.currentLanguageAsset.tableList.Count)
+                return false;
+
+            activeTable = localizationManager.currentLanguageAsset.tableList[tableIndex];
+            return activeTable != null;
+        }
+
         public void UpdateItem()
         {
-            if (!isInitialized || localizationManager == null || localizationManager.currentLanguageAsset == null || localizationManager.currentLanguageAsset.tableList.Count == 0)
+            if (!TryGetActiveTable(out var activeTable))
                 return;
 
             if (objectType == ObjectType.TextMeshPro && textObj != null)
             {
-                for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+                for (int i = 0; i < activeTable.tableContent.Count; i++)
                 {
-                    if (localizationKey == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                    if (localizationKey == activeTable.tableContent[i].key)
                     {
-                        if (string.IsNullOrEmpty(localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value))
+                        if (string.IsNullOrEmpty(activeTable.tableContent[i].value))
                         {
-                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty for " + localizationManager.currentLanguageAsset.languageName + ".", this); }           
+                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty."); }
                             break;
                         }
 
-                        textObj.text = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value;
-                        onLanguageChanged.Invoke(localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value);
+                        textObj.text = activeTable.tableContent[i].value;
+                        onLanguageChanged.Invoke(activeTable.tableContent[i].value);
                         break;
                     }
                 }
@@ -125,17 +139,17 @@ namespace Michsky.UI.Reach
 
             else if (objectType == ObjectType.Audio && audioObj != null)
             {
-                for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+                for (int i = 0; i < activeTable.tableContent.Count; i++)
                 {
-                    if (localizationKey == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                    if (localizationKey == activeTable.tableContent[i].key)
                     {
-                        if (localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].audioValue == null)
+                        if (activeTable.tableContent[i].audioValue == null)
                         {
-                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty for " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty."); }
                             break;
                         }
 
-                        audioObj.clip = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].audioValue;
+                        audioObj.clip = activeTable.tableContent[i].audioValue;
                         break;
                     }
                 }
@@ -143,17 +157,17 @@ namespace Michsky.UI.Reach
 
             else if (objectType == ObjectType.Image && imageObj != null)
             {
-                for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+                for (int i = 0; i < activeTable.tableContent.Count; i++)
                 {
-                    if (localizationKey == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                    if (localizationKey == activeTable.tableContent[i].key)
                     {
-                        if (localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].spriteValue == null)
+                        if (activeTable.tableContent[i].spriteValue == null)
                         {
-                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty for " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                            if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + localizationKey + "' could not be found or the output value is empty."); }
                             break;
                         }
 
-                        imageObj.sprite = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].spriteValue;
+                        imageObj.sprite = activeTable.tableContent[i].spriteValue;
                         break;
                     }
                 }
@@ -161,20 +175,23 @@ namespace Michsky.UI.Reach
 
             else if (objectType == ObjectType.Custom || objectType == ObjectType.ComponentDriven)
             {
-                for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+                for (int i = 0; i < activeTable.tableContent.Count; i++)
                 {
-                    if (localizationKey == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                    if (localizationKey == activeTable.tableContent[i].key)
                     {
-                        if (string.IsNullOrEmpty(localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value))
+                        if (string.IsNullOrEmpty(activeTable.tableContent[i].value))
                             break;
 
-                        onLanguageChanged.Invoke(localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value);
+                        onLanguageChanged.Invoke(activeTable.tableContent[i].value);
                         break;
                     }
                 }
             }
 
-            if (rebuildLayoutOnUpdate && gameObject.activeInHierarchy) { StartCoroutine("RebuildLayout"); }
+            if (rebuildLayoutOnUpdate && gameObject.activeInHierarchy)
+            {
+                StartCoroutine(RebuildLayout());
+            }
         }
 
         public bool CheckLocalizationStatus()
@@ -190,14 +207,14 @@ namespace Michsky.UI.Reach
             bool keyFound = false;
 
             if (localizationManager != null && localizationManager.currentLanguageAsset == null) { localizationManager.InitializeLanguage(); }
-            if (!isInitialized || localizationManager == null || localizationManager.currentLanguageAsset == null || localizationManager.currentLanguageAsset.tableList.Count == 0)
+            if (!TryGetActiveTable(out var activeTable))
                 return LocalizationSettings.notInitializedText;
 
-            for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+            for (int i = 0; i < activeTable.tableContent.Count; i++)
             {
-                if (key == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                if (key == activeTable.tableContent[i].key)
                 {
-                    keyValue = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].value;
+                    keyValue = activeTable.tableContent[i].value;
                     keyFound = true;
                     break;
                 }
@@ -205,13 +222,13 @@ namespace Michsky.UI.Reach
 
             if (keyFound && string.IsNullOrEmpty(keyValue))
             {
-                if (LocalizationManager.enableLogs == true) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs == true) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageID + ": " + key); }
                 return "EMPTY_KEY_IN_" + localizationManager.currentLanguageAsset.languageID + ": " + key;
             }
 
             else if (!keyFound)
             {
-                if (LocalizationManager.enableLogs == true) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs == true) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageID + ": " + key); }
                 return "MISSING_KEY_IN_" + localizationManager.currentLanguageAsset.languageID + ": " + key;
             }
 
@@ -224,14 +241,14 @@ namespace Michsky.UI.Reach
             bool keyFound = false;
 
             if (localizationManager != null && localizationManager.currentLanguageAsset == null) { localizationManager.InitializeLanguage(); }
-            if (!isInitialized || localizationManager == null || localizationManager.currentLanguageAsset == null || localizationManager.currentLanguageAsset.tableList.Count == 0)
+            if (!TryGetActiveTable(out var activeTable))
                 return null;
 
-            for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+            for (int i = 0; i < activeTable.tableContent.Count; i++)
             {
-                if (key == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                if (key == activeTable.tableContent[i].key)
                 {
-                    keyValue = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].audioValue;
+                    keyValue = activeTable.tableContent[i].audioValue;
                     keyFound = true;
                     break;
                 }
@@ -239,13 +256,13 @@ namespace Michsky.UI.Reach
 
             if (keyFound && keyValue == null)
             {
-                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageName + ": " + key); }
                 return null;
             }
 
             else if (!keyFound)
             {
-                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageName + ": " + key); }
                 return null;
             }
 
@@ -258,14 +275,14 @@ namespace Michsky.UI.Reach
             bool keyFound = false;
 
             if (localizationManager != null && localizationManager.currentLanguageAsset == null) { localizationManager.InitializeLanguage(); }
-            if (!isInitialized || localizationManager == null || localizationManager.currentLanguageAsset == null || localizationManager.currentLanguageAsset.tableList.Count == 0)
+            if (!TryGetActiveTable(out var activeTable))
                 return null;
 
-            for (int i = 0; i < localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent.Count; i++)
+            for (int i = 0; i < activeTable.tableContent.Count; i++)
             {
-                if (key == localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].key)
+                if (key == activeTable.tableContent[i].key)
                 {
-                    keyValue = localizationManager.currentLanguageAsset.tableList[tableIndex].tableContent[i].spriteValue;
+                    keyValue = activeTable.tableContent[i].spriteValue;
                     keyFound = true;
                     break;
                 }
@@ -273,13 +290,13 @@ namespace Michsky.UI.Reach
 
             if (keyFound && keyValue == null)
             {
-                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The output value for '" + key + "' is empty in " + localizationManager.currentLanguageAsset.languageName + ": " + key); }
                 return null;
             }
 
             else if (!keyFound)
             {
-                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageName + ".", this); }
+                if (LocalizationManager.enableLogs) { Debug.Log("<b>[Localized Object]</b> The specified key '" + key + "' could not be found in " + localizationManager.currentLanguageAsset.languageName + ": " + key); }
                 return null;
             }
 
@@ -294,7 +311,6 @@ namespace Michsky.UI.Reach
                 return null;
 
             int tableIndex = -1;
-            string keyValue = null;
 
             for (int i = 0; i < tempUIM.currentLanguage.tableList.Count; i++)
             {
@@ -312,13 +328,12 @@ namespace Michsky.UI.Reach
                 {
                     if (tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].key == tableKey)
                     {
-                        keyValue = tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].value;
-                        break;
+                        return tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].value;
                     }
                 }
             }
 
-            return keyValue;
+            return null;
         }
 
         public static AudioClip GetKeyOutputAudio(string tableID, string tableKey)
@@ -329,7 +344,6 @@ namespace Michsky.UI.Reach
                 return null;
 
             int tableIndex = -1;
-            AudioClip keyValue = null;
 
             for (int i = 0; i < tempUIM.currentLanguage.tableList.Count; i++)
             {
@@ -347,13 +361,12 @@ namespace Michsky.UI.Reach
                 {
                     if (tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].key == tableKey)
                     {
-                        keyValue = tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].audioValue;
-                        break;
+                        return tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].audioValue;
                     }
                 }
             }
 
-            return keyValue;
+            return null;
         }
 
         public static Sprite GetKeyOutputSprite(string tableID, string tableKey)
@@ -364,7 +377,6 @@ namespace Michsky.UI.Reach
                 return null;
 
             int tableIndex = -1;
-            Sprite keyValue = null;
 
             for (int i = 0; i < tempUIM.currentLanguage.tableList.Count; i++)
             {
@@ -382,20 +394,29 @@ namespace Michsky.UI.Reach
                 {
                     if (tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].key == tableKey)
                     {
-                        keyValue = tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].spriteValue;
-                        break;
+                        return tempUIM.currentLanguage.tableList[tableIndex].tableContent[i].spriteValue;
                     }
                 }
             }
 
-            return keyValue;
+            return null;
         }
 
         IEnumerator RebuildLayout()
         {
             yield return new WaitForSecondsRealtime(0.025f);
-            LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
-            LayoutRebuilder.ForceRebuildLayoutImmediate(transform.parent.GetComponent<RectTransform>());
+
+            if (transform.parent != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
+                LayoutRebuilder.ForceRebuildLayoutImmediate(transform.parent.GetComponent<RectTransform>());
+            }
+            else
+            {
+                var rect = GetComponent<RectTransform>();
+                if (rect != null)
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+            }
         }
     }
 }
