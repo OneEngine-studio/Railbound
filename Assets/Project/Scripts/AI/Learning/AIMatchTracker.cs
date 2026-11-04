@@ -80,10 +80,16 @@ namespace Project.AI.Learning
 
         public void Initialize(string profileId, int matchNumber)
         {
-            currentMetrics.ProfileId = profileId;
-            currentMetrics.MatchNumber = matchNumber;
-            currentMetrics.MatchDurationSeconds = 0f;
-            currentMetrics.SurvivedMatch = true;
+            currentMetrics = new AIMatchMetrics
+            {
+                ProfileId = profileId,
+                MatchNumber = matchNumber,
+                MatchDurationSeconds = 0f,
+                SurvivedMatch = true
+            };
+
+            totalReactionTimeAccum = 0f;
+            reactionTimeCount = 0;
             matchStartTime = Time.time;
             hasEndedMatch = false;
         }
@@ -106,10 +112,16 @@ namespace Project.AI.Learning
 
         public void RecordSoundHeard(float reactionLatencySeconds)
         {
+            if (reactionLatencySeconds < 0f)
+                reactionLatencySeconds = 0f;
+
             currentMetrics.GunshotsHeard++;
             totalReactionTimeAccum += reactionLatencySeconds;
             reactionTimeCount++;
-            currentMetrics.AverageReactionTimeSeconds = totalReactionTimeAccum / reactionTimeCount;
+
+            currentMetrics.AverageReactionTimeSeconds = reactionTimeCount > 0
+                ? totalReactionTimeAccum / reactionTimeCount
+                : 0f;
         }
 
         public void RecordThreatInvestigated()
