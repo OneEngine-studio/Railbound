@@ -1,0 +1,128 @@
+name: Build & deploy dedicated server
+
+# Builds the Linux dedicated server (MAP-1) with Unity, packs it into the Docker image,
+# pushes the image to Docker Hub and bumps the image tag in the GitOps repo so ArgoCD
+# rolls it out to the k3s cluster.
+#
+# Required repository secrets:
+#   UNITY_LICENSE            contents of the Unity .ulf license file (Personal) - see game.ci activation docs
+#   UNITY_EMAIL              Unity account e-mail
+#   UNITY_PASSWORD           Unity account password
+#   DOCKERHUB_USERNAME       Docker Hub user (kushanrandika)
+#   DOCKERHUB_TOKEN         Docker Hub access token with write access
+#   GITOPS_TOKEN             GitHub PAT with contents:write on OneEngine-studio/railbound-gitops
+#
+# Optional: set repository variable DEPLOY_GITOPS=false to build and push the image only.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - "ProjectSettings/**"
+      - "Dockerfile"
+      - ".github/workflows/build-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-server
+  cancel-in-progress: true
+
+env:
+  IMAGE: kushanrandika/railbound-server
+  GITOPS_REPO: OneEngine-studio/railbound-gitops
+  GITOPS_VALUES: charts/game-server/values.yaml
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Linux-server-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Linux-server-
+
+      - name: Build Linux dedicated server (Unity)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 2023.1.22f1
+          targetPlatform: StandaloneLinux64
+          buildMethod: Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI
+          allowDirtyBuild: true
+          # the build method writes to Builds/Server/Linux itself
+          customParameters: -nographics
+
+      - name: Check build output
+        run: |
+          ls -la Builds/Server/Linux
+          test -f Builds/Server/Linux/RailboundServer.x86_64
+
+      - name: Compute image tag
+        id: meta
+        run: echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-gitops:
+    needs: build-and-push
+    if: vars.DEPLOY_GITOPS != 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          ref: main
+
+      # A unique tag (not "latest") makes Kubernetes pull the new image;
+      # ArgoCD (automated sync) then rolls the pod.
+      - name: Bump image tag in values.yaml
+        run: |
+          sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$GITOPS_VALUES"
+          git --no-pager diff -- "$GITOPS_VALUES"
+
+      - name: Commit and push
+        run: |
+          git config user.name "railbound-ci"
+          git config user.email "ci@railbound.invalid"
+          git add "$GITOPS_VALUES"
+          git diff --cached --quiet && { echo "No change"; exit 0; }
+          git commit -m "ci(game-server): deploy ${{ needs.build-and-push.outputs.tag }}"
+          git push origin HEAD:main

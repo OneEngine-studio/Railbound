@@ -102,6 +102,17 @@ namespace Railbound.Editor
             Debug.Log("<color=#00FF88>[NetcodeSetup] [NETWORKING] successfully configured and saved in MAP-1!</color>");
         }
 
+        /// <summary>
+        /// Batch-mode entry point for CI (GitHub Actions / game-ci):
+        /// -executeMethod Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI
+        /// Exits the editor with code 0 on success and 1 on failure so the pipeline step fails correctly.
+        /// </summary>
+        public static void BuildLinuxServerCI()
+        {
+            bool ok = BuildLinuxServer();
+            EditorApplication.Exit(ok ? 0 : 1);
+        }
+
         [MenuItem("Tools/Railbound/Netcode/Build Linux Dedicated Server (Docker Target)", false, 20)]
         public static bool BuildLinuxServer()
         {
