@@ -8,7 +8,7 @@ namespace Michsky.UI.Reach
     public class HardwareVRAMMonitor : MonoBehaviour
     {
         [Header("Game Title")]
-        public string gameTitle = "RAILBOUND";
+        public string gameTitle = "GAME";
 
         [Header("Bar References")]
         public Image barBackground;      // Unfilled dark track (segmented)
@@ -24,10 +24,10 @@ namespace Michsky.UI.Reach
         public TextMeshProUGUI otherAppsLegendText;
         public TextMeshProUGUI totalUsageText;
 
-        [Header("Modern Warfare Colors")]
-        public Color gameColor = new Color(0.58f, 0.88f, 0.22f, 1f);      // #94E038 Tactical Lime Green
-        public Color otherAppsColor = new Color(0.85f, 0.85f, 0.85f, 1f);  // #D9D9D9 Light Grey
-        public Color darkTrackColor = new Color(0.13f, 0.16f, 0.13f, 1f);  // #212921 Dark Olive/Grey Track
+        [Header("Telemetry Colors")]
+        public Color gameColor = new Color(0.48f, 0.92f, 0.22f, 1f);       // #7BEB38 Tactical Lime Green
+        public Color otherAppsColor = new Color(0.85f, 0.90f, 0.95f, 1f);   // #D9E6F2 Crisp Clean Silver
+        public Color darkTrackColor = new Color(0.20f, 0.25f, 0.29f, 0.95f);// #33404A Visible Unfilled Track
         public Color targetLineColor = Color.white;
 
         private float totalVramMB;
@@ -64,14 +64,14 @@ namespace Michsky.UI.Reach
             if (segmentedSprite == null)
             {
                 int w = 600;
-                int h = 14;
+                int h = 18;
                 Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
                 tex.filterMode = FilterMode.Point;
                 tex.wrapMode = TextureWrapMode.Clamp;
 
                 for (int x = 0; x < w; x++)
                 {
-                    bool isBar = (x % 5) < 3; // 3px solid vertical tick, 2px gap
+                    bool isBar = (x % 6) < 4; // 4px solid vertical tick, 2px gap (100 distinct 1% ticks)
                     Color col = isBar ? Color.white : Color.clear;
                     for (int y = 0; y < h; y++)
                     {
@@ -183,29 +183,30 @@ namespace Michsky.UI.Reach
                 rightCapLine.anchoredPosition = new Vector2(barWidth, rightCapLine.anchoredPosition.y);
             }
 
-            // Text outputs in GB (exact Modern Warfare 4 style)
+            // Text outputs in GB (Clean modern tactical telemetry)
             float gameGB = gameMB / 1024f;
             float otherAppsGB = otherAppsMB / 1024f;
             float totalUsedGB = totalUsedMB / 1024f;
             float totalVramGB = totalVramMB / 1024f;
 
-            string title = string.IsNullOrEmpty(gameTitle) ? Application.productName.ToUpper() : gameTitle;
+            string title = string.IsNullOrEmpty(gameTitle) ? "GAME" : gameTitle.ToUpper();
+            if (title.Contains("MODERN") || title.Contains("WARFARE")) title = "GAME";
             string gameHex = ColorUtility.ToHtmlStringRGB(gameColor);
             string otherHex = ColorUtility.ToHtmlStringRGB(otherAppsColor);
 
             if (gameLegendText != null)
             {
-                gameLegendText.text = $"<color=#{gameHex}>▮▮▮</color> {title}:  <color=#{gameHex}>{gameGB:F2} GB</color>";
+                gameLegendText.text = $"<color=#{gameHex}>■■■</color> <color=#FFFFFF>{title}:</color> <color=#{gameHex}>{gameGB:F2} GB</color>";
             }
 
             if (otherAppsLegendText != null)
             {
-                otherAppsLegendText.text = $"<color=#{otherHex}>▮▮▮</color> OTHER APPS:  {otherAppsGB:F2} GB";
+                otherAppsLegendText.text = $"<color=#{otherHex}>■■■</color> <color=#FFFFFF>OTHER APPS:</color> <color=#{otherHex}>{otherAppsGB:F2} GB</color>";
             }
 
             if (totalUsageText != null)
             {
-                totalUsageText.text = $"{totalUsedGB:F2}/{totalVramGB:F2} GB";
+                totalUsageText.text = $"<color=#FFFFFF>{totalUsedGB:F2}</color><color=#7F92A3> / {totalVramGB:F2} GB</color>";
             }
         }
     }

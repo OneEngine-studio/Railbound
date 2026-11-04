@@ -48,8 +48,7 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
 
             HLSLPROGRAM
             #pragma target 4.5
-            #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
-            #pragma vertex vert
+                        #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
 
@@ -124,11 +123,11 @@ Shader "Railbound/URP_EnemyThroughWallXRay"
                 // 4. Color & Alpha Blending
                 float3 baseCol = _Color.rgb;
                 float3 rimCol = _RimColor.rgb;
-                float3 finalColor = lerp(baseCol, rimCol, fresnel) * (_EmissionIntensity * pulse * scanMod) * GetCurrentExposureMultiplier();
+                float3 finalColor = lerp(baseCol, rimCol, fresnel) * (_EmissionIntensity * pulse * scanMod);
 
                 float alpha = lerp(_InnerAlpha, _RimAlpha, fresnel) * _Color.a * scanMod;
 
-                return float4(finalColor * alpha, alpha);
+                return float4(finalColor, alpha);
             }
             ENDHLSL
         }

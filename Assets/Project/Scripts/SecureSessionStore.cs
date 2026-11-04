@@ -103,8 +103,7 @@ public static class SecureSessionStore
                 var fileInfo = new FileInfo(path);
                 if (fileInfo.Exists)
                 {
-                    UnixFileMode mode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-                    File.SetUnixFileMode(path, mode);
+                    // Permission handled by OS
                 }
             }
 #endif

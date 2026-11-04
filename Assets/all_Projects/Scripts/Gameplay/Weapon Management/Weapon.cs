@@ -94,6 +94,7 @@ namespace JUTPS.WeaponSystem
 			CurrentFireRateToShoot = Fire_Rate - 0.05f;
 			mCamera = (CamPivot != null) ? CamPivot.mCamera.transform : null;
 			mAudioSource = GetComponent<AudioSource>();
+			Railbound.Audio.WeaponShotAudio.ConfigureGearSource(mAudioSource);
 
 			if (RaycastingLayers.value == 0)
 			{
@@ -324,10 +325,10 @@ namespace JUTPS.WeaponSystem
 
 
 					//Audio
-					if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
+					if (ShootAudio != null)
 					{
-						mAudioSource.pitch = Random.Range(0.7f, 1.3f);
-						mAudioSource.PlayOneShot(ShootAudio);
+						// 3D gunshot: distance falloff, travel delay, muffling and occlusion (see WeaponShotAudio)
+						Railbound.Audio.WeaponShotAudio.PlayShot(ShootAudio, Shoot_Position != null ? Shoot_Position.position : transform.position, Random.Range(0.92f, 1.08f), ItemName);
 					}
 
 					//Debug.Log("Shoot from raycast");
@@ -341,10 +342,10 @@ namespace JUTPS.WeaponSystem
 
 
 					//Audio
-					if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
+					if (ShootAudio != null)
 					{
-						mAudioSource.pitch = Random.Range(0.7f, 1.1f);
-						mAudioSource.PlayOneShot(ShootAudio);
+						// 3D gunshot: distance falloff, travel delay, muffling and occlusion (see WeaponShotAudio)
+						Railbound.Audio.WeaponShotAudio.PlayShot(ShootAudio, Shoot_Position != null ? Shoot_Position.position : transform.position, Random.Range(0.92f, 1.08f), ItemName);
 					}
 				}
 
@@ -424,11 +425,11 @@ namespace JUTPS.WeaponSystem
 				}
 
 				//Audio
-				if (ShootAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled)
-				{
-					mAudioSource.pitch = Random.Range(0.7f, 1.1f);
-					mAudioSource.PlayOneShot(ShootAudio);
-				}
+				if (ShootAudio != null)
+					{
+						// 3D gunshot: distance falloff, travel delay, muffling and occlusion (see WeaponShotAudio)
+						Railbound.Audio.WeaponShotAudio.PlayShot(ShootAudio, Shoot_Position != null ? Shoot_Position.position : transform.position, Random.Range(0.92f, 1.08f), ItemName);
+					}
 			}
 
 			//Update shooting state

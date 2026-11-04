@@ -94,6 +94,36 @@ namespace Michsky.UI.Reach
             EditorUtility.SetDirty(gm);
 
             // 3. Locate Layout Group
+            // Update Category button text from Visuals to Graphics
+            var catVisuals = canvas.transform.Find("Pause Menu/Settings/Content/Panel Content/Categories/Visuals");
+            if (catVisuals != null)
+            {
+                var loc = catVisuals.GetComponent<Michsky.UI.Reach.LocalizedObject>();
+                if (loc != null) loc.enabled = false;
+                var pb = catVisuals.GetComponent<Michsky.UI.Reach.PanelButton>();
+                if (pb != null)
+                {
+                    pb.useLocalization = false;
+                    pb.buttonText = "Graphics";
+                    pb.UpdateUI();
+                    EditorUtility.SetDirty(pb);
+                }
+                foreach (var tmp in catVisuals.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true))
+                {
+                    tmp.text = "Graphics";
+                    EditorUtility.SetDirty(tmp);
+                }
+            }
+
+            // Ensure fullscreen dark backdrop on Pause Menu
+            var menuBg = canvas.transform.Find("Background");
+            if (menuBg != null)
+            {
+                var bgImg = menuBg.GetComponent<Image>() ?? menuBg.gameObject.AddComponent<Image>();
+                bgImg.color = new Color(0.02f, 0.03f, 0.05f, 0.90f);
+                EditorUtility.SetDirty(bgImg);
+            }
+
             var layoutGroupTransform = canvas.transform.Find("Pause Menu/Settings/Content/Panel Content/Panels/Visuals/Content/List/Layout Group");
             if (layoutGroupTransform == null)
             {
@@ -448,15 +478,30 @@ namespace Michsky.UI.Reach
                 descRt.offsetMin = new Vector2(descRt.offsetMin.x, 115f);
             }
 
-            // 1. Root Container (Floating seamlessly without box borders)
-            var widgetGo = new GameObject("VRAM Widget", typeof(RectTransform));
+            // 1. Root Container (Solid dark tactical card)
+            var widgetGo = new GameObject("VRAM Widget", typeof(RectTransform), typeof(Image));
             widgetGo.transform.SetParent(descArea, false);
             var widgetRt = widgetGo.GetComponent<RectTransform>();
             widgetRt.anchorMin = new Vector2(0f, 0f);
             widgetRt.anchorMax = new Vector2(1f, 0f);
             widgetRt.pivot = new Vector2(0.5f, 0f);
-            widgetRt.anchoredPosition = new Vector2(0f, 15f);
-            widgetRt.sizeDelta = new Vector2(-60f, 85f);
+            widgetRt.anchoredPosition = new Vector2(0f, 0f);
+            widgetRt.sizeDelta = new Vector2(-40f, 116f);
+
+            var widgetBgImg = widgetGo.GetComponent<Image>();
+            widgetBgImg.color = new Color(0.03f, 0.05f, 0.08f, 0.98f); // Solid dark card prevents in-game HUD bleed-through
+
+            // Top Cyan Accent Line
+            var topAccentGo = new GameObject("Card Top Accent", typeof(RectTransform), typeof(Image));
+            topAccentGo.transform.SetParent(widgetGo.transform, false);
+            var topAccentRt = topAccentGo.GetComponent<RectTransform>();
+            topAccentRt.anchorMin = new Vector2(0f, 1f);
+            topAccentRt.anchorMax = new Vector2(1f, 1f);
+            topAccentRt.pivot = new Vector2(0.5f, 1f);
+            topAccentRt.anchoredPosition = Vector2.zero;
+            topAccentRt.sizeDelta = new Vector2(0f, 2f);
+            var topAccentImg = topAccentGo.GetComponent<Image>();
+            topAccentImg.color = new Color(0.0f, 0.75f, 1.0f, 0.55f);
 
             // 2. Row 1: Estimated VRAM Usage (Left)
             var estimatedGo = new GameObject("Estimated Label", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -465,24 +510,24 @@ namespace Michsky.UI.Reach
             estimatedRt.anchorMin = new Vector2(0f, 1f);
             estimatedRt.anchorMax = new Vector2(0.5f, 1f);
             estimatedRt.pivot = new Vector2(0f, 1f);
-            estimatedRt.anchoredPosition = new Vector2(0f, 0f);
-            estimatedRt.sizeDelta = new Vector2(250f, 18f);
+            estimatedRt.anchoredPosition = new Vector2(16f, -10f);
+            estimatedRt.sizeDelta = new Vector2(300f, 18f);
 
             var estimatedTmp = estimatedGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) estimatedTmp.font = fontAsset;
-            estimatedTmp.text = "ESTIMATED VRAM USAGE:";
+            estimatedTmp.text = "ESTIMATED GPU VRAM USAGE:";
             estimatedTmp.fontSize = 13f;
             estimatedTmp.fontStyle = FontStyles.Bold;
-            estimatedTmp.color = new Color(0.85f, 0.88f, 0.9f, 1f);
+            estimatedTmp.color = new Color(0.92f, 0.95f, 0.98f, 1f);
 
-            // Target Label (Positioned at 80% mark above the tick)
+            // Target Label (Positioned above the tick)
             var targetGo = new GameObject("Target Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             targetGo.transform.SetParent(widgetGo.transform, false);
             var targetRt = targetGo.GetComponent<RectTransform>();
             targetRt.anchorMin = new Vector2(0f, 1f);
             targetRt.anchorMax = new Vector2(0f, 1f);
             targetRt.pivot = new Vector2(0.5f, 1f);
-            targetRt.anchoredPosition = new Vector2(456f, 0f); // 80% of 570px
+            targetRt.anchoredPosition = new Vector2(456f, -10f);
             targetRt.sizeDelta = new Vector2(60f, 16f);
 
             var targetTmp = targetGo.GetComponent<TextMeshProUGUI>();
@@ -490,7 +535,7 @@ namespace Michsky.UI.Reach
             targetTmp.text = "TARGET";
             targetTmp.fontSize = 11f;
             targetTmp.alignment = TextAlignmentOptions.Center;
-            targetTmp.color = new Color(0.85f, 0.88f, 0.9f, 1f);
+            targetTmp.color = new Color(0.85f, 0.90f, 0.95f, 1f);
 
             // 3. Row 2: The Segmented Bar Container
             var barContainerGo = new GameObject("Bar Container", typeof(RectTransform));
@@ -498,9 +543,9 @@ namespace Michsky.UI.Reach
             var barContainerRt = barContainerGo.GetComponent<RectTransform>();
             barContainerRt.anchorMin = new Vector2(0f, 1f);
             barContainerRt.anchorMax = new Vector2(1f, 1f);
-            barContainerRt.pivot = new Vector2(0f, 1f);
-            barContainerRt.anchoredPosition = new Vector2(0f, -22f);
-            barContainerRt.sizeDelta = new Vector2(0f, 12f);
+            barContainerRt.pivot = new Vector2(0.5f, 1f);
+            barContainerRt.anchoredPosition = new Vector2(0f, -34f);
+            barContainerRt.sizeDelta = new Vector2(-32f, 16f);
 
             // Background Track (Dark segmented ticks)
             var barBgGo = new GameObject("Bar Background", typeof(RectTransform), typeof(Image));
@@ -511,7 +556,7 @@ namespace Michsky.UI.Reach
             barBgRt.offsetMin = Vector2.zero;
             barBgRt.offsetMax = Vector2.zero;
             var barBgImg = barBgGo.GetComponent<Image>();
-            barBgImg.color = new Color(0.13f, 0.16f, 0.13f, 1f);
+            barBgImg.color = new Color(0.20f, 0.25f, 0.29f, 0.95f);
 
             // Other Apps Fill Bar (Light grey segmented ticks)
             var otherAppsGo = new GameObject("Other Apps Fill", typeof(RectTransform), typeof(Image));
@@ -525,7 +570,7 @@ namespace Michsky.UI.Reach
             otherAppsImg.type = Image.Type.Filled;
             otherAppsImg.fillMethod = Image.FillMethod.Horizontal;
             otherAppsImg.fillAmount = 0.28f;
-            otherAppsImg.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            otherAppsImg.color = new Color(0.85f, 0.90f, 0.95f, 1f);
 
             // Game Usage Fill Bar (Tactical lime green segmented ticks)
             var gameUsageGo = new GameObject("Game Usage Fill", typeof(RectTransform), typeof(Image));
@@ -539,7 +584,7 @@ namespace Michsky.UI.Reach
             gameUsageImg.type = Image.Type.Filled;
             gameUsageImg.fillMethod = Image.FillMethod.Horizontal;
             gameUsageImg.fillAmount = 0.20f;
-            gameUsageImg.color = new Color(0.58f, 0.88f, 0.22f, 1f);
+            gameUsageImg.color = new Color(0.48f, 0.92f, 0.22f, 1f);
 
             // Target Vertical Tick Line
             var targetLineGo = new GameObject("Target Line", typeof(RectTransform), typeof(Image));
@@ -549,7 +594,7 @@ namespace Michsky.UI.Reach
             targetLineRt.anchorMax = new Vector2(0f, 0.5f);
             targetLineRt.pivot = new Vector2(0.5f, 0.5f);
             targetLineRt.anchoredPosition = new Vector2(456f, 0f);
-            targetLineRt.sizeDelta = new Vector2(2f, 20f);
+            targetLineRt.sizeDelta = new Vector2(3f, 22f);
             var targetLineImg = targetLineGo.GetComponent<Image>();
             targetLineImg.color = Color.white;
 
@@ -561,7 +606,7 @@ namespace Michsky.UI.Reach
             rightCapRt.anchorMax = new Vector2(1f, 0.5f);
             rightCapRt.pivot = new Vector2(1f, 0.5f);
             rightCapRt.anchoredPosition = new Vector2(0f, 0f);
-            rightCapRt.sizeDelta = new Vector2(2f, 14f);
+            rightCapRt.sizeDelta = new Vector2(3f, 18f);
             var rightCapImg = rightCapGo.GetComponent<Image>();
             rightCapImg.color = Color.white;
 
@@ -571,9 +616,9 @@ namespace Michsky.UI.Reach
             var legendContainerRt = legendContainerGo.GetComponent<RectTransform>();
             legendContainerRt.anchorMin = new Vector2(0f, 0f);
             legendContainerRt.anchorMax = new Vector2(1f, 0f);
-            legendContainerRt.pivot = new Vector2(0f, 0f);
-            legendContainerRt.anchoredPosition = new Vector2(0f, 2f);
-            legendContainerRt.sizeDelta = new Vector2(0f, 20f);
+            legendContainerRt.pivot = new Vector2(0.5f, 0f);
+            legendContainerRt.anchoredPosition = new Vector2(0f, 8f);
+            legendContainerRt.sizeDelta = new Vector2(-32f, 22f);
 
             // Game Legend (Left)
             var gameLegGo = new GameObject("Game Legend", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -588,7 +633,7 @@ namespace Michsky.UI.Reach
             if (fontAsset != null) gameLegTmp.font = fontAsset;
             gameLegTmp.fontSize = 12f;
             gameLegTmp.alignment = TextAlignmentOptions.Left;
-            gameLegTmp.text = "<color=#94E038>▮▮▮</color> MODERN WARFARE 4:  <color=#94E038>8.04 GB</color>";
+            gameLegTmp.text = "<color=#7BEB38>■■■</color> <color=#FFFFFF>GAME:</color>  <color=#7BEB38>2.51 GB</color>";
 
             // Other Apps Legend (Center)
             var otherLegGo = new GameObject("Other Apps Legend", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -603,7 +648,7 @@ namespace Michsky.UI.Reach
             if (fontAsset != null) otherLegTmp.font = fontAsset;
             otherLegTmp.fontSize = 12f;
             otherLegTmp.alignment = TextAlignmentOptions.Left;
-            otherLegTmp.text = "<color=#D9D9D9>▮▮▮</color> OTHER APPS:  1.39 GB";
+            otherLegTmp.text = "<color=#D9E6F2>■■■</color> <color=#FFFFFF>OTHER APPS:</color>  <color=#D9E6F2>0.46 GB</color>";
 
             // Total Usage Text (Right)
             var totalGo = new GameObject("Total Usage", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -620,11 +665,11 @@ namespace Michsky.UI.Reach
             totalTmp.fontStyle = FontStyles.Bold;
             totalTmp.alignment = TextAlignmentOptions.Right;
             totalTmp.color = Color.white;
-            totalTmp.text = "9.44/23.57 GB";
+            totalTmp.text = "<color=#FFFFFF>2.97</color><color=#7F92A3> / 5.78 GB</color>";
 
             // 5. Attach HardwareVRAMMonitor
             var monitor = widgetGo.AddComponent<HardwareVRAMMonitor>();
-            monitor.gameTitle = "MODERN WARFARE 4";
+            monitor.gameTitle = "GAME";
             monitor.barBackground = barBgImg;
             monitor.otherAppsFillBar = otherAppsImg;
             monitor.gameUsageFillBar = gameUsageImg;

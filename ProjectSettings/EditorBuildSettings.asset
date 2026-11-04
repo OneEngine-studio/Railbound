@@ -40,10 +40,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/SandBox/Networking/NakamaConnection.unity
     guid: d4f20f519634aeda785adf6f72516a46
-  - enabled: 1
+  - enabled: 0
     path: Assets/Project/LoginMenu.unity
     guid: 13c103712f09e622cb7c95dedb0add6c
-  - enabled: 1
+  - enabled: 0
     path: Assets/Project/GameLobby.unity
     guid: 87a0cd4f3377019e2bd61d1e821bd8b5
   - enabled: 0

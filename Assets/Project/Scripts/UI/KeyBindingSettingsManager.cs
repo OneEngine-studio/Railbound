@@ -87,14 +87,30 @@ namespace Railbound.UI
             UpdateAllButtonLabels();
         }
 
+        private bool _isDisabling;
+
         private void OnDisable()
         {
-            CancelActiveRebinding();
+            // While this panel is being disabled (including scene teardown) the real JUInputManager may already be gone.
+            // JUInput.Instance() would then spawn a second "JU Input Manager" with default bindings, which leaves a stray
+            // object behind and can take over input. So never create one from this path.
+            _isDisabling = true;
+            try
+            {
+                CancelActiveRebinding();
+            }
+            finally
+            {
+                _isDisabling = false;
+            }
         }
 
         public JUInputManager GetJUInput()
         {
-            return FindObjectOfType<JUInputManager>() ?? JUInput.Instance();
+            var existing = FindObjectOfType<JUInputManager>();
+            if (existing != null) return existing;
+            if (_isDisabling) return null;
+            return JUInput.Instance();
         }
 
         public JUTPSInputControlls GetInputActions()

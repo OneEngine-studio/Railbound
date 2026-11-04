@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -96,9 +96,75 @@ namespace Project.Character
         [Header("Mapped Bones")]
         public List<BoneMapping> BoneMappings = new List<BoneMapping>();
 
+        private void Awake()
+        {
+            AutoRebindAllBones();
+        }
+
         private void OnEnable()
         {
+            AutoRebindAllBones();
+        }
+
+        public void AutoRebindAllBones()
+        {
+            if (SourceHips == null)
+            {
+                Transform armature = transform.Find("Armature");
+                SourceHips = armature != null ? FindDeepChild(armature, "Hips") : FindDeepChild(transform, "Hips");
+            }
+
+            if (TargetSkinRoot == null)
+            {
+                TargetSkinRoot = transform.Find("Anim_Idle_MIL_R5");
+            }
+
+            if (TargetSkinRoot != null && TargetHips == null)
+            {
+                TargetHips = FindDeepChild(TargetSkinRoot, "mixamorig:Hips");
+            }
+
             ValidateOrAutoBindLegs();
+            ValidateOrAutoBindArms();
+
+            if (SourceHips != null && TargetHips != null && BoneMappings != null)
+            {
+                for (int i = 0; i < BoneMappings.Count; i++)
+                {
+                    var m = BoneMappings[i];
+                    if ((m.SourceBone == null || m.TargetBone == null) && !string.IsNullOrEmpty(m.Name))
+                    {
+                        string[] parts = m.Name.Split(new string[] { " -> " }, System.StringSplitOptions.None);
+                        if (parts.Length == 2)
+                        {
+                            if (m.SourceBone == null) m.SourceBone = FindDeepChild(SourceHips, parts[0].Trim());
+                            if (m.TargetBone == null) m.TargetBone = FindDeepChild(TargetHips, parts[1].Trim());
+                            BoneMappings[i] = m;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void ValidateOrAutoBindArms()
+        {
+            if (SourceHips == null || TargetSkinRoot == null) return;
+
+            if (SourceLeftUpperArm == null) SourceLeftUpperArm = FindDeepChild(transform, "LeftArm");
+            if (SourceLeftLowerArm == null && SourceLeftUpperArm != null) SourceLeftLowerArm = FindDeepChild(SourceLeftUpperArm, "LeftForeArm");
+            if (SourceLeftHand == null && SourceLeftLowerArm != null) SourceLeftHand = FindDeepChild(SourceLeftLowerArm, "LeftHand");
+
+            if (TargetLeftUpperArm == null) TargetLeftUpperArm = FindDeepChild(TargetSkinRoot, "mixamorig:LeftArm");
+            if (TargetLeftLowerArm == null && TargetLeftUpperArm != null) TargetLeftLowerArm = FindDeepChild(TargetLeftUpperArm, "mixamorig:LeftForeArm");
+            if (TargetLeftHand == null && TargetLeftLowerArm != null) TargetLeftHand = FindDeepChild(TargetLeftLowerArm, "mixamorig:LeftHand");
+
+            if (SourceRightUpperArm == null) SourceRightUpperArm = FindDeepChild(transform, "RightArm");
+            if (SourceRightLowerArm == null && SourceRightUpperArm != null) SourceRightLowerArm = FindDeepChild(SourceRightUpperArm, "RightForeArm");
+            if (SourceRightHand == null && SourceRightLowerArm != null) SourceRightHand = FindDeepChild(SourceRightLowerArm, "RightHand");
+
+            if (TargetRightUpperArm == null) TargetRightUpperArm = FindDeepChild(TargetSkinRoot, "mixamorig:RightArm");
+            if (TargetRightLowerArm == null && TargetRightUpperArm != null) TargetRightLowerArm = FindDeepChild(TargetRightUpperArm, "mixamorig:RightForeArm");
+            if (TargetRightHand == null && TargetRightLowerArm != null) TargetRightHand = FindDeepChild(TargetRightLowerArm, "mixamorig:RightHand");
         }
 
         public void ValidateOrAutoBindLegs()

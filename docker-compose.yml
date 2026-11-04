@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  railbound-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: railbound-dedicated-server:latest
+    container_name: railbound_dedicated_server
+    restart: unless-stopped
+    ports:
+      - "7777:7777/udp"
+    volumes:
+      - ./server_logs:/server/logs
+    environment:
+      - UNITY_SERVER=1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

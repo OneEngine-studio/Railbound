@@ -1,11 +1,11 @@
 ---
 name: unity-mcp-workflow
 description: Efficient workflow for using Unity MCP to edit, import, compile, inspect, and test Unity projects.
-version: 1.0.0
+version: 1.0.1
 platform: agents
 ---
 <!-- KitWright Unity managed project skills -->
-<!-- KitWright Unity skill version: unity-mcp-workflow@1.0.0 -->
+<!-- KitWright Unity skill version: unity-mcp-workflow@1.0.1 -->
 
 # Unity MCP Workflow
 
@@ -18,6 +18,7 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
    - Check that Unity MCP is reachable before assuming Editor state.
    - Inspect hierarchy, prefab paths, selected objects, and relevant component references through MCP.
    - If the user names an object, treat the name as a hint and verify the real Unity object path before editing.
+   - Group independent reads into one `batch_execute` call instead of one round-trip each.
 2. Choose the edit surface.
    - Edit source files with normal repo tools, then trigger Unity recompilation.
    - Edit scene objects through Unity APIs, mark the scene dirty, and save the scene.
@@ -34,7 +35,7 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
    - Do not run self-healing fallback loops; if a reference, path, package, or tool is missing, report it once and stop or skip that item.
 4. Validate.
    - Read back the changed objects through MCP.
-   - For code or resource edits, exit Play Mode if needed, call `request_recompile`, call `wait_for_compilation`, then inspect compilation errors and console errors.
+   - For code or resource edits, exit Play Mode if needed and follow Recompile And Reload below: `request_recompile`, then `wait_for_compilation(force_refresh=false)` only if it reports a started import or compile. Both return the compile errors, so do not follow them with `get_compilation_errors`; inspect console errors.
    - For runtime behavior, enter Play Mode or inspect live objects when needed.
    - If MCP is unreachable, do not claim scene, prefab, asset, or runtime verification.
    - Report exactly what was verified and what still requires device, store, network, or manual validation.
@@ -56,16 +57,20 @@ Use this skill when Codex or another AI agent is working in a Unity project and 
 
 ## MCP Call Pattern
 
-If native MCP tools are not directly available, probe the local HTTP endpoint:
+If native MCP tools are not directly available, probe the local HTTP endpoint. Take its URL from the `kitwright` entry in this project's MCP client config (`.mcp.json`, `.codex/config.toml`, `.gemini/settings.json`, ...). It is not written here because it carries this editor's access token: a skill file gets committed, and the token must not be.
 
 ```bash
-curl -sS -m 1 -X POST http://127.0.0.1:9285/p/0c5f74cb/t/b2ef602f73e51c6657329a4cdc060bee/mcp \
+URL='<url of the kitwright entry>'
+curl -sS -m 1 -X POST "${URL}mcp" \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"ping"}'
 ```
 
-That URL carries this project's pin. A pinless or stale-port URL is answered by whichever
-editor happens to hold the port, which may be a different Unity project.
+Probe with `ping`, never with `tools/list`: that returns the whole tool catalog, tens of KB per probe. Call `tools/list` once, only when you need the tool schemas.
+
+That URL carries this project's pin and access token, and the editor rewrites it to the live
+port on every start. A URL without the token is refused with 401. A pinless or stale-port URL
+is answered by whichever editor happens to hold the port, which may be a different Unity project.
 
 For multi-line `execute_code` calls over curl, generate JSON with a real encoder instead of hand-escaping C#:
 
@@ -204,14 +209,16 @@ return "Scene dirtied: size " + before + " -> " + rect.sizeDelta + " (call save_
 After external C# or asset file edits:
 
 1. If Unity is in Play Mode, call `exit_play_mode` first — `request_recompile` is rejected during play because Unity does not run script compilation or domain reloads while playing.
-2. Call `request_recompile`.
-3. Call `wait_for_compilation`.
-4. Read `get_compilation_errors` and `get_console_logs` errors before continuing.
-5. If a domain reload drops or interrupts the request, call `get_reload_recovery_status` when available, re-scan the MCP endpoint if needed, then continue from `wait_for_compilation`.
+2. Call `request_recompile`, always first: it is the call that imports the edits. Unless it reports that Unity started importing or recompiling, its answer already carries the compile result (`COMPILATION_FAILED` with the issues, or no errors).
+3. Only if it reported that Unity started importing or recompiling, call `wait_for_compilation` with `force_refresh=false`: the refresh already ran, and its answer carries the compile errors too. Never use `force_refresh=false` without step 2 before it — on its own it reads the state from before the edits.
+4. Do not follow step 2 or 3 with `get_compilation_errors`. Read `get_console_logs` errors before continuing.
+5. If a domain reload drops or interrupts the request, call `get_reload_recovery_status` when available, re-scan the MCP endpoint if needed, then continue from step 3.
+
+Editing several `.cs` files: write all of them with your own file tools, then run this sequence once. `create_script`, `edit_script`, `patch_script`, `edit_script_members` and `write_file` each refresh the asset database, so writing N files through them starts up to N imports and compiles.
 
 Do not treat a disconnected, interrupted, or domain-reload-recovered request as a successful compile or edit. It only means the state is unknown until compilation checks and MCP readback confirm the final values.
 
-After `enter_play_mode`, the HTTP server is briefly unreachable while Unity reloads the domain. Before issuing the next tool call, poll a cheap endpoint such as `tools/list` (or `get_reload_recovery_status` if exposed) until you get a response — do not assume the connection survives the Play Mode transition.
+`enter_play_mode` and a recompile both reload the domain. In broker mode (the default) the broker holds requests across the reload and delivers them once Unity is back, so make the next call directly — no poll loop is needed (over curl, give that call a timeout of a minute rather than `-m 1`). A call answered with "Unity is recompiling scripts, so this tool did not run" is simply repeated. If the connection is refused instead (direct mode), poll `ping` as in MCP Call Pattern (with native tools only, `get_reload_recovery_status`) until it answers.
 
 ## Verification Checklist
 
@@ -254,5 +261,5 @@ For gameplay or network work, verify object identity, ownership, live instance e
 ## Metadata
 
 - Original skill id: `unity-mcp-workflow`
-- Skill version: `1.0.0`
+- Skill version: `1.0.1`
 - Source repository: `https://github.com/kitwright/unity-mcp`

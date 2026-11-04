@@ -21,10 +21,10 @@ namespace Railbound.Gameplay
         private float _duration = 3.8f; // Expands smoothly over 3.8 seconds
         private float _startTime;
 
-        // Visual Colors (Matching user's screenshot - Neon Coral / Amber Glow)
-        private Color _waveColor = new Color(2.8f, 0.72f, 0.48f, 1.0f);
-        private Color _coreColor = new Color(3.8f, 3.2f, 2.7f, 1.0f);
-        private Color _trailColor = new Color(1.8f, 0.45f, 0.28f, 0.45f);
+        // Visual Colors (Vibrant Tactical Cyan / Azure Hologram)
+        private Color _waveColor = new Color(0.0f, 1.8f, 2.8f, 1.0f);
+        private Color _coreColor = new Color(0.6f, 2.2f, 3.2f, 1.0f);
+        private Color _trailColor = new Color(0.0f, 0.6f, 1.4f, 0.4f);
 
         // Ground ripple ring reference
         private Transform _groundRingTr;
@@ -41,6 +41,8 @@ namespace Railbound.Gameplay
             if (waveColor.HasValue)
             {
                 effect._waveColor = waveColor.Value;
+                effect._coreColor = Color.Lerp(waveColor.Value * 2.2f, new Color(8.0f, 9.5f, 10.0f, 1.0f), 0.55f);
+                effect._trailColor = new Color(waveColor.Value.r * 0.4f, waveColor.Value.g * 0.4f, waveColor.Value.b * 0.4f, 0.45f);
             }
             return effect;
         }
@@ -85,8 +87,8 @@ namespace Railbound.Gameplay
 
             _groundRingMat = new Material(ringShader);
             _groundRingMat.renderQueue = 3040; // Inside HDRP's [2900..3100] Transparent queue range
-            _groundRingMat.SetColor("_Color", new Color(1.0f, 0.5f, 0.35f, 0.85f));
-            _groundRingMat.SetFloat("_Emission", 2.8f);
+            _groundRingMat.SetColor("_Color", new Color(0.0f, 0.9f, 1.0f, 0.85f));
+            _groundRingMat.SetFloat("_Emission", 2.5f);
 
             Texture ringTex = Resources.Load<Texture>("SonarRingTex_wave");
             if (ringTex == null)
@@ -133,9 +135,9 @@ namespace Railbound.Gameplay
             _material.SetColor("_WaveColor", _waveColor);
             _material.SetColor("_CoreColor", _coreColor);
             _material.SetColor("_TrailColor", _trailColor);
-            _material.SetFloat("_WaveWidth", 3.2f);
-            _material.SetFloat("_TrailLength", 16.0f);
-            _material.SetFloat("_EdgeDetectSensitivity", 2.5f);
+            _material.SetFloat("_WaveWidth", 3.5f);
+            _material.SetFloat("_TrailLength", 22.0f);
+            _material.SetFloat("_EdgeDetectSensitivity", 2.8f);
         }
 
         private void Update()
@@ -161,8 +163,8 @@ namespace Railbound.Gameplay
 
                 if (_groundRingMat != null)
                 {
-                    float ringAlpha = (1f - smoothProgress) * 0.85f;
-                    _groundRingMat.SetColor("_Color", new Color(1.0f, 0.48f, 0.32f, ringAlpha));
+                    float ringAlpha = (1f - smoothProgress) * 0.9f;
+                    _groundRingMat.SetColor("_Color", new Color(_waveColor.r, _waveColor.g, _waveColor.b, ringAlpha));
                 }
             }
 

@@ -26,8 +26,7 @@ Shader "MadeByProfessorOakie/URP_SonarWaveRing"
 
             HLSLPROGRAM
             #pragma target 4.5
-            #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
-            #pragma vertex vert
+                        #pragma vertex vert
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
@@ -70,7 +69,7 @@ Shader "MadeByProfessorOakie/URP_SonarWaveRing"
             {
                 float4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 float alpha = tex.r * input.color.a * _Color.a;
-                float3 rgb = _Color.rgb * tex.rgb * _Emission * input.color.rgb * GetCurrentExposureMultiplier();
+                float3 rgb = _Color.rgb * tex.rgb * _Emission * input.color.rgb;
                 return float4(rgb, alpha);
             }
             ENDHLSL
