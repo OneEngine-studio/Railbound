@@ -27,6 +27,8 @@ namespace Railbound.BR
         [Header("Seed")]
         [Tooltip("0 = pick a new random seed every match. Any other value reproduces the same layout.")]
         public int Seed = 0;
+        [Tooltip("Seed used when a NetworkManager exists (multiplayer) so server and clients generate the same layout. Override with -seed <n>.")]
+        public int NetworkedSeed = 20260104;
         public int ActiveSeed { get; private set; }
 
         [Header("Playable Area")]
@@ -112,10 +114,35 @@ namespace Railbound.BR
             Generate();
         }
 
+        /// <summary>
+        /// Seed priority: -seed command-line arg, then the Seed field, then a fixed seed shared by every peer
+        /// in a Netcode session (server and clients must build the same layout), then a random seed offline.
+        /// </summary>
+        private int ResolveSeed()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], "-seed", System.StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(args[i + 1], out int cliSeed) && cliSeed != 0)
+                    return cliSeed;
+            }
+
+            if (Seed != 0) return Seed;
+
+            bool offline = System.Array.Exists(args, a =>
+                string.Equals(a, "-offline", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a, "-solo", System.StringComparison.OrdinalIgnoreCase));
+            if (!offline && Unity.Netcode.NetworkManager.Singleton != null)
+                return NetworkedSeed;
+
+            return Random.Range(1, int.MaxValue);
+        }
+
         [ContextMenu("Regenerate Match Layout")]
         public void Generate()
         {
-            ActiveSeed = Seed != 0 ? Seed : Random.Range(1, int.MaxValue);
+            ActiveSeed = ResolveSeed();
             rng = new System.Random(ActiveSeed);
 
             usedSpawnPoints.Clear();

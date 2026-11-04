@@ -10658,7 +10658,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4452290909106180118
 Transform:
   m_ObjectHideFlags: 0
@@ -11426,9 +11426,9 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.4
-  m_Height: 1.72
+  m_Height: 2.1183286
   m_Direction: 1
-  m_Center: {x: 0, y: 0.85, z: 0}
+  m_Center: {x: 0, y: 0.65083575, z: 0}
 --- !u!82 &3489979222139667184
 AudioSource:
   m_ObjectHideFlags: 0
@@ -11440,7 +11440,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -11654,7 +11654,7 @@ MonoBehaviour:
   IsPlayer: 1
   UseOldInputSystem: 0
   JuTPSCharacter: {fileID: 0}
-  ItemToEquipOnStart: -1
+  ItemToEquipOnStart: 0
   EnableNextAndPreviousWeaponSwitch: 1
   CustomNextWeaponKeyCode: 0
   CustomPreviousWeaponKeycode: 0
@@ -11788,13 +11788,13 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 26f502cf42482a44996df100ebd487b4, type: 3}
     Effects: []
   InvertX: 0
-  MinTimeToPlayAudio: 0.3
+  MinTimeToPlayAudio: 0.25
   GroundLayers:
     serializedVersion: 2
-    m_Bits: 0
-  CheckRadius: 0.1
-  UpOffset: -0.07
-  ForwardOffset: 0.07
+    m_Bits: 2049
+  CheckRadius: 0.18
+  UpOffset: -0.15
+  ForwardOffset: 0.05
   LeftFoot: {fileID: 8920685807685998627}
   RightFoot: {fileID: 3189634651214911421}
 --- !u!114 &3489979222139667186
@@ -11804,21 +11804,21 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4372868026506870464}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 18a04a3340ba13a4ea148b476187b539, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   BlockBodyPositioning: 0
-  EnableFootPlacement: 1
+  EnableFootPlacement: 0
   AdvancedMode: 1
   GroundLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 67585
   RaycastMaxDistance: 2
   RaycastHeight: 1
-  FootHeight: 0.1
-  MaxStepHeight: 0.6
+  FootHeight: 0.08
+  MaxStepHeight: 0.4
   UseDynamicFootPlacing: 1
   LeftFootHeightCurveName: LeftFootHeight
   RightFootHeightCurveName: RightFootHeight
@@ -11830,7 +11830,7 @@ MonoBehaviour:
   LeftFootRotationWeight: 0
   RightFootRotationWeight: 0
   radius: 0.1
-  EnableDynamicBodyPlacing: 1
+  EnableDynamicBodyPlacing: 0
   UpAndDownForce: 10
   MaxBodyCrouchHeight: 0.3
   JustCalculateBodyPosition: 0
@@ -11948,7 +11948,7 @@ MonoBehaviour:
   WhatIsGround:
     serializedVersion: 2
     m_Bits: 71937
-  GroundCheckRadius: 0.1
+  GroundCheckRadius: 0.36
   GroundCheckHeighOfsset: 0.1
   GroundCheckSize: 0.5
   WhatIsWall:
@@ -11967,7 +11967,7 @@ MonoBehaviour:
   EnableUngroundedStepUp: 1
   UngroundedStepUpSpeed: 4
   UngroundedStepUpRayDistance: 0.1
-  StoppingTimeOnStepPosition: 0.5
+  StoppingTimeOnStepPosition: 0
   AnimatorParameters:
     _BaseLayerIndex: 0
     _LegsLayerIndex: 1
@@ -12312,9 +12312,9 @@ MonoBehaviour:
   HeightOffset: 0.73
   ProneAndRollCenterY: 0.38
   CenterOffset: {x: 0, y: 0, z: 0}
-  ProneRadius: 0.18
-  ProneCenterY: 0.18
-  ProneCenterZ: 0
+  ProneRadius: 0.16
+  ProneCenterY: 0.26
+  ProneCenterZ: -0.05
   ProneHeight: 1.7
   RollRadius: 0.35
   RollCenterY: 0.38
@@ -12781,10 +12781,10 @@ MonoBehaviour:
   triggerKey: 105
   scanRadius: 140
   scanDuration: 3.8
-  waveSpeed: 40
+  waveSpeed: 180
   cooldown: 10
   revealDuration: 14
-  scanWaveColor: {r: 0, g: 1.8, b: 2.8, a: 1}
+  scanWaveColor: {r: 2.8, g: 0.72, b: 0.48, a: 1}
   audioSource: {fileID: 0}
   sonarLaunchSfx: {fileID: 8300000, guid: 582181f476c9e3b4d9a63c7d32cc859b, type: 3}
   enemyAcquiredSfx: {fileID: 0}
@@ -14374,7 +14374,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4722543904091769475
 Transform:
   m_ObjectHideFlags: 0
@@ -18261,6 +18261,16 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4851121866228179361, guid: 6a288f1be7ce7e64a87b2cdfffc373ca,
         type: 3}
+      propertyPath: Unlocked
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4851121866228179361, guid: 6a288f1be7ce7e64a87b2cdfffc373ca,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4851121866228179361, guid: 6a288f1be7ce7e64a87b2cdfffc373ca,
+        type: 3}
       propertyPath: ItemModelInBody
       value: 
       objectReference: {fileID: 3927814329596496556}
@@ -18489,13 +18499,18 @@ PrefabInstance:
     - target: {fileID: 6169894348648410233, guid: 21944e43693201f46a01a25ae54686d3,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6169894348648410233, guid: 21944e43693201f46a01a25ae54686d3,
         type: 3}
       propertyPath: ShootAudio
       value: 
       objectReference: {fileID: 8300000, guid: 66feb496a3228bc498296ea0c505919e, type: 3}
+    - target: {fileID: 6169894348648410233, guid: 21944e43693201f46a01a25ae54686d3,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6169894348648410233, guid: 21944e43693201f46a01a25ae54686d3,
         type: 3}
       propertyPath: TotalBullets
@@ -18704,6 +18719,11 @@ PrefabInstance:
     - target: {fileID: 8047097017070325310, guid: adb104378856a7748abb638ce946bec0,
         type: 3}
       propertyPath: Unlocked
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8047097017070325310, guid: adb104378856a7748abb638ce946bec0,
+        type: 3}
+      propertyPath: ItemQuantity
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8047097017070325310, guid: adb104378856a7748abb638ce946bec0,
@@ -19197,7 +19217,12 @@ PrefabInstance:
     - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
         type: 3}
@@ -19336,6 +19361,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: UMP5
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: a8634f456eb355b41aadd9d7ce8436e9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -19531,6 +19561,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Benelli M4
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 09ede8a5085181f43a18d1369fb48cf5,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -19629,6 +19664,11 @@ PrefabInstance:
     - target: {fileID: 2726708000731834156, guid: 8908fcaa0ad536743b86aeb5d88313ec,
         type: 3}
       propertyPath: Unlocked
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2726708000731834156, guid: 8908fcaa0ad536743b86aeb5d88313ec,
+        type: 3}
+      propertyPath: ItemQuantity
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2726708000731834156, guid: 8908fcaa0ad536743b86aeb5d88313ec,
@@ -19770,6 +19810,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Katana
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 8f9a2e8100a737a42b1cdd8bdf7a618a,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -19882,7 +19927,12 @@ PrefabInstance:
     - target: {fileID: 8873450923734636497, guid: 12ee8c7845ee649429e2f2a3886c056d,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8873450923734636497, guid: 12ee8c7845ee649429e2f2a3886c056d,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8873450923734636497, guid: 12ee8c7845ee649429e2f2a3886c056d,
         type: 3}
@@ -19986,12 +20036,17 @@ PrefabInstance:
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
       propertyPath: Fire_Rate
       value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
@@ -20138,12 +20193,17 @@ PrefabInstance:
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
       propertyPath: Fire_Rate
       value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2261002572458860519, guid: 280e114e844adfb47bddec8bcab103ac,
         type: 3}
@@ -20613,6 +20673,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: BaseballBat
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: e48f70aa59c84254f88011769f365596,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -20721,7 +20786,12 @@ PrefabInstance:
     - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
         type: 3}
       propertyPath: Unlocked
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
+        type: 3}
+      propertyPath: ItemQuantity
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5143966286369086509, guid: 36f9432f4096a1e40b04a3bf5b254b4d,
         type: 3}
@@ -20794,6 +20864,11 @@ PrefabInstance:
     - target: {fileID: 3195200035291602774, guid: 674922e14aa387f45934fd2fb86d8500,
         type: 3}
       propertyPath: Unlocked
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3195200035291602774, guid: 674922e14aa387f45934fd2fb86d8500,
+        type: 3}
+      propertyPath: ItemQuantity
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3195200035291602774, guid: 674922e14aa387f45934fd2fb86d8500,
