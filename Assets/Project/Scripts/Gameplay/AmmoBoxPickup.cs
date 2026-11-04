@@ -46,6 +46,9 @@ namespace Railbound.Gameplay
         private bool _isOpening = false;
         private bool _isCollected = false;
 
+        /// <summary>True once the box has been opened or looted (the empty crate can remain in the world).</summary>
+        public bool IsCollected => _isCollected || _isOpening;
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody>();

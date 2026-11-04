@@ -11,6 +11,7 @@ using JUTPS.AI;
 using Project.AI.Sensory;
 using Project.AI.Skills;
 using Project.AI.Learning;
+using Project.AI.Exploration;
 
 namespace Project.AI.RL
 {
@@ -26,7 +27,8 @@ namespace Project.AI.RL
     [AddComponentMenu("Project/AI/RL/JU Character RL Agent")]
     public class JUCharacterRLAgent : Agent, IAISoundListener
     {
-        public const int VECTOR_OBSERVATION_SIZE = 24;
+        // 24 combat observations + 6 loot + 3 exploration
+        public const int VECTOR_OBSERVATION_SIZE = 33;
         public const int CONTINUOUS_ACTION_COUNT = 4;
         public static readonly int[] DISCRETE_BRANCH_SIZES = new int[] { 2, 2, 3, 3, 2, 2 };
 
@@ -61,6 +63,45 @@ namespace Project.AI.RL
         public float SafeZoneRadius = 250f;
         public Vector3 SafeZoneCenter = Vector3.zero;
         public WaypointPath PatrolWaypointPath;
+
+        [Header("Exploration & Looting")]
+        [Tooltip("If true, ranged bots start with no usable weapon and must find one on the map.")]
+        public bool StartUnarmed = false;
+        public float ExplorationCellSize = 10f;
+        public float ExplorationMapRadius = 300f;
+        [Tooltip("Loot closer than this is noticed; farther loot is unknown until the bot explores near it.")]
+        public float LootSenseRadius = 40f;
+        public float LootPickupRadius = 2.2f;
+        public float NewCellReward = 0.02f;
+        public float FirstWeaponReward = 1.0f;
+        public float ExtraWeaponReward = 0.3f;
+        public float AmmoPickupReward = 0.25f;
+        public float UnarmedPenaltyPerSecond = 0.0005f;
+
+        [Header("Exploration Telemetry (Read-Only)")]
+        public float ExplorationCoverage;
+        public int VisitedCellCount;
+        public int WeaponsCollected;
+
+        private AIExplorationMap explorationMap;
+        private AILootMemory lootMemory;
+        private float exploreSampleTimer;
+        private float lootScanTimer;
+        private float frontierTimer;
+        private Vector3 frontierPoint;
+        private bool hasFrontier;
+        private LootEntry trackedLoot;
+        private bool trackedLootValid;
+        private bool trackedWasUnarmed;
+        private float trackedLastDistance;
+        private int trackedPickupAttempts;
+        private float pickupCooldown;
+        private float trackedBestDistance;
+        private float trackedNoProgressTimer;
+        [Tooltip("Give up on loot that the bot cannot get closer to for this many seconds (e.g. unreachable on the NavMesh).")]
+        public float LootNoProgressTimeout = 12f;
+        private bool pendingWeaponStrip;
+        private bool episodeEndedByDeath;
 
         [Header("Recurrent Memory State (POMDP)")]
         [SerializeField] private Transform currentTarget;
@@ -159,6 +200,13 @@ namespace Project.AI.RL
 
             ConfigureCharacterAsAI();
             EnsureMatchTrackerAttached();
+
+            // The serialized BehaviorParameters may still hold the old observation size; keep it in sync with the code.
+            var behavior = GetComponent<BehaviorParameters>();
+            if (behavior != null && behavior.BrainParameters.VectorObservationSize != VECTOR_OBSERVATION_SIZE)
+            {
+                behavior.BrainParameters.VectorObservationSize = VECTOR_OBSERVATION_SIZE;
+            }
         }
 
         protected override void OnEnable()
@@ -261,6 +309,10 @@ namespace Project.AI.RL
             roamDestination = transform.position + transform.forward * 15f;
             hasEvolvedThisDeath = false;
 
+            ResetExplorationState();
+            // The inventory finishes setting up in its own Start(), so the strip is applied later from Update().
+            pendingWeaponStrip = StartUnarmed;
+
             AcquireBestTarget();
             UpdateLineOfSightMemory();
             CacheHealthBaselines();
@@ -280,6 +332,14 @@ namespace Project.AI.RL
             hasEvolvedThisDeath = false;
 
             predictiveTracker.Reset();
+
+            // MaxStep episode resets while the bot is still alive must not wipe its map, loot memory or weapons.
+            if (episodeEndedByDeath)
+            {
+                episodeEndedByDeath = false;
+                ResetExplorationState();
+                pendingWeaponStrip = StartUnarmed;
+            }
 
             AcquireBestTarget();
             UpdateLineOfSightMemory();
@@ -477,6 +537,8 @@ namespace Project.AI.RL
 
             // Apply the current RL policy action every Update() frame so JUCharacterController
             // smoothly moves, rotates, aims, and fires/attacks at full frame rate.
+            UpdateExplorationAndLoot();
+
             ApplyCachedActionsToCharacter();
 
             EvaluateStepRewards();
@@ -579,6 +641,9 @@ namespace Project.AI.RL
             sensor.AddObservation(localSafeDir.x);
             sensor.AddObservation(localSafeDir.z);
             sensor.AddObservation(hasAcousticThreat ? 1f : 0f);
+
+            // 6. Loot awareness (6 floats) and exploration progress (3 floats)
+            AddExplorationObservations(sensor);
         }
 
         public override void OnActionReceived(ActionBuffers actions)
@@ -792,7 +857,26 @@ namespace Project.AI.RL
                 }
             }
 
-            if (currentTarget != null)
+            // Loot first: an unarmed bot goes for a weapon, a bot low on ammo goes for an ammo box,
+            // unless an enemy already has line of sight close by.
+            // An unarmed ranged bot cannot fight, so it ignores enemies entirely until it has a gun.
+            bool unarmedRanged = Role == CombatRole.RangedTactical && !HasAnyRangedWeapon();
+
+            if (Role == CombatRole.RangedTactical && trackedLootValid && trackedLoot.IsAvailable())
+            {
+                bool enemyClose = currentTarget != null && hasTargetLineOfSight &&
+                                  Vector3.Distance(transform.position, currentTarget.position) < 15f;
+                if (!enemyClose || unarmedRanged)
+                {
+                    Vector3 lootDir = ComputeSteeredDirectionTo(trackedLoot.Position);
+                    cont[0] = Mathf.Clamp(lootDir.x, -1f, 1f);
+                    cont[1] = Mathf.Clamp(lootDir.z, -1f, 1f);
+                    disc[3] = trackedLastDistance > 12f ? 1 : 0;
+                    return;
+                }
+            }
+
+            if (currentTarget != null && !unarmedRanged)
             {
                 Vector3 targetPos = currentTarget.position;
                 Vector3 toTarget = targetPos - transform.position;
@@ -921,9 +1005,9 @@ namespace Project.AI.RL
                     }
                 }
             }
-            else if (hasAcousticThreat)
+            else if (hasAcousticThreat && !(Role == CombatRole.RangedTactical && !HasAnyRangedWeapon()))
             {
-                // Investigate acoustic threat location
+                // Investigate acoustic threat location (unarmed bots keep looting/exploring instead)
                 Vector3 toThreat = ComputeSteeredDirectionTo(threatLocation);
                 cont[0] = Mathf.Clamp(toThreat.x, -1f, 1f);
                 cont[1] = Mathf.Clamp(toThreat.z, -1f, 1f);
@@ -937,13 +1021,296 @@ namespace Project.AI.RL
             }
             else
             {
-                // No target or sound cue: follow WaypointPath or roam
-                Vector3 patrolDir = GetWaypointPatrolDirection();
-                cont[0] = Mathf.Clamp(patrolDir.x, -1f, 1f);
-                cont[1] = Mathf.Clamp(patrolDir.z, -1f, 1f);
-                disc[3] = 0;
+                // No target or sound cue: explore toward the least-visited part of the map
+                Vector3 exploreDir = GetExploreDirection(out bool farFromGoal);
+                cont[0] = Mathf.Clamp(exploreDir.x, -1f, 1f);
+                cont[1] = Mathf.Clamp(exploreDir.z, -1f, 1f);
+                disc[3] = farFromGoal ? 1 : 0;
             }
         }
+
+        #region Exploration & Looting
+
+        private void ResetExplorationState()
+        {
+            if (explorationMap == null)
+            {
+                explorationMap = new AIExplorationMap(ExplorationCellSize, ExplorationMapRadius, SafeZoneCenter);
+            }
+            explorationMap.Clear();
+
+            if (lootMemory == null) lootMemory = new AILootMemory();
+            lootMemory.Clear();
+
+            trackedLootValid = false;
+            hasFrontier = false;
+            exploreSampleTimer = 0f;
+            lootScanTimer = 0f;
+            frontierTimer = 0f;
+            trackedPickupAttempts = 0;
+            WeaponsCollected = 0;
+            ExplorationCoverage = 0f;
+            VisitedCellCount = 0;
+        }
+
+        /// <summary>True when the bot holds, or has unlocked, at least one ranged weapon.</summary>
+        private bool HasAnyRangedWeapon()
+        {
+            if (characterBrain == null) return false;
+            if (characterBrain.WeaponInUseRightHand != null) return true;
+
+            var inv = characterBrain.Inventory;
+            if (inv == null || inv.HoldableItensRightHand == null) return false;
+
+            for (int i = 0; i < inv.HoldableItensRightHand.Length; i++)
+            {
+                var item = inv.HoldableItensRightHand[i];
+                if (item != null && item.Unlocked && item is JUTPS.WeaponSystem.Weapon) return true;
+            }
+            return false;
+        }
+
+        private bool IsLowOnAmmo()
+        {
+            var w = characterBrain != null ? characterBrain.WeaponInUseRightHand : null;
+            if (w == null) return false;
+            return w.TotalBullets + w.BulletsAmounts < Mathf.Max(1, w.BulletsPerMagazine) * 2;
+        }
+
+        /// <summary>Locks every starting weapon so the bot has to find one on the map.</summary>
+        /// <summary>Returns true once the inventory was ready and the strip was applied (or is not needed).</summary>
+        private bool StripStartingWeapons()
+        {
+            if (Role != CombatRole.RangedTactical) return true;
+            if (characterBrain == null) return false;
+
+            var inv = characterBrain.Inventory;
+            if (inv == null || inv.HoldableItensRightHand == null || inv.HoldableItensRightHand.Length == 0) return false;
+
+            for (int i = 0; i < inv.HoldableItensRightHand.Length; i++)
+            {
+                var item = inv.HoldableItensRightHand[i];
+                if (item != null && item is JUTPS.WeaponSystem.Weapon)
+                {
+                    item.Unlocked = false;
+                }
+            }
+            // JUInventory.Update unequips any held item whose Unlocked flag is false.
+            inv.RefreshInBodyItemVisibility();
+            return true;
+        }
+
+        private void UpdateExplorationAndLoot()
+        {
+            if (explorationMap == null || lootMemory == null) ResetExplorationState();
+
+            if (pendingWeaponStrip && StripStartingWeapons())
+            {
+                pendingWeaponStrip = false;
+            }
+
+            float dt = Time.deltaTime;
+            bool armed = HasAnyRangedWeapon();
+
+            // 1. Exploration: reward each newly visited cell
+            exploreSampleTimer -= dt;
+            if (exploreSampleTimer <= 0f)
+            {
+                exploreSampleTimer = 0.25f;
+                if (explorationMap.MarkVisited(transform.position))
+                {
+                    ProvideReward(NewCellReward);
+                }
+                ExplorationCoverage = explorationMap.Coverage;
+                VisitedCellCount = explorationMap.VisitedCount;
+            }
+
+            // 2. Being unarmed is a cost, which pushes the bot to find a weapon
+            if (Role == CombatRole.RangedTactical && !armed)
+            {
+                ProvideReward(-UnarmedPenaltyPerSecond * dt);
+            }
+
+            // 3. Loot scan: pick what the bot currently needs
+            lootScanTimer -= dt;
+            if (lootScanTimer <= 0f)
+            {
+                lootScanTimer = 0.5f;
+                lootMemory.Sense(transform.position, LootSenseRadius);
+
+                if (Role == CombatRole.RangedTactical &&
+                    lootMemory.TryGetBest(transform.position, !armed, armed && IsLowOnAmmo(), out LootEntry best, out float bestDistance))
+                {
+                    if (!trackedLootValid || trackedLoot.Source != best.Source)
+                    {
+                        trackedLoot = best;
+                        trackedLootValid = true;
+                        trackedWasUnarmed = !armed;
+                        trackedPickupAttempts = 0;
+                        trackedBestDistance = bestDistance;
+                        trackedNoProgressTimer = 0f;
+                    }
+                    trackedLastDistance = bestDistance;
+                }
+                else if (trackedLootValid && !trackedLoot.IsAvailable())
+                {
+                    // Handled below as "collected"
+                }
+                else if (trackedLootValid)
+                {
+                    trackedLootValid = false;
+                }
+            }
+
+            // 4. Track the chosen loot: reward on collection, pick up weapons when close
+            pickupCooldown -= dt;
+            if (trackedLootValid)
+            {
+                if (!trackedLoot.IsAvailable())
+                {
+                    if (trackedLastDistance <= 4f)
+                    {
+                        if (trackedLoot.Kind == LootKind.Weapon)
+                        {
+                            WeaponsCollected++;
+                            ProvideReward(trackedWasUnarmed ? FirstWeaponReward : ExtraWeaponReward);
+                        }
+                        else
+                        {
+                            ProvideReward(AmmoPickupReward);
+                        }
+                    }
+                    trackedLootValid = false;
+                    lootScanTimer = 0f;
+                }
+                else
+                {
+                    trackedLastDistance = FlatDistance(transform.position, trackedLoot.Position);
+
+                    // Watchdog: if the bot cannot get closer to this loot, stop chasing it so it explores instead of standing still.
+                    if (trackedLastDistance < trackedBestDistance - 1f)
+                    {
+                        trackedBestDistance = trackedLastDistance;
+                        trackedNoProgressTimer = 0f;
+                    }
+                    else if (trackedLastDistance > LootPickupRadius)
+                    {
+                        trackedNoProgressTimer += dt;
+                        if (trackedNoProgressTimer >= LootNoProgressTimeout)
+                        {
+                            lootMemory.Ignore(trackedLoot.Source);
+                            trackedLootValid = false;
+                            trackedNoProgressTimer = 0f;
+                            lootScanTimer = 0f;
+                            return;
+                        }
+                    }
+
+                    if (trackedLoot.Kind == LootKind.Weapon && trackedLastDistance <= LootPickupRadius && pickupCooldown <= 0f)
+                    {
+                        pickupCooldown = 1f;
+                        TryPickUpWeapon();
+                    }
+                }
+            }
+        }
+
+        private void TryPickUpWeapon()
+        {
+            var inv = characterBrain != null ? characterBrain.Inventory : null;
+            var item = trackedLoot.Source as JUTPS.ItemSystem.JUItem;
+            if (inv == null || item == null) return;
+
+            trackedPickupAttempts++;
+            if (trackedPickupAttempts > 3)
+            {
+                // The bot's inventory has no matching slot for this weapon; stop chasing it.
+                lootMemory.Ignore(trackedLoot.Source);
+                trackedLootValid = false;
+                return;
+            }
+
+            inv.ItemToPickUp = item;
+            inv.PickUp();
+        }
+
+        private void RefreshFrontierIfNeeded()
+        {
+            frontierTimer -= Time.deltaTime;
+            bool reached = hasFrontier && FlatDistance(transform.position, frontierPoint) < 4f;
+            if (hasFrontier && !reached && frontierTimer > 0f) return;
+
+            frontierTimer = 4f;
+            hasFrontier = explorationMap != null &&
+                          explorationMap.TryFindFrontier(transform.position, transform.forward, IsOnNavMesh, out frontierPoint);
+        }
+
+        private static bool IsOnNavMesh(Vector3 p)
+        {
+            return NavMesh.SamplePosition(p, out _, 8f, NavMesh.AllAreas);
+        }
+
+        private Vector3 GetExploreDirection(out bool farFromGoal)
+        {
+            RefreshFrontierIfNeeded();
+            farFromGoal = false;
+
+            if (hasFrontier)
+            {
+                farFromGoal = FlatDistance(transform.position, frontierPoint) > 20f;
+                return ComputeSteeredDirectionTo(frontierPoint);
+            }
+
+            return GetWaypointPatrolDirection();
+        }
+
+        private void AddExplorationObservations(VectorSensor sensor)
+        {
+            if (trackedLootValid && trackedLoot.IsAvailable())
+            {
+                Vector3 to = trackedLoot.Position - transform.position;
+                float d = to.magnitude;
+                Vector3 local = d > 0.01f ? transform.InverseTransformDirection(to / d) : Vector3.forward;
+
+                sensor.AddObservation(1f);
+                sensor.AddObservation(local.x);
+                sensor.AddObservation(local.z);
+                sensor.AddObservation(Mathf.Clamp01(d / Mathf.Max(1f, LootSenseRadius)));
+                sensor.AddObservation(trackedLoot.Kind == LootKind.Weapon ? 1f : 0f);
+                sensor.AddObservation(trackedLoot.Kind == LootKind.Ammo ? 1f : 0f);
+            }
+            else
+            {
+                for (int i = 0; i < 6; i++) sensor.AddObservation(0f);
+            }
+
+            sensor.AddObservation(explorationMap != null ? explorationMap.Coverage : 0f);
+
+            if (hasFrontier)
+            {
+                Vector3 toFrontier = frontierPoint - transform.position;
+                toFrontier.y = 0f;
+                Vector3 local = toFrontier.sqrMagnitude > 0.01f
+                    ? transform.InverseTransformDirection(toFrontier.normalized)
+                    : Vector3.forward;
+                sensor.AddObservation(local.x);
+                sensor.AddObservation(local.z);
+            }
+            else
+            {
+                sensor.AddObservation(0f);
+                sensor.AddObservation(0f);
+            }
+        }
+
+        private static float FlatDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        #endregion
 
         private Vector3 FindCoverDirection(Vector3 threatPos, Vector3 dirToThreatFlat, Vector3 fallbackStrafe)
         {
@@ -1283,6 +1650,7 @@ namespace Project.AI.RL
                     ProvideReward(-3.0f);
                     CompletedEpisodesCount++;
                     TriggerEvolutionOnDeath();
+                    episodeEndedByDeath = true;
                     EndEpisode();
                     return;
                 }

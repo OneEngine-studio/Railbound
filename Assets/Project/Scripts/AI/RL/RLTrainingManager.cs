@@ -21,7 +21,8 @@ namespace Project.AI.RL
 
         [Header("Curriculum & Multi-Agent Settings")]
         public CurriculumStage ActiveStage = CurriculumStage.Stage3_BattleRoyaleSquads;
-        public bool EnableMaPocaSquadGroup = true;
+        [Tooltip("MA-POCA groups agents into ONE cooperative team with a shared reward. Leave off for free-for-all Battle Royale, where every bot must fight for itself.")]
+        public bool EnableMaPocaSquadGroup = false;
         public bool AutoRespawnDeadAgentsInTraining = false;
         public float EpisodeTimeoutSeconds = 180f;
 
