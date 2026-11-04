@@ -345,6 +345,7 @@
     <Compile Include="Assets\all_Projects\Scripts\Physics\Bullet.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Physics\Vehicle Physics\Examples\CustomVehicleExample.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Character Controllers\Additionals\DamageableBody.cs" />
+    <Compile Include="Assets\Project\Scripts\BR\BRMatchSetup.cs" />
     <Compile Include="Assets\Project\Scripts\Animation\MenuAnimator.cs" />
     <Compile Include="Assets\all_Projects\Scripts\Gameplay\Weapon Management\GeneralHoldableObject.cs" />
     <Compile Include="Assets\Reach - Complete Sci-Fi UI\Scripts\HUD\HUDManagerEditor.cs" />
