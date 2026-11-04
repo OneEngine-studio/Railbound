@@ -137,8 +137,11 @@ namespace Project.Character
                         string[] parts = m.Name.Split(new string[] { " -> " }, System.StringSplitOptions.None);
                         if (parts.Length == 2)
                         {
-                            if (m.SourceBone == null) m.SourceBone = FindDeepChild(SourceHips, parts[0].Trim());
-                            if (m.TargetBone == null) m.TargetBone = FindDeepChild(TargetHips, parts[1].Trim());
+                            string srcName = parts[0].Trim();
+                            string dstName = parts[1].Trim();
+                            // FindDeepChild only searches descendants, so the hips themselves need explicit handling.
+                            if (m.SourceBone == null) m.SourceBone = srcName == SourceHips.name ? SourceHips : FindDeepChild(SourceHips, srcName);
+                            if (m.TargetBone == null) m.TargetBone = dstName == TargetHips.name ? TargetHips : FindDeepChild(TargetHips, dstName);
                             BoneMappings[i] = m;
                         }
                     }

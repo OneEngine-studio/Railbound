@@ -82,9 +82,10 @@ public class JUNetworkPlayer : NetworkBehaviour
             }
 
             // Test helper: "-spawnat x,y,z" places this client at exact world coordinates (to put two test clients side by side).
-            if (TryGetSpawnOverride(out Vector3 testSpawn))
+            if (TryGetSpawnOverride(out Vector3 testSpawn, out float testYaw))
             {
                 transform.position = testSpawn;
+                if (!float.IsNaN(testYaw)) transform.rotation = Quaternion.Euler(0f, testYaw, 0f);
                 if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
 
@@ -156,7 +157,7 @@ public class JUNetworkPlayer : NetworkBehaviour
                 Railbound.Gameplay.Map1DeathRestartController.Instance.RegisterPlayer(gameObject);
             }
 
-            Debug.Log($"[JUNetworkPlayer] Local player (ClientId: {OwnerClientId}) successfully spawned at {transform.position} with camera and controls linked.");
+            Debug.Log($"[JUNetworkPlayer] Local player (ClientId: {OwnerClientId}) successfully spawned at {transform.position} yaw={transform.eulerAngles.y:F1} with camera and controls linked.");
         }
         else
         {
@@ -178,15 +179,18 @@ public class JUNetworkPlayer : NetworkBehaviour
         }
     }
 
-    private static bool TryGetSpawnOverride(out Vector3 position)
+    private static bool TryGetSpawnOverride(out Vector3 position, out float yaw)
     {
         position = default;
+        yaw = float.NaN;
         string[] args = Environment.GetCommandLineArgs();
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (!string.Equals(args[i], "-spawnat", StringComparison.OrdinalIgnoreCase)) continue;
             string[] parts = args[i + 1].Split(',');
-            if (parts.Length != 3) return false;
+            if (parts.Length != 3 && parts.Length != 4) return false;
+            if (parts.Length == 4)
+                float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out yaw);
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             if (float.TryParse(parts[0], System.Globalization.NumberStyles.Float, ci, out float x) &&
                 float.TryParse(parts[1], System.Globalization.NumberStyles.Float, ci, out float y) &&
