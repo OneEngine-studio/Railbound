@@ -44,6 +44,7 @@ namespace Railbound.Networking
                 Destroy(gameObject);
                 return;
             }
+
             Instance = this;
             LoadPlayerPrefabIfNull();
         }
@@ -53,7 +54,8 @@ namespace Railbound.Networking
             if (playerPrefab == null)
             {
 #if UNITY_EDITOR
-                playerPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/SandBox/Networking/Prefabs/TPS Character.prefab");
+                playerPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                    "Assets/SandBox/Networking/Prefabs/TPS Character.prefab");
 #else
                 playerPrefab = Resources.Load<GameObject>("Prefabs/TPS Character");
 #endif
@@ -81,7 +83,10 @@ namespace Railbound.Networking
 
                 // 2. Prepare Netcode NetworkManager & Start Host
                 UpdateStatus("STARTING NETCODE HOST...");
-                EnsureNetcodeHost();
+                if (!EnsureNetcodeHost())
+                {
+                    throw new InvalidOperationException("Failed to start Unity Netcode Host.");
+                }
 
                 // 3. Load Target Gameplay Scene (MAP-1)
                 UpdateStatus("LOADING MAP-1...");
@@ -139,7 +144,7 @@ namespace Railbound.Networking
             }
         }
 
-        private void EnsureNetcodeHost()
+        private bool EnsureNetcodeHost()
         {
             var netMgr = NetworkManager.Singleton;
             if (netMgr == null)
@@ -159,6 +164,7 @@ namespace Railbound.Networking
             {
                 netMgr.NetworkConfig.PlayerPrefab = playerPrefab;
             }
+
             netMgr.NetworkConfig.EnableSceneManagement = true;
 
             if (!netMgr.IsListening)
@@ -171,12 +177,15 @@ namespace Railbound.Networking
                 else
                 {
                     Debug.LogError("[LobbyMatchmaker] Failed to start Unity Netcode Host.");
+                    return false;
                 }
             }
             else
             {
                 Debug.Log("[LobbyMatchmaker] Netcode is already running (Host/Server).");
             }
+
+            return true;
         }
 
         private void LoadGameplayScene()
