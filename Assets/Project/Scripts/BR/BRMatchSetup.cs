@@ -60,6 +60,9 @@ namespace Railbound.BR
         public int AmmoBoxes = 30;
         public int Medkits = 12;
         public float MinLootSpacing = 14f;
+        [Range(0f, 1f)]
+        [Tooltip("Share of weapons, ammo and medkits placed on BRLootPoints (inside buildings) instead of open terrain.")]
+        public float LootPointShare = 0.5f;
         public GameObject AmmoBoxPrefab;
         public GameObject MedkitPrefab;
 
@@ -127,7 +130,8 @@ namespace Railbound.BR
             if (RandomizeLoot) ScatterLoot();
 
             Debug.Log($"[BRMatchSetup] seed={ActiveSeed} bots={BotsPlaced} playerSpawns={PlayerSpawnsReady} " +
-                      $"weapons={WeaponsPlaced} ammo={AmmoPlaced} medkits={MedkitsPlaced}");
+                      $"weapons={WeaponsPlaced} ammo={AmmoPlaced} medkits={MedkitsPlaced} " +
+                      $"lootPoints={LootPointsUsed}/{LootPointsAvailable}");
         }
 
         // ------------------------------------------------------------------ spawns
@@ -234,17 +238,48 @@ namespace Railbound.BR
             }
         }
 
+        private readonly List<Transform> lootPointSpots = new List<Transform>();
+        private readonly HashSet<int> usedLootPointSpots = new HashSet<int>();
+        public int LootPointsAvailable { get; private set; }
+        public int LootPointsUsed { get; private set; }
+
+        /// <summary>
+        /// Picks a spot for one loot item: with probability LootPointShare a free BRLootPoint (inside a building),
+        /// otherwise open terrain.
+        /// </summary>
+        private bool TryGetLootSpot(float terrainSpacing, out Vector3 spot)
+        {
+            if (lootPointSpots.Count > usedLootPointSpots.Count && rng.NextDouble() < LootPointShare)
+            {
+                for (int attempt = 0; attempt < 12; attempt++)
+                {
+                    int index = rng.Next(lootPointSpots.Count);
+                    if (lootPointSpots[index] == null || !usedLootPointSpots.Add(index)) continue;
+                    spot = lootPointSpots[index].position;
+                    LootPointsUsed++;
+                    return true;
+                }
+            }
+            return TryFindPoint(usedLootPoints, terrainSpacing, out spot);
+        }
+
         private void ScatterLoot()
         {
             EnsureLootRoot();
             if (weaponTemplates.Count == 0) CollectWeaponTemplates();
+
+            lootPointSpots.Clear();
+            usedLootPointSpots.Clear();
+            LootPointsUsed = 0;
+            foreach (var lp in FindObjectsOfType<BRLootPoint>()) lootPointSpots.Add(lp.transform);
+            LootPointsAvailable = lootPointSpots.Count;
 
             // Existing ground weapons are moved first, then extras are cloned until ScatteredWeapons is reached.
             int placed = 0;
             var originals = new List<Weapon>(weaponTemplates);
             for (int i = 0; i < originals.Count && placed < ScatteredWeapons; i++)
             {
-                if (!TryFindPoint(usedLootPoints, MinLootSpacing, out Vector3 p)) break;
+                if (!TryGetLootSpot(MinLootSpacing, out Vector3 p)) break;
                 usedLootPoints.Add(p);
                 MoveLoot(originals[i].transform, p);
                 WeaponsPlaced++;
@@ -256,7 +291,7 @@ namespace Railbound.BR
             {
                 var template = PickWeaponTemplate();
                 if (template == null) break;
-                if (!TryFindPoint(usedLootPoints, MinLootSpacing, out Vector3 p)) break;
+                if (!TryGetLootSpot(MinLootSpacing, out Vector3 p)) break;
                 usedLootPoints.Add(p);
                 CloneLoot(template.gameObject, p);
                 WeaponsPlaced++;
@@ -274,7 +309,7 @@ namespace Railbound.BR
             int placed = 0;
             for (int i = 0; i < count; i++)
             {
-                if (!TryFindPoint(usedLootPoints, MinLootSpacing * 0.6f, out Vector3 p)) break;
+                if (!TryGetLootSpot(MinLootSpacing * 0.6f, out Vector3 p)) break;
                 usedLootPoints.Add(p);
 
                 var go = Instantiate(prefab, p + Vector3.up * 0.4f, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f), lootRoot);
