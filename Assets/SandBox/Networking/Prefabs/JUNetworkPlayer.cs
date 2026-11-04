@@ -42,7 +42,18 @@ public class JUNetworkPlayer : NetworkBehaviour
         {
             // 1. Position on spawn platform or map spawn location
             JUCharacterController offlineChar = FindOfflinePlayer();
-            if (transform.position == Vector3.zero || transform.position.magnitude < 1f)
+            if (Railbound.BR.BRMatchSetup.Instance != null &&
+                Railbound.BR.BRMatchSetup.Instance.TryGetPlayerSpawn((int)OwnerClientId, out Vector3 randomSpawn, out Quaternion randomRotation))
+            {
+                // Random terrain spawn from the match setup (never on the train or inside buildings)
+                transform.SetPositionAndRotation(randomSpawn, randomRotation);
+                if (rb != null)
+                {
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+            }
+            else if (transform.position == Vector3.zero || transform.position.magnitude < 1f)
             {
                 if (offlineChar != null)
                 {

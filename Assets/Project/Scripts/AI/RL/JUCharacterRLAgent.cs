@@ -356,6 +356,35 @@ namespace Project.AI.RL
             }
         }
 
+        /// <summary>
+        /// Moves the bot to a new spawn (used by the random match setup) and clears everything that
+        /// depended on its old position: path, patrol point, map memory and respawn point.
+        /// </summary>
+        public void TeleportTo(Vector3 position, Quaternion rotation)
+        {
+            if (selfRb == null) selfRb = GetComponent<Rigidbody>();
+
+            transform.SetPositionAndRotation(position, rotation);
+            if (selfRb != null)
+            {
+                selfRb.velocity = Vector3.zero;
+                selfRb.angularVelocity = Vector3.zero;
+            }
+            Physics.SyncTransforms();
+
+            spawnPosition = position;
+            spawnRotation = rotation;
+            roamDestination = position + transform.forward * 15f;
+            lastKnownTargetPos = position + transform.forward * 15f;
+            smoothedAimPosition = position + transform.forward * 10f + Vector3.up * AimUpOffset;
+            cachedNavPath = new Vector3[0];
+            navPathRefreshTimer = 0f;
+            currentTarget = null;
+            currentTargetBrain = null;
+            currentTargetHealth = null;
+            ResetExplorationState();
+        }
+
         private void CacheHealthBaselines()
         {
             prevSelfHealth = selfHealth != null ? selfHealth.Health : 100f;
