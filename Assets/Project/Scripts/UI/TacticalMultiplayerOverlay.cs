@@ -150,8 +150,11 @@ namespace Railbound.UI
             }
         }
 
+        [SerializeField, Tooltip("Old IMGUI ping badge. The HUD now shows ping in its own network chip (HudNetworkChip).")] private bool showLegacyPingBadge = false;
+
         private void OnGUI()
         {
+            if (!showLegacyPingBadge) return;
             // Do not render UI in headless Linux servers (Docker)
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
 

@@ -115,6 +115,10 @@ namespace Railbound.BR
         private float lastOutsideWarningTime = -99f;
         private Transform localPlayerTransform;
 
+        /// <summary>Name of the active zone phase (e.g. "Phase 2 - Sector Choke"); used by the HUD objective card.</summary>
+        public string CurrentPhaseName => (phases != null && CurrentPhaseIndex >= 0 && CurrentPhaseIndex < phases.Length) ? phases[CurrentPhaseIndex].PhaseName : string.Empty;
+        public int PhaseCount => phases != null ? phases.Length : 0;
+
         public Vector3 CurrentCenter => interpolatedCenter;
         public float CurrentRadius => interpolatedRadius;
         public int CurrentPhaseIndex => IsNetworkedActive ? NetCurrentPhase.Value : localPhaseIndex;

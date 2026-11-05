@@ -317,8 +317,8 @@ namespace Railbound.Gameplay
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(24f, -270f);
-            rt.sizeDelta = new Vector2(240f, 38f);
+            rt.anchoredPosition = new Vector2(24f, -274f);
+            rt.sizeDelta = new Vector2(280f, 50f);
 
             // Dark Backing
             var bgGO = new GameObject("Background", typeof(RectTransform));
@@ -328,7 +328,7 @@ namespace Railbound.Gameplay
             bgRt.anchorMax = Vector2.one;
             bgRt.sizeDelta = Vector2.zero;
             var bgImg = bgGO.AddComponent<Image>();
-            bgImg.color = new Color(0.02f, 0.04f, 0.06f, 0.9f);
+            bgImg.sprite = Resources.Load<Sprite>("HUD/Hud_Panel"); bgImg.type = Image.Type.Sliced; bgImg.color = Color.white;
 
             // Cyan Accent Top Border
             var borderGO = new GameObject("TopBorder", typeof(RectTransform));
@@ -339,7 +339,7 @@ namespace Railbound.Gameplay
             borderRt.pivot = new Vector2(0f, 1f);
             borderRt.sizeDelta = new Vector2(0f, 2f);
             var borderImg = borderGO.AddComponent<Image>();
-            borderImg.color = new Color(1.0f, 1.0f, 1.0f, 0.6f);
+            borderImg.color = new Color(1.0f, 1.0f, 1.0f, 0.0f); // the chamfered panel sprite already draws the border
 
             // Fill Bar
             var fillGO = new GameObject("FillBar", typeof(RectTransform));
@@ -347,8 +347,9 @@ namespace Railbound.Gameplay
             var fillRt = fillGO.GetComponent<RectTransform>();
             fillRt.anchorMin = new Vector2(0f, 0f);
             fillRt.anchorMax = new Vector2(1f, 0f);
-            fillRt.pivot = new Vector2(0f, 0f);
-            fillRt.sizeDelta = new Vector2(0f, 4f);
+            fillRt.pivot = new Vector2(0.5f, 0f);
+            fillRt.anchoredPosition = new Vector2(0f, 8f);
+            fillRt.sizeDelta = new Vector2(-34f, 3f);
             cooldownFillImage = fillGO.AddComponent<Image>();
             cooldownFillImage.color = new Color(1.0f, 1.0f, 1.0f, 1f);
             cooldownFillImage.type = Image.Type.Filled;
@@ -361,10 +362,15 @@ namespace Railbound.Gameplay
             var txtRt = txtGO.GetComponent<RectTransform>();
             txtRt.anchorMin = Vector2.zero;
             txtRt.anchorMax = Vector2.one;
-            txtRt.sizeDelta = new Vector2(-16f, 0f);
-            txtRt.anchoredPosition = new Vector2(8f, 0f);
+            txtRt.sizeDelta = new Vector2(-34f, -8f);
+            txtRt.anchoredPosition = new Vector2(0f, 5f);
             cooldownText = txtGO.AddComponent<TextMeshProUGUI>();
-            cooldownText.fontSize = 12f;
+            cooldownText.fontSize = 17f;
+            cooldownText.enableAutoSizing = true;
+            cooldownText.fontSizeMin = 11f;
+            cooldownText.fontSizeMax = 17f;
+            cooldownText.enableWordWrapping = false;
+            cooldownText.overflowMode = TextOverflowModes.Overflow;
             cooldownText.fontStyle = FontStyles.Bold;
             cooldownText.alignment = TextAlignmentOptions.MidlineLeft;
             cooldownText.text = "<color=#FFFFFF>[I]</color> FULL SCAN: <color=#66FF66>READY (1600M)</color>";
@@ -377,12 +383,12 @@ namespace Railbound.Gameplay
             msgRt.anchorMax = new Vector2(1f, 0f);
             msgRt.pivot = new Vector2(0f, 1f);
             msgRt.anchoredPosition = new Vector2(0f, -6f);
-            msgRt.sizeDelta = new Vector2(360f, 32f);
+            msgRt.sizeDelta = new Vector2(420f, 44f);
             _hudStatusCanvasGroup = msgGO.AddComponent<CanvasGroup>();
             _hudStatusCanvasGroup.alpha = 0f;
 
             var msgBg = msgGO.AddComponent<Image>();
-            msgBg.color = new Color(0.02f, 0.03f, 0.05f, 0.92f);
+            msgBg.sprite = Resources.Load<Sprite>("HUD/Hud_Panel"); msgBg.type = Image.Type.Sliced; msgBg.color = Color.white;
 
             var msgTxtGO = new GameObject("Text", typeof(RectTransform));
             msgTxtGO.transform.SetParent(msgGO.transform, false);
@@ -392,7 +398,7 @@ namespace Railbound.Gameplay
             msgTxtRt.sizeDelta = new Vector2(-12f, 0f);
             msgTxtRt.anchoredPosition = new Vector2(6f, 0f);
             hudStatusText = msgTxtGO.AddComponent<TextMeshProUGUI>();
-            hudStatusText.fontSize = 12f;
+            hudStatusText.fontSize = 17f;
             hudStatusText.fontStyle = FontStyles.Bold;
             hudStatusText.alignment = TextAlignmentOptions.MidlineLeft;
             hudStatusText.text = "";

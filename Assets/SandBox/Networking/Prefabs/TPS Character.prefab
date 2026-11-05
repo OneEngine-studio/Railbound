@@ -8777,8 +8777,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa2549d042f8b6d41bb6289069865f19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Health: 400
-  MaxHealth: 400
+  Health: 100
+  MaxHealth: 100
   BloodScreenEffect: 1
   BloodHitParticle: {fileID: 3377176041485713299, guid: f5973a37858ed07439978e742b77a3af,
     type: 3}
@@ -9904,7 +9904,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a34dd20b5145314db0bf15a79c9f55f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSurvivalHealth: 50
+  maxSurvivalHealth: 100
   dangerThreshold: 0.55
   criticalThreshold: 0.3
   heartbeatAudioSource: {fileID: 0}
@@ -12518,12 +12518,12 @@ PrefabInstance:
     - target: {fileID: 9061191107087665080, guid: 31354f2fc9735834d855e7ec008a1cc2,
         type: 3}
       propertyPath: TotalBullets
-      value: 2255
+      value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 9061191107087665080, guid: 31354f2fc9735834d855e7ec008a1cc2,
         type: 3}
       propertyPath: BulletsAmounts
-      value: 556
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 9061191107087665080, guid: 31354f2fc9735834d855e7ec008a1cc2,
         type: 3}
