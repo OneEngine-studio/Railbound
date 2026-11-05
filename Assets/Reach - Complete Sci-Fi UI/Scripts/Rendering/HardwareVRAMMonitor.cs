@@ -26,8 +26,8 @@ namespace Michsky.UI.Reach
 
         [Header("Telemetry Colors")]
         public Color gameColor = new Color(0.48f, 0.92f, 0.22f, 1f);       // #7BEB38 Tactical Lime Green
-        public Color otherAppsColor = new Color(0.85f, 0.90f, 0.95f, 1f);   // #D9E6F2 Crisp Clean Silver
-        public Color darkTrackColor = new Color(0.20f, 0.25f, 0.29f, 0.95f);// #33404A Visible Unfilled Track
+        public Color otherAppsColor = new Color(0.85f, 0.85f, 0.85f, 1f);   // #D9D9D9 Neutral Silver
+        public Color darkTrackColor = new Color(0.25f, 0.25f, 0.25f, 0.95f);// #404040 Visible Unfilled Track
         public Color targetLineColor = Color.white;
 
         private float totalVramMB;
@@ -206,7 +206,7 @@ namespace Michsky.UI.Reach
 
             if (totalUsageText != null)
             {
-                totalUsageText.text = $"<color=#FFFFFF>{totalUsedGB:F2}</color><color=#7F92A3> / {totalVramGB:F2} GB</color>";
+                totalUsageText.text = $"<color=#FFFFFF>{totalUsedGB:F2}</color><color=#9A9A9A> /{totalVramGB:F2} GB</color>";
             }
         }
     }
