@@ -412,6 +412,7 @@ namespace Railbound.Gameplay
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
+            go.layer = parent.gameObject.layer;
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
             return rt;
