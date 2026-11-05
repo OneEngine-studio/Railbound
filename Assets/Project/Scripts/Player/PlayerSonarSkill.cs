@@ -37,8 +37,8 @@ namespace Railbound.Gameplay
 
         [Header("HUD (Auto-Created)")]
         public Sprite deviceSprite;                 // falls back to Resources/HUD/Sonar_Device
-        [System.NonSerialized] public Vector2 hudPosition = new Vector2(40f, 188f); // bottom-left, above the vitals card
-        [System.NonSerialized] public float hudSize = 150f;
+        [System.NonSerialized] public Vector2 hudPosition = new Vector2(28f, 126f); // bottom-left, above the vitals card
+        [System.NonSerialized] public float hudSize = 100f;
 
         private float _lastUsedTime = -100f;
         private int _charges;
