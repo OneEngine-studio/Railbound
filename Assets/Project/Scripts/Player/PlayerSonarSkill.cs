@@ -48,13 +48,14 @@ namespace Railbound.Gameplay
         private CanvasGroup _widgetGroup;
         private Image _iconFill, _iconGhost, _iconShadow, _flash, _ring;
         private TextMeshProUGUI _countText, _keyText;
+        private Image _keyCap;
         private RectTransform _iconRoot, _ringRt;
 
         // HUD animation state (unscaled time, so it keeps animating while paused)
         private float _popStart = -10f, _shakeStart = -10f, _flashStart = -10f, _rippleStart = -10f;
         private bool _wasReady = true;
         private int _shownCharges = -1;
-        private static Sprite _ringSprite;
+        private static Sprite _ringSprite, _keycapSprite;
 
         public int Charges => _charges;
         public int MaxCharges => maxCharges;
@@ -293,6 +294,7 @@ namespace Railbound.Gameplay
             float fill = !hasCharges ? 0f : (ready ? 1f : 1f - CooldownRemaining / Mathf.Max(0.01f, cooldown));
             _iconFill.fillAmount = fill;
             Color tint = hasCharges ? Ink : Warn;
+            if (_keyCap != null) _keyCap.color = new Color(1f, 1f, 1f, hasCharges ? (ready ? 1f : 0.6f) : 0.35f);
             _iconGhost.color = new Color(tint.r, tint.g, tint.b, hasCharges ? 0.30f : 0.45f);
 
             // count label
@@ -330,6 +332,55 @@ namespace Railbound.Gameplay
             float ease = 1f - (1f - rp) * (1f - rp);
             _ringRt.localScale = Vector3.one * Mathf.Lerp(0.7f, 2.1f, ease);
             _ring.color = new Color(1f, 1f, 1f, (rp > 0f && rp < 1f) ? (1f - rp) * 0.75f : 0f);
+        }
+
+        /// <summary>Rounded keyboard-key plate (white, soft grey rim), 9-sliced.</summary>
+        private static Sprite GetKeycapSprite()
+        {
+            if (_keycapSprite != null) return _keycapSprite;
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.name = "SonarHudKeycap";
+            var px = new Color32[size * size];
+            float half = size * 0.5f, radius = 15f, rim = 3f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = Mathf.Abs(x + 0.5f - half) - (half - radius);
+                    float dy = Mathf.Abs(y + 0.5f - half) - (half - radius);
+                    float outside = Mathf.Sqrt(Mathf.Max(dx, 0f) * Mathf.Max(dx, 0f) + Mathf.Max(dy, 0f) * Mathf.Max(dy, 0f));
+                    float d = outside + Mathf.Min(Mathf.Max(dx, dy), 0f) - radius; // <0 inside
+                    float a = Mathf.Clamp01(0.5f - d);
+                    float rimK = Mathf.Clamp01((d + rim) / rim);                    // 0 inside .. 1 at the edge
+                    byte g = (byte)Mathf.Lerp(255f, 205f, rimK * rimK);
+                    px[y * size + x] = new Color32(g, g, g, (byte)(a * 255f));
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            _keycapSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(18, 18, 18, 18));
+            return _keycapSprite;
+        }
+
+        private static string KeyLabel(KeyCode k)
+        {
+            string n = k.ToString();
+            if (n.StartsWith("Alpha")) return n.Substring(5);
+            if (n.StartsWith("Keypad")) return n.Substring(6);
+            switch (k)
+            {
+                case KeyCode.LeftShift: case KeyCode.RightShift: return "SHFT";
+                case KeyCode.LeftControl: case KeyCode.RightControl: return "CTRL";
+                case KeyCode.LeftAlt: case KeyCode.RightAlt: return "ALT";
+                case KeyCode.Space: return "SPC";
+                case KeyCode.Tab: return "TAB";
+                case KeyCode.Return: return "ENT";
+                case KeyCode.Backspace: return "BKSP";
+            }
+            return n.ToUpper();
         }
 
         private static Sprite GetRingSprite()
@@ -452,15 +503,29 @@ namespace Railbound.Gameplay
             cr.sizeDelta = new Vector2(hudSize * 0.7f, hudSize * 0.38f);
             cr.anchoredPosition = new Vector2(hudSize * 0.10f, -hudSize * 0.04f);
 
-            // key hint, top-right
-            _keyText = NewLabel("Key", _widget, hudSize * 0.16f, TextAlignmentOptions.TopLeft);
+            // key hint: keyboard-key plate at the top-right of the icon
+            float cap = hudSize * 0.30f;
+            var capRt = NewRect("KeyCap", _widget);
+            capRt.anchorMin = capRt.anchorMax = new Vector2(1f, 1f);
+            capRt.pivot = new Vector2(1f, 1f);
+            capRt.sizeDelta = new Vector2(cap, cap);
+            capRt.anchoredPosition = new Vector2(hudSize * 0.04f, hudSize * 0.03f);
+            _keyCap = capRt.gameObject.AddComponent<Image>();
+            _keyCap.sprite = GetKeycapSprite();
+            _keyCap.type = Image.Type.Sliced;
+            _keyCap.raycastTarget = false;
+
+            _keyText = NewLabel("Key", capRt, cap * 0.70f, TextAlignmentOptions.Center);
             var kr = _keyText.rectTransform;
-            kr.anchorMin = kr.anchorMax = new Vector2(1f, 1f);
-            kr.pivot = new Vector2(0f, 1f);
-            kr.sizeDelta = new Vector2(hudSize * 0.4f, hudSize * 0.3f);
-            kr.anchoredPosition = new Vector2(hudSize * 0.04f, hudSize * 0.02f);
-            _keyText.color = new Color(1f, 1f, 1f, 0.8f);
-            _keyText.text = "[" + triggerKey.ToString().ToUpper() + "]";
+            kr.anchorMin = Vector2.zero; kr.anchorMax = Vector2.one;
+            kr.sizeDelta = Vector2.zero; kr.anchoredPosition = Vector2.zero;
+            _keyText.outlineWidth = 0f;
+            _keyText.enableAutoSizing = true;
+            _keyText.fontSizeMin = cap * 0.22f;
+            _keyText.fontSizeMax = cap * 0.70f;
+            _keyText.margin = new Vector4(2f, 0f, 2f, 0f);
+            _keyText.color = new Color(0.06f, 0.06f, 0.06f, 1f);
+            _keyText.text = KeyLabel(triggerKey);
 
             _shownCharges = -1;
             _wasReady = true;
@@ -470,7 +535,7 @@ namespace Railbound.Gameplay
         /// <summary>Called when the player rebinds the sonar key.</summary>
         public void RefreshKeyHint()
         {
-            if (_keyText != null) _keyText.text = "[" + triggerKey.ToString().ToUpper() + "]";
+            if (_keyText != null) _keyText.text = KeyLabel(triggerKey);
         }
 
         private void OnDestroy()
