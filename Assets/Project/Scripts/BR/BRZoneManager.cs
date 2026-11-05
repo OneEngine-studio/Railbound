@@ -64,6 +64,10 @@ namespace Railbound.BR
             new ZonePhase("Phase 6 - Final Collapse", 30f, 30f, 0f, 18.0f)
         };
 
+        [Header("Match Flow (dedicated server)")]
+        [Tooltip("Seconds the final zone state is shown before a new round starts.")]
+        [SerializeField] private float roundRestartDelay = 25f;
+
         [Header("Network Sync State")]
         public NetworkVariable<int> NetCurrentPhase = new NetworkVariable<int>(
             0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -159,17 +163,7 @@ namespace Railbound.BR
         {
             if (IsAuthority)
             {
-                if (IsNetworkedActive)
-                {
-                    NetCurrentPhase.Value = 0;
-                    NetIsShrinking.Value = false;
-                    NetPhaseDuration.Value = localPhaseDuration;
-                    NetTimeRemaining.Value = localPhaseDuration;
-                    NetStartRadius.Value = localStartRadius;
-                    NetTargetRadius.Value = localTargetRadius;
-                    NetStartCenter.Value = localStartCenter;
-                    NetTargetCenter.Value = localTargetCenter;
-                }
+                // ZoneRoutine resets the synced state itself and, on a networked server, waits for the first player
                 StartCoroutine(ZoneRoutine());
             }
         }
@@ -179,6 +173,7 @@ namespace Railbound.BR
             UpdateInterpolatedZone();
             UpdateVisualBarrier();
             MonitorLocalPlayerSafeZone();
+            ClientNotifyTick();
 
             if (IsAuthority)
             {
@@ -301,7 +296,76 @@ namespace Railbound.BR
             ringVisualTransform.localScale = new Vector3(radius * 2f, wallHeight * 0.5f, radius * 2f);
         }
 
+        /// <summary>True on the networked server only; offline play and clients never wait for players.</summary>
+        private bool IsDedicatedAuthority => IsNetworkedActive && IsServer;
+
+        private int ConnectedPlayerCount()
+        {
+            var nm = NetworkManager.Singleton;
+            return nm != null && nm.IsServer ? nm.ConnectedClientsList.Count : 0;
+        }
+
+        /// <summary>
+        /// Match loop. On a networked server the zone does NOT run until a player is connected (otherwise the whole
+        /// match burns down while the server sits empty and every late joiner lands in a finished, zero-radius zone).
+        /// A round restarts when everybody leaves and again a short while after the final collapse.
+        /// </summary>
+        private static bool LaunchedAsServer()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return true;
+            foreach (string a in System.Environment.GetCommandLineArgs())
+            {
+                if (string.Equals(a, "-server", System.StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a, "-dedicated", System.StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a, "-host", System.StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
         private IEnumerator ZoneRoutine()
+        {
+            // a server process may still be bringing the network up when this component starts: wait for it,
+            // otherwise the "wait for a player" gate below would be skipped and the round would burn down empty
+            if (LaunchedAsServer())
+            {
+                float waited = 0f;
+                while (!IsNetworkedActive && waited < 30f)
+                {
+                    waited += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+            }
+
+            while (true)
+            {
+                ResetZoneToInitial();
+
+                // hold phase 1 until somebody is actually on the server
+                while (IsDedicatedAuthority && ConnectedPlayerCount() == 0) yield return null;
+
+                yield return StartCoroutine(RunRound());
+
+                // offline / listen-less play: a single round, the final state stays on screen
+                if (!IsDedicatedAuthority) yield break;
+
+                // round finished (or everyone left): short breather, then start fresh
+                float hold = roundRestartDelay;
+                while (hold > 0f && ConnectedPlayerCount() > 0)
+                {
+                    hold -= Time.deltaTime;
+                    yield return null;
+                }
+            }
+        }
+
+        private bool RoundAborted()
+        {
+            // clients never drive the zone; a server with nobody connected abandons the round
+            if (IsNetworkedActive && !IsServer) return true;
+            return IsDedicatedAuthority && ConnectedPlayerCount() == 0;
+        }
+
+        private IEnumerator RunRound()
         {
             for (int p = 0; p < phases.Length; p++)
             {
@@ -321,6 +385,7 @@ namespace Railbound.BR
 
                 while (timer > 0f)
                 {
+                    if (RoundAborted()) yield break;
                     timer -= Time.deltaTime;
                     UpdateTimeRemaining(timer);
 
@@ -361,6 +426,7 @@ namespace Railbound.BR
                 timer = phase.ShrinkDuration;
                 while (timer > 0f)
                 {
+                    if (RoundAborted()) yield break;
                     timer -= Time.deltaTime;
                     UpdateTimeRemaining(timer);
                     yield return null;
@@ -368,6 +434,78 @@ namespace Railbound.BR
 
                 // Finalize ring at exact target before starting next wait phase
                 SetPhaseFinalized(phase.TargetRadius, targetC);
+            }
+        }
+
+        /// <summary>Puts the zone (local + synced values) back to its opening state: phase 1, full radius, waiting.</summary>
+        private void ResetZoneToInitial()
+        {
+            localStartRadius = initialRadius;
+            localTargetRadius = phases.Length > 0 ? phases[0].TargetRadius : initialRadius;
+            localStartCenter = initialCenter;
+            localTargetCenter = initialCenter;
+            localIsShrinking = false;
+            localPhaseIndex = 0;
+            localPhaseDuration = phases.Length > 0 ? phases[0].WaitDuration : 120f;
+            localTimeRemaining = localPhaseDuration;
+
+            if (IsNetworkedActive && IsServer)
+            {
+                NetCurrentPhase.Value = 0;
+                NetIsShrinking.Value = false;
+                NetPhaseDuration.Value = localPhaseDuration;
+                NetTimeRemaining.Value = localPhaseDuration;
+                NetStartRadius.Value = localStartRadius;
+                NetTargetRadius.Value = localTargetRadius;
+                NetStartCenter.Value = localStartCenter;
+                NetTargetCenter.Value = localTargetCenter;
+            }
+        }
+
+        // ---- client side: the routine only runs on the authority, so mirror its announcements from the synced state ----
+        private int clientPhaseSeen = -1;
+        private bool clientShrinkSeen;
+
+        private void ClientNotifyTick()
+        {
+            if (!IsNetworkedActive || IsServer) return;
+
+            int p = NetCurrentPhase.Value;
+            bool shrinking = NetIsShrinking.Value;
+            float t = NetTimeRemaining.Value;
+
+            if (p != clientPhaseSeen)
+            {
+                bool firstSight = clientPhaseSeen < 0;
+                clientPhaseSeen = p;
+                clientShrinkSeen = shrinking;
+                notified30sWarning = notified10sWarning = false;
+                if (!firstSight && p >= 0 && p < phases.Length)
+                    BRFeedNotificationManager.Instance?.ShowInfo($"NEW SAFE ZONE LOCATED ({phases[p].PhaseName})");
+            }
+
+            if (shrinking)
+            {
+                if (!clientShrinkSeen)
+                {
+                    clientShrinkSeen = true;
+                    if (p == phases.Length - 1) BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: FINAL COLLAPSE INITIATED - ELIMINATE ALL HOSTILES!");
+                    else BRFeedNotificationManager.Instance?.ShowWarning("RESTRICTED AREA: SAFE ZONE IS NOW SHRINKING");
+                }
+            }
+            else
+            {
+                clientShrinkSeen = false;
+                if (t <= 30.5f && t > 28.5f && !notified30sWarning)
+                {
+                    notified30sWarning = true;
+                    BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 30 SECONDS");
+                }
+                else if (t <= 10.5f && t > 8.5f && !notified10sWarning)
+                {
+                    notified10sWarning = true;
+                    BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 10 SECONDS - MOVE NOW!");
+                }
             }
         }
 
