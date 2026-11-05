@@ -147,6 +147,13 @@ public class JUNetworkPlayer : NetworkBehaviour
                 invUI.Player = transform;
             }
 
+            // 6b. HUD/camera scripts cached the offline scene player at scene load: move them to this player
+            if (offlineChar != null)
+            {
+                int rebound = Railbound.Networking.PlayerReferenceRebinder.Rebind(offlineChar.transform, transform);
+                Debug.Log($"[JUNetworkPlayer] Rebound {rebound} HUD/system reference(s) from the offline player to the network player.");
+            }
+
             // 7. Lock cursor for gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -272,7 +279,9 @@ public class JUNetworkPlayer : NetworkBehaviour
         if (IsOwner)
         {
             // Restore locked cursor on left click if user alt-tabbed or clicked outside
-            if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
+            // (not while a menu/pause screen is open, or it swallows the first click on its buttons)
+            if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked
+                && !JUTPS.JUPauseGame.IsPaused && Time.timeScale > 0f)
             {
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
