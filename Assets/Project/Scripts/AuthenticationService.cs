@@ -18,10 +18,10 @@ public class AuthenticationService : MonoBehaviour
 
     [Header("Nakama Configuration")]
     [Tooltip("http for local/remote without TLS, https for TLS")]
-    [SerializeField] private string scheme = "http";
-    [SerializeField] private string host = "161.118.227.105";
-    [SerializeField] private int port = 7350;
-    [SerializeField] private string serverKey = "defaultkey";
+    [SerializeField] private string scheme = ServerConfig.NakamaScheme;
+    [SerializeField] private string host = ServerConfig.NakamaHost;
+    [SerializeField] private int port = ServerConfig.NakamaPort;
+    [SerializeField] private string serverKey = ServerConfig.NakamaServerKey;
     [Tooltip("Auto-restore saved session on Awake")]
     [SerializeField] private bool autoRestoreSession = true;
 
@@ -78,7 +78,7 @@ public class AuthenticationService : MonoBehaviour
     {
         if (_client != null) return;
         _client = new Client(scheme, host, port, serverKey, UnityWebRequestAdapter.Instance);
-        Debug.Log($"[Auth] Nakama client {scheme}://{host}:{port} key={serverKey}");
+        Debug.Log($"[Auth] Nakama client {scheme}://{host}:{port}");
     }
 
     private async Task TryRestoreSessionAsync()
