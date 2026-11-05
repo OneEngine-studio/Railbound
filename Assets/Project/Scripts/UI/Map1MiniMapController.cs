@@ -26,7 +26,7 @@ namespace Railbound.UI
         public Sprite enemyPingedSprite;
 
         [Header("Colors")]
-        public Color playerColor = new Color(0.0f, 0.95f, 1.0f, 1.0f); // Sci-Fi Cyan
+        public Color playerColor = new Color(1.0f, 1.0f, 1.0f, 1.0f); // Neutral white (HUD theme)
         public Color enemyIdleColor = new Color(1.0f, 0.25f, 0.25f, 0.8f);
         public Color enemyPingedColor = new Color(1.0f, 0.12f, 0.22f, 1.0f); // Tactical Neon Red
 

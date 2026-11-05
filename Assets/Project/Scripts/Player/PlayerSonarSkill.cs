@@ -277,13 +277,13 @@ namespace Railbound.Gameplay
             {
                 if (IsReady)
                 {
-                    cooldownText.text = "<color=#00F0FF>[I]</color> FULL SCAN: <color=#66FF66>READY (1600M)</color>";
+                    cooldownText.text = "<color=#FFFFFF>[I]</color> FULL SCAN: <color=#66FF66>READY (1600M)</color>";
                     if (cooldownFillImage != null) cooldownFillImage.fillAmount = 1f;
                 }
                 else
                 {
                     float remaining = CooldownRemaining;
-                    cooldownText.text = $"<color=#00F0FF>[I]</color> RECHARGING: <color=#FFAA33>{remaining:0.0}s</color>";
+                    cooldownText.text = $"<color=#FFFFFF>[I]</color> RECHARGING: <color=#FFAA33>{remaining:0.0}s</color>";
                     if (cooldownFillImage != null)
                     {
                         cooldownFillImage.fillAmount = 1f - (remaining / cooldown);
@@ -339,7 +339,7 @@ namespace Railbound.Gameplay
             borderRt.pivot = new Vector2(0f, 1f);
             borderRt.sizeDelta = new Vector2(0f, 2f);
             var borderImg = borderGO.AddComponent<Image>();
-            borderImg.color = new Color(0.0f, 0.95f, 1.0f, 0.7f);
+            borderImg.color = new Color(1.0f, 1.0f, 1.0f, 0.6f);
 
             // Fill Bar
             var fillGO = new GameObject("FillBar", typeof(RectTransform));
@@ -350,7 +350,7 @@ namespace Railbound.Gameplay
             fillRt.pivot = new Vector2(0f, 0f);
             fillRt.sizeDelta = new Vector2(0f, 4f);
             cooldownFillImage = fillGO.AddComponent<Image>();
-            cooldownFillImage.color = new Color(0.0f, 0.95f, 1.0f, 1f);
+            cooldownFillImage.color = new Color(1.0f, 1.0f, 1.0f, 1f);
             cooldownFillImage.type = Image.Type.Filled;
             cooldownFillImage.fillMethod = Image.FillMethod.Horizontal;
             cooldownFillImage.fillAmount = 1f;
@@ -367,7 +367,7 @@ namespace Railbound.Gameplay
             cooldownText.fontSize = 12f;
             cooldownText.fontStyle = FontStyles.Bold;
             cooldownText.alignment = TextAlignmentOptions.MidlineLeft;
-            cooldownText.text = "<color=#00F0FF>[I]</color> FULL SCAN: <color=#66FF66>READY (1600M)</color>";
+            cooldownText.text = "<color=#FFFFFF>[I]</color> FULL SCAN: <color=#66FF66>READY (1600M)</color>";
 
             // Status message
             var msgGO = new GameObject("StatusMessage", typeof(RectTransform));

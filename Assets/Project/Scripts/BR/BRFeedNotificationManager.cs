@@ -56,9 +56,9 @@ namespace Railbound.BR
         public static readonly Color CriticalGlow = new Color(1.0f, 0.20f, 0.20f, 0.35f);
         public static readonly Color CriticalText = new Color(1.0f, 0.32f, 0.32f, 1.0f);
 
-        public static readonly Color InfoCyan     = new Color(0.0f, 0.85f, 1.0f, 1.0f);        // #00D9FF
-        public static readonly Color InfoGlow     = new Color(0.0f, 0.85f, 1.0f, 0.20f);
-        public static readonly Color InfoText     = new Color(0.35f, 0.90f, 1.0f, 1.0f);
+        public static readonly Color InfoCyan     = new Color(0.95f, 0.95f, 0.95f, 1.0f);      // neutral white (HUD theme)
+        public static readonly Color InfoGlow     = new Color(1.0f, 1.0f, 1.0f, 0.14f);
+        public static readonly Color InfoText     = new Color(1.0f, 1.0f, 1.0f, 1.0f);
 
         private FeedNotification currentActiveNotification;
         private BRNotificationPriority currentPriority = BRNotificationPriority.Info;

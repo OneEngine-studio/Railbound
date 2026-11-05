@@ -11,22 +11,11 @@ using UnityEngine.UI;
 
 namespace Michsky.UI.Reach
 {
-    [InitializeOnLoad]
+    // NOTE: this builder used to run automatically after every script reload ([InitializeOnLoad]); it deletes and
+    // rebuilds the Graphics tab + VRAM widget and saves MAP-1 each time, which silently overwrote hand edits to the
+    // settings menu. It now only runs when invoked from Tools > Build Modern Settings in MAP-1.
     public class ModernSettingsMenuBuilder : MonoBehaviour
     {
-        private static bool hasExecuted = false;
-
-        static ModernSettingsMenuBuilder()
-        {
-            EditorApplication.delayCall += () =>
-            {
-                if (!hasExecuted && !EditorApplication.isPlayingOrWillChangePlaymode)
-                {
-                    hasExecuted = true;
-                    BuildMenu();
-                }
-            };
-        }
 
         [MenuItem("Tools/Build Modern Settings in MAP-1")]
         public static void BuildMenu()

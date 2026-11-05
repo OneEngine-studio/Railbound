@@ -48,6 +48,9 @@ namespace Railbound.UI
         [SerializeField] private float fillLerpSpeed = 12f;
         [SerializeField] private bool enableLowHealthPulse = true;
 
+        /// <summary>The health component currently shown (used by the HUD readout / low-health warning).</summary>
+        public JUHealth Health => healthComponent;
+
         private float[] _currentSlotFills = new float[TOTAL_SLOTS];
         private float[] _targetSlotFills = new float[TOTAL_SLOTS];
         private float _healingFlashTimer = 0f;
