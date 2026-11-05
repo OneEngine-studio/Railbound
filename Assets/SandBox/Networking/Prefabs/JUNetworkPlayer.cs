@@ -106,6 +106,8 @@ public class JUNetworkPlayer : NetworkBehaviour
             {
                 rb.isKinematic = false;
                 rb.useGravity = true;
+                // physics steps at a fixed rate but frames do not: interpolate so movement and the follow camera stay smooth
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
             }
             if (anim != null) anim.enabled = true;
             if (sonarSkill != null) sonarSkill.enabled = true;
@@ -174,7 +176,7 @@ public class JUNetworkPlayer : NetworkBehaviour
                 characterController.UseDefaultControllerInput = false;
                 characterController.enabled = false;
             }
-            if (rb != null) rb.isKinematic = true; 
+            if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }   // NetworkTransform interpolates remote players
             if (sonarSkill != null) sonarSkill.enabled = false;
 
             // Keep visual retargeter active so remote soldier animates smoothly with networked bones
