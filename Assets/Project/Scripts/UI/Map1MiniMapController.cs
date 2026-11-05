@@ -77,7 +77,7 @@ namespace Railbound.UI
         // full-map overlay
         private RectTransform _overlay, _overlayContent;
         private CanvasGroup _overlayGroup;
-        private TextMeshProUGUI _tTitle, _tGrid, _tCoords, _tPhase, _tZoneState, _tTimer, _tDist, _tRadius, _tHostiles;
+        private TextMeshProUGUI _tTitle, _tGrid, _tZoneState, _tTimer, _tDist;
         private float _openT;                 // 0..1 animated
         private bool _wantOpen;
         private float _nextTextUpdate, _nextRingUpdate;
@@ -259,35 +259,30 @@ namespace Railbound.UI
                 row.rectTransform.anchoredPosition = new Vector2(-mapPx * 0.5f - pad * 0.5f, mapPx * 0.5f - cellPx * (i + 0.5f));
             }
 
-            // --- info panel ---
+            // --- info panel (kept deliberately short) ---
+            const float infoH = 440f;
             var info = NewImage("Info", _overlayContent, null, Panel);
             var ir = info.rectTransform;
-            ir.anchorMin = ir.anchorMax = new Vector2(1f, 0.5f);
-            ir.pivot = new Vector2(1f, 0.5f);
+            ir.anchorMin = ir.anchorMax = new Vector2(1f, 1f);
+            ir.pivot = new Vector2(1f, 1f);
             ir.anchoredPosition = Vector2.zero;
-            ir.sizeDelta = new Vector2(infoW, totalH);
+            ir.sizeDelta = new Vector2(infoW, infoH);
             AddBorder(ir, 1.5f, new Color(1f, 1f, 1f, 0.35f));
 
             float y = -26f;
-            _tTitle = InfoText(ir, "MAP-1", 40f, ref y, 52f, White, true);
+            _tTitle = InfoText(ir, "MAP-1", 38f, ref y, 48f, White, true);
             _tGrid = InfoText(ir, "GRID --", 22f, ref y, 34f, new Color(1f, 1f, 1f, 0.8f), true);
-            _tCoords = InfoText(ir, "", 18f, ref y, 28f, new Color(1f, 1f, 1f, 0.6f), false);
             Divider(ir, ref y);
-            _tPhase = InfoText(ir, "", 20f, ref y, 30f, White, true);
             _tZoneState = InfoText(ir, "", 17f, ref y, 26f, new Color(1f, 1f, 1f, 0.6f), true);
             _tTimer = InfoText(ir, "--:--", 46f, ref y, 58f, White, true);
             _tDist = InfoText(ir, "", 20f, ref y, 30f, White, true);
-            _tRadius = InfoText(ir, "", 17f, ref y, 28f, new Color(1f, 1f, 1f, 0.6f), false);
-            Divider(ir, ref y);
-            _tHostiles = InfoText(ir, "", 18f, ref y, 28f, White, true);
             Divider(ir, ref y);
 
             // legend
             LegendRow(ir, ref y, "YOU", LegendKind.Arrow, White);
             LegendRow(ir, ref y, "SAFE ZONE", LegendKind.Dots, White);
-            LegendRow(ir, ref y, "NEXT ZONE", LegendKind.DotsSmall, new Color(1f, 1f, 1f, 0.5f));
             LegendRow(ir, ref y, "SAFE PATH", LegendKind.Path, Amber);
-            LegendRow(ir, ref y, "HOSTILE (SONAR)", LegendKind.Dot, Danger);
+            LegendRow(ir, ref y, "HOSTILE", LegendKind.Dot, Danger);
 
             var close = NewText("Close", ir, "[" + mapKey + "]  CLOSE", 17f, TextAlignmentOptions.BottomRight, new Color(1f, 1f, 1f, 0.7f), true);
             close.rectTransform.anchorMin = close.rectTransform.anchorMax = new Vector2(1f, 0f);
@@ -643,34 +638,24 @@ namespace Railbound.UI
         private void UpdateInfo(bool hasZone, Vector3 pp, Vector3 zc, float zr, Vector3 tc, float tr, bool outside)
         {
             _tGrid.text = _player != null ? "GRID  " + GridRef(pp) : "GRID  --";
-            _tCoords.text = _player != null ? $"X {pp.x:0}   Z {pp.z:0}   ALT {pp.y:0} m" : "";
-
-            int hostile = 0;
-            foreach (var kv in _pings) if (kv.Value.Target != null && kv.Value.End > Time.time) hostile++;
-            _tHostiles.text = hostile > 0 ? $"HOSTILES PINGED  {hostile}" : "NO HOSTILES DETECTED";
 
             var zm = BRZoneManager.Instance;
             if (!hasZone || zm == null)
             {
-                _tPhase.text = "NO ACTIVE ZONE";
                 _tZoneState.text = "";
                 _tTimer.text = "--:--";
                 _tDist.text = "";
-                _tRadius.text = "";
                 return;
             }
 
-            _tPhase.text = zm.CurrentPhaseName.ToUpperInvariant();
             _tZoneState.text = zm.IsShrinking ? "ZONE CLOSING" : "NEXT ZONE IN";
             int secs = Mathf.Max(0, Mathf.CeilToInt(zm.TimeRemaining));
             _tTimer.text = $"{secs / 60:00}:{secs % 60:00}";
-            _tRadius.text = $"RADIUS  {zr:0} m  >  {tr:0} m";
 
             if (_player != null)
             {
-                float d = Vector2.Distance(new Vector2(pp.x, pp.z), new Vector2(zc.x, zc.z)) - zr;
-                if (outside) { _tDist.text = $"OUTSIDE ZONE  {Mathf.Abs(d):0} m"; _tDist.color = Danger; }
-                else { _tDist.text = $"INSIDE ZONE  {Mathf.Abs(d):0} m TO EDGE"; _tDist.color = White; }
+                _tDist.text = outside ? "OUTSIDE ZONE" : "INSIDE ZONE";
+                _tDist.color = outside ? Danger : White;
             }
         }
 
