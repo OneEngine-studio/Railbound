@@ -29,7 +29,7 @@ namespace Railbound.BR
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<BRFeedNotificationManager>();
+                    _instance = FindFirstObjectByType<BRFeedNotificationManager>();
                 }
                 return _instance;
             }
@@ -128,7 +128,7 @@ namespace Railbound.BR
         {
             // Find existing Canvas in the scene
             Canvas targetCanvas = null;
-            var canvases = FindObjectsOfType<Canvas>(true);
+            var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var c in canvases)
             {
                 if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.gameObject.name.Contains("JUTPS User Interface"))

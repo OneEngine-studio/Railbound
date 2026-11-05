@@ -107,7 +107,7 @@ namespace Railbound.UI
 
         public JUInputManager GetJUInput()
         {
-            var existing = FindObjectOfType<JUInputManager>();
+            var existing = FindFirstObjectByType<JUInputManager>();
             if (existing != null) return existing;
             if (_isDisabling) return null;
             return JUInput.Instance();
@@ -338,7 +338,7 @@ namespace Railbound.UI
             {
                 _sonarRebindCoroutine = StartCoroutine(ListenForCustomKey(entry, "Player_Sonar_Key", KeyCode.I, code =>
                 {
-                    var playerSonar = FindObjectOfType<PlayerSonarSkill>();
+                    var playerSonar = FindFirstObjectByType<PlayerSonarSkill>();
                     if (playerSonar != null) playerSonar.triggerKey = code;
                 }));
             }
@@ -346,7 +346,7 @@ namespace Railbound.UI
             {
                 _sonarRebindCoroutine = StartCoroutine(ListenForCustomKey(entry, "Player_Heal_Key", KeyCode.H, code =>
                 {
-                    var medkitSys = FindObjectOfType<PlayerMedkitSystem>();
+                    var medkitSys = FindFirstObjectByType<PlayerMedkitSystem>();
                     if (medkitSys != null) medkitSys.SetHealKey(code);
                 }));
             }
@@ -475,10 +475,10 @@ namespace Railbound.UI
             PlayerPrefs.DeleteKey("Player_Heal_Key");
             PlayerPrefs.Save();
 
-            var playerSonar = FindObjectOfType<PlayerSonarSkill>();
+            var playerSonar = FindFirstObjectByType<PlayerSonarSkill>();
             if (playerSonar != null) playerSonar.triggerKey = KeyCode.I;
 
-            var medkitSys = FindObjectOfType<PlayerMedkitSystem>();
+            var medkitSys = FindFirstObjectByType<PlayerMedkitSystem>();
             if (medkitSys != null) medkitSys.SetHealKey(KeyCode.H);
 
             UpdateAllButtonLabels();

@@ -40,7 +40,7 @@ namespace Project.AI.RL
         {
             if (RegisteredAgents == null || RegisteredAgents.Count == 0)
             {
-                var found = FindObjectsOfType<JUCharacterRLAgent>(true);
+                var found = FindObjectsByType<JUCharacterRLAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 RegisteredAgents = new List<JUCharacterRLAgent>(found);
             }
 
