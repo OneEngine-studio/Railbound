@@ -106,8 +106,9 @@ public class JUNetworkPlayer : NetworkBehaviour
             {
                 rb.isKinematic = false;
                 rb.useGravity = true;
-                // physics steps at a fixed rate but frames do not: interpolate so movement and the follow camera stay smooth
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                // Keep interpolation OFF: JU TPS turns the character by writing transform.rotation every frame, and Rigidbody
+                // interpolation overwrites that with the last physics pose, which breaks strafe / backwards (A, S, D) movement.
+                rb.interpolation = RigidbodyInterpolation.None;
             }
             if (anim != null) anim.enabled = true;
             if (sonarSkill != null) sonarSkill.enabled = true;
