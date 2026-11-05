@@ -5,7 +5,7 @@ public class InspectHUDInMap1
 {
     public static string Run()
     {
-        var canvases = GameObject.FindObjectsOfType<Canvas>(true);
+        var canvases = GameObject.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         string res = $"Canvases count: {canvases.Length}\n";
         foreach (var c in canvases)
         {

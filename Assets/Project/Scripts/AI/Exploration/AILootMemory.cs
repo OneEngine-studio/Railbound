@@ -64,7 +64,7 @@ namespace Project.AI.Exploration
         {
             all.Clear();
 
-            var weapons = Object.FindObjectsOfType<Weapon>();
+            var weapons = Object.FindObjectsByType<Weapon>(FindObjectsSortMode.None);
             for (int i = 0; i < weapons.Length; i++)
             {
                 var w = weapons[i];
@@ -72,7 +72,7 @@ namespace Project.AI.Exploration
                 all.Add(new LootEntry { Source = w, Kind = LootKind.Weapon });
             }
 
-            var ammoBoxes = Object.FindObjectsOfType<AmmoBoxPickup>();
+            var ammoBoxes = Object.FindObjectsByType<AmmoBoxPickup>(FindObjectsSortMode.None);
             for (int i = 0; i < ammoBoxes.Length; i++)
             {
                 var a = ammoBoxes[i];

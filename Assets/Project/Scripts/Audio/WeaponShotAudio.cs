@@ -137,7 +137,7 @@ namespace Railbound.Audio
         {
             if (listener == null || !listener.isActiveAndEnabled)
             {
-                listener = Object.FindObjectOfType<AudioListener>();
+                listener = Object.FindFirstObjectByType<AudioListener>();
             }
             return listener != null ? listener.transform : null;
         }

@@ -197,7 +197,7 @@ namespace Railbound.BR
 
         private void PlaceBots()
         {
-            var agents = FindObjectsOfType<JUCharacterRLAgent>(true);
+            var agents = FindObjectsByType<JUCharacterRLAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < agents.Length; i++)
             {
                 var agent = agents[i];
@@ -224,7 +224,7 @@ namespace Railbound.BR
                 return JUGameManager.PlayerController;
             }
 
-            var all = FindObjectsOfType<JUCharacterController>();
+            var all = FindObjectsByType<JUCharacterController>(FindObjectsSortMode.None);
             for (int i = 0; i < all.Length; i++)
             {
                 var c = all[i];
@@ -256,7 +256,7 @@ namespace Railbound.BR
         private void CollectWeaponTemplates()
         {
             weaponTemplates.Clear();
-            var all = FindObjectsOfType<Weapon>(true);
+            var all = FindObjectsByType<Weapon>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < all.Length; i++)
             {
                 var w = all[i];
@@ -298,7 +298,7 @@ namespace Railbound.BR
             lootPointSpots.Clear();
             usedLootPointSpots.Clear();
             LootPointsUsed = 0;
-            foreach (var lp in FindObjectsOfType<BRLootPoint>()) lootPointSpots.Add(lp.transform);
+            foreach (var lp in FindObjectsByType<BRLootPoint>(FindObjectsSortMode.None)) lootPointSpots.Add(lp.transform);
             LootPointsAvailable = lootPointSpots.Count;
 
             // Existing ground weapons are moved first, then extras are cloned until ScatteredWeapons is reached.

@@ -115,7 +115,7 @@ namespace Project.UI
             // 1. Enemies (DISABLED BY DEFAULT as requested)
             if (trackEnemies && (EnemyOffScreenPrefab != null || EnemyCompassPrefab != null))
             {
-                JUCharacterController[] characters = FindObjectsOfType<JUCharacterController>();
+                JUCharacterController[] characters = FindObjectsByType<JUCharacterController>(FindObjectsSortMode.None);
                 foreach (JUCharacterController ch in characters)
                 {
                     if (ch == null || ch.gameObject == gameObject || ch.CompareTag("Player"))
@@ -143,7 +143,7 @@ namespace Project.UI
             // 3. Vehicles
             if (trackVehicles)
             {
-                Vehicle[] vehicles = FindObjectsOfType<Vehicle>();
+                Vehicle[] vehicles = FindObjectsByType<Vehicle>(FindObjectsSortMode.None);
                 foreach (Vehicle v in vehicles)
                 {
                     if (v == null) continue;
