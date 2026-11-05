@@ -133,7 +133,10 @@ namespace JUTPS.WeaponSystem
 		}
 		protected virtual void OnEnable()
 		{
-			if (mAudioSource != null && WeaponEquipAudio != null)
+			// Skip the equip sound when the weapon is being auto-equipped by a pickup (the pickup sound plays instead).
+			var ownerInventory = GetComponentInParent<JUTPS.InventorySystem.JUInventory>();
+			bool equippedByPickup = ownerInventory != null && ownerInventory.IsPickingItem;
+			if (mAudioSource != null && WeaponEquipAudio != null && !equippedByPickup)
 			{
 				mAudioSource.clip = null;
 				mAudioSource.PlayOneShot(WeaponEquipAudio);

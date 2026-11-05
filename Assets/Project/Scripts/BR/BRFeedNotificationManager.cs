@@ -198,7 +198,7 @@ namespace Railbound.BR
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Project/Resources/UI/Lobby/Icon_Warning.png")
                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Close Circle (64x).png");
 #else
-            return null;
+            return Resources.Load<Sprite>("UI/Lobby/Icon_Warning") ?? Resources.Load<Sprite>("HUD/Icons/Close_Circle");
 #endif
         }
 
@@ -208,7 +208,7 @@ namespace Railbound.BR
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Close Circle (64x).png")
                    ?? LoadWarningIcon();
 #else
-            return null;
+            return Resources.Load<Sprite>("HUD/Icons/Close_Circle") ?? LoadWarningIcon();
 #endif
         }
 
@@ -218,7 +218,7 @@ namespace Railbound.BR
             return UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Reach - Complete Sci-Fi UI/Textures/Icons/HUD/Shield (64x).png")
                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Reach - Complete Sci-Fi UI/Textures/Icons/Navigation/Checkmark Circle (64x).png");
 #else
-            return null;
+            return Resources.Load<Sprite>("HUD/Icons/Shield") ?? Resources.Load<Sprite>("HUD/Icons/Checkmark_Circle");
 #endif
         }
 

@@ -90,6 +90,7 @@ namespace Railbound.Gameplay
                     if (added)
                     {
                         _isPickedUp = true;
+                        Railbound.Audio.PickupSound.Play(medkitSys.gameObject);
                         TriggerPickupEffects();
                         Destroy(gameObject, 0.05f);
                     }

@@ -108,11 +108,7 @@ namespace Railbound.Gameplay
         {
             _isOpening = true;
 
-            // 1. Play mechanical lid unlatch sound
-            if (audioSource != null && openLatchClip != null)
-            {
-                audioSource.PlayOneShot(openLatchClip, 0.95f);
-            }
+            // 1. (Unlatch sound removed: the shared pickup sound plays when the ammo is granted.)
 
             // 2. Animate lid opening smoothly
             if (lidTransform != null)
@@ -146,14 +142,11 @@ namespace Railbound.Gameplay
                 }
             }
 
-            // 4. Play ammo collect chime
-            if (audioSource != null && pickupChimeClip != null)
-            {
-                audioSource.PlayOneShot(pickupChimeClip, 0.9f);
-            }
+            // 4. (Ammo chime removed: the shared pickup sound plays when the ammo is granted.)
 
             // 5. Grant ammo to player weapons
             bool granted = GrantAmmoToPlayer(pl);
+            if (granted) Railbound.Audio.PickupSound.Play(pl.gameObject);
 
             // 6. Show HUD notification
             ShowHUDNotification($"<color=#FFD54F>+{ammoAmount} AMMO COLLECTED</color>");
