@@ -9,12 +9,12 @@ namespace Michsky.UI.Reach
         public UIManager targetUIManager;
 
         [Header("Colors")]
-        public Color accent = new Color32(0, 200, 255, 255);
-        public Color accentMatch = new Color32(25, 35, 45, 255);
+        public Color accent = new Color32(255, 255, 255, 255);
+        public Color accentMatch = new Color32(10, 10, 10, 255);
         public Color primary = new Color32(255, 255, 255, 255);
         public Color secondary = new Color32(255, 255, 255, 255);
         public Color negative = new Color32(255, 75, 75, 255);
-        public Color background = new Color32(25, 35, 45, 255);
+        public Color background = new Color32(3, 3, 3, 255);
 
         [Header("Settings")]
         [SerializeField] private bool applyOnStart;
