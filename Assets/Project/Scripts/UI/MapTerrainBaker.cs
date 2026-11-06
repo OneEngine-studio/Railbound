@@ -68,8 +68,62 @@ namespace Railbound.UI
                     h[y * res + x] = h2[y, x];
             h2 = null;
 
-            float sizeX = td.size.x, sizeY = td.size.y;
-            float baseY = terrain.transform.position.y;
+            Vector3 tp = terrain.transform.position;
+            yield return BakeCore(h, res, td.size.x, td.size.y, tp.y, new Vector2(tp.x, tp.z), target, s, onDone);
+        }
+
+        /// <summary>
+        /// Coroutine: bakes a square world region (<paramref name="origin"/> = south-west corner, <paramref name="size"/> metres)
+        /// that may span several terrain tiles. Heights are sampled from whichever tile covers each point.
+        /// </summary>
+        public static IEnumerator BakeRegion(Vector2 origin, float size, RenderTexture target, Settings s, Action onDone)
+        {
+            Terrain[] tiles = Terrain.activeTerrains;
+            if (tiles == null || tiles.Length == 0 || target == null || size < 1f) yield break;
+
+            int res = Mathf.Clamp(Mathf.CeilToInt(size / 1.25f), 256, 1536);   // ~1 m height samples
+            var meters = new float[res * res];
+            float minH = float.MaxValue, maxH = float.MinValue;
+            int batch = Mathf.Max(8, s.rowsPerFrame * 4);
+            for (int y0 = 0; y0 < res; y0 += batch)
+            {
+                int y1 = Mathf.Min(res, y0 + batch);
+                for (int y = y0; y < y1; y++)
+                {
+                    float wz = origin.y + (y / (float)(res - 1)) * size;
+                    for (int x = 0; x < res; x++)
+                    {
+                        float wx = origin.x + (x / (float)(res - 1)) * size;
+                        float hgt = SampleWorldHeight(tiles, wx, wz);
+                        meters[y * res + x] = hgt;
+                        if (hgt < minH) minH = hgt;
+                        if (hgt > maxH) maxH = hgt;
+                    }
+                }
+                yield return null;
+            }
+
+            float range = Mathf.Max(1f, maxH - minH);
+            for (int i = 0; i < meters.Length; i++) meters[i] = (meters[i] - minH) / range;
+            yield return BakeCore(meters, res, size, range, minH, origin, target, s, onDone);
+        }
+
+        private static float SampleWorldHeight(Terrain[] tiles, float wx, float wz)
+        {
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                Terrain t = tiles[i];
+                Vector3 p = t.transform.position;
+                Vector3 sz = t.terrainData.size;
+                if (wx >= p.x && wx <= p.x + sz.x && wz >= p.z && wz <= p.z + sz.z)
+                    return t.SampleHeight(new Vector3(wx, 0f, wz)) + p.y;
+            }
+            return 0f;
+        }
+
+        private static IEnumerator BakeCore(float[] h, int res, float sizeX, float sizeY, float baseY, Vector2 worldOrigin,
+                                            RenderTexture target, Settings s, Action onDone)
+        {
             int n = Mathf.Max(64, s.textureSize);
             float texelM = sizeX / n;                       // metres per output texel
             var tex = new Texture2D(n, n, TextureFormat.RGBA32, false, false)
@@ -90,11 +144,11 @@ namespace Railbound.UI
                 for (int y = y0; y < y1; y++)
                 {
                     float v = (y + 0.5f) / n;
-                    float wz = v * sizeX;
+                    float wz = worldOrigin.y + v * sizeX;
                     for (int x = 0; x < n; x++)
                     {
                         float u = (x + 0.5f) / n;
-                        float wx = u * sizeX;
+                        float wx = worldOrigin.x + u * sizeX;
 
                         float hm = Sample(h, res, u, v) * sizeY + baseY;
                         float hxp = Sample(h, res, u + 1f / n, v) * sizeY;
