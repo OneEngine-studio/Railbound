@@ -42,6 +42,7 @@ namespace Railbound.UI
 
         // ---- map space ----
         private Terrain _terrain;
+        private bool _multiTile;         // true when the map is made of several terrain tiles (region comes from MiniMapBounds)
         private Vector2 _mapCenter;      // world XZ of the map centre
         private float _mapSize = 1600f;  // metres (square)
         private Vector2 _mapOrigin;      // world XZ of the south-west corner
@@ -117,7 +118,14 @@ namespace Railbound.UI
             BuildMini(rt);
             BuildFull(rt);
 
-            if (_terrain != null)
+            if (_multiTile)
+            {
+                var s = MapTerrainBaker.Settings.Default;
+                s.textureSize = textureSize;
+                s.waterLevel = waterLevel;
+                StartCoroutine(MapTerrainBaker.BakeRegion(_mapOrigin, _mapSize, _mapRT, s, () => _baked = true));
+            }
+            else if (_terrain != null)
             {
                 var s = MapTerrainBaker.Settings.Default;
                 s.textureSize = textureSize;
@@ -129,6 +137,23 @@ namespace Railbound.UI
         private void FindMapData()
         {
             _terrain = Terrain.activeTerrain != null ? Terrain.activeTerrain : FindObjectOfType<Terrain>();
+            _multiTile = false;
+
+            // Maps built from several terrain tiles (MAP-2): the playable region comes from the MiniMapBounds corners.
+            if (Terrain.activeTerrains.Length > 1)
+            {
+                var bounds = FindObjectOfType<Arikan.MiniMapBounds>();
+                if (bounds != null && bounds.topRight != null && bounds.bottomLeft != null)
+                {
+                    Vector3 bl = bounds.bottomLeft.position, tr = bounds.topRight.position;
+                    _mapOrigin = new Vector2(Mathf.Min(bl.x, tr.x), Mathf.Min(bl.z, tr.z));
+                    _mapSize = Mathf.Max(Mathf.Abs(tr.x - bl.x), Mathf.Abs(tr.z - bl.z));
+                    _mapCenter = _mapOrigin + Vector2.one * (_mapSize * 0.5f);
+                    _multiTile = true;
+                    return;
+                }
+            }
+
             if (_terrain != null && _terrain.terrainData != null)
             {
                 Vector3 p = _terrain.transform.position;
@@ -270,7 +295,7 @@ namespace Railbound.UI
             AddBorder(ir, 1.5f, new Color(1f, 1f, 1f, 0.35f));
 
             float y = -26f;
-            _tTitle = InfoText(ir, "MAP-1", 38f, ref y, 48f, White, true);
+            _tTitle = InfoText(ir, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name.ToUpperInvariant(), 38f, ref y, 48f, White, true);
             _tGrid = InfoText(ir, "GRID --", 22f, ref y, 34f, new Color(1f, 1f, 1f, 0.8f), true);
             Divider(ir, ref y);
             _tZoneState = InfoText(ir, "", 17f, ref y, 26f, new Color(1f, 1f, 1f, 0.6f), true);

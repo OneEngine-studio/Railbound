@@ -68,7 +68,8 @@ namespace Railbound.UI
 
         private void OnDestroy()
         {
-            if (LobbyParty.Instance != null) LobbyParty.Instance.Changed -= OnPartyChanged;
+            var party = LobbyParty.InstanceIfExists;
+            if (party != null) party.Changed -= OnPartyChanged;
         }
 
         // ------------------------------------------------------------------ party models

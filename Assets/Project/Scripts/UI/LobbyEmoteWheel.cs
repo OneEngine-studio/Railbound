@@ -23,7 +23,7 @@ namespace Railbound.UI
 
         private static readonly Color White = new Color(0.96f, 0.96f, 0.97f, 1f);
         private static readonly Color Dim = new Color(0.96f, 0.96f, 0.97f, 0.62f);
-        private static readonly Color Yellow = new Color(1f, 0.816f, 0f, 1f);
+        private static readonly Color Yellow = new Color(0.97f, 0.975f, 1f, 1f);   // accent = white
 
         public static LobbyEmoteWheel Create(Transform canvasRoot, Transform launcherParent, TMP_FontAsset font)
         {
@@ -81,7 +81,7 @@ namespace Railbound.UI
                 slot.anchoredPosition = pos; slot.sizeDelta = new Vector2(210f, 70f);
                 var img = slot.gameObject.AddComponent<Image>(); img.sprite = panel; img.type = Image.Type.Sliced; img.color = Color.white;
                 var btn = slot.gameObject.AddComponent<Button>(); btn.targetGraphic = img;
-                var cb = Tint(1f, 1f, 1f); cb.highlightedColor = new Color(1f, 0.93f, 0.55f, 1f); cb.pressedColor = Yellow; btn.colors = cb;
+                var cb = Tint(1f, 1f, 1f); cb.highlightedColor = new Color(0.85f, 0.88f, 0.95f, 1f); cb.pressedColor = Yellow; btn.colors = cb;
                 int id = i + 1; btn.onClick.AddListener(() => { PickEmote(id); });
                 var name = Label("Name", slot, layer, LobbyActorRig.EmoteNames[i], 26, White, TextAlignmentOptions.Center);
                 name.rectTransform.anchorMin = Vector2.zero; name.rectTransform.anchorMax = Vector2.one; name.rectTransform.offsetMin = new Vector2(46f, 0f); name.rectTransform.offsetMax = new Vector2(-8f, 0f);
@@ -135,7 +135,7 @@ namespace Railbound.UI
         private static ColorBlock Tint(float normalA, float hover, float press)
         {
             var c = ColorBlock.defaultColorBlock;
-            c.normalColor = new Color(1f, 1f, 1f, 1f); c.highlightedColor = new Color(1f, 1f, 1f, 1f) * hover; c.pressedColor = new Color(1f, 0.93f, 0.55f, 1f);
+            c.normalColor = new Color(1f, 1f, 1f, 1f); c.highlightedColor = new Color(1f, 1f, 1f, 1f) * hover; c.pressedColor = new Color(0.85f, 0.88f, 0.95f, 1f);
             c.selectedColor = c.normalColor; c.colorMultiplier = 1f; c.fadeDuration = 0.08f; return c;
         }
 

@@ -20,7 +20,7 @@ namespace Railbound.UI
         [Header("Highlight Settings")]
         [SerializeField] private Graphic targetGraphic;
         [SerializeField] private bool tintOnHover = false;
-        [SerializeField] private Color hoverColor = new Color(1.0f, 0.894f, 0.36f, 1.0f); // #FFE45C
+        [SerializeField] private Color hoverColor = new Color(0.80f, 0.84f, 0.93f, 1.0f); // soft cool white (was yellow)
         private Color normalColor = Color.white;
 
         private Vector3 baseScale = Vector3.one;
