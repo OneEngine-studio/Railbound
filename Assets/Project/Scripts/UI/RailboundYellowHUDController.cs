@@ -201,7 +201,8 @@ namespace Railbound.UI
         private void OnDestroy()
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
-            if (LobbyParty.Instance != null) LobbyParty.Instance.Changed -= RefreshSquad;
+            var party = LobbyParty.InstanceIfExists;
+            if (party != null) party.Changed -= RefreshSquad;
         }
 
         // ----------------------------------------------------

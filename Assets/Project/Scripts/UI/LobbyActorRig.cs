@@ -52,6 +52,9 @@ namespace Railbound.UI
 
         public bool IsEmoting => emote != 0;
 
+        /// <summary>Receiver for the "move" animation event baked into the JU TPS idle clips (nothing to do in the lobby).</summary>
+        public void move() { }
+
         private void Awake()
         {
             anim = GetComponent<Animator>();

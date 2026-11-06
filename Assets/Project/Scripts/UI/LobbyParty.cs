@@ -39,6 +39,9 @@ namespace Railbound.UI
             }
         }
 
+        /// <summary>The party if it exists; never creates one (use from OnDestroy / teardown code).</summary>
+        public static LobbyParty InstanceIfExists => _instance;
+
         [Tooltip("Fill the friend slots with sample squadmates (placeholder until the real party backend is connected).")]
         [SerializeField] private bool seedDemoSquad = true;
 
@@ -61,6 +64,11 @@ namespace Railbound.UI
                 TryAddMember(new PartyMember { id = "demo_vex", displayName = "VEX_TACTICAL", levelText = "LVL. 48", operatorIndex = 2, ready = true });
                 TryAddMember(new PartyMember { id = "demo_noob", displayName = "NOOB_SHENKY", levelText = "LVL. 3", operatorIndex = 3, ready = false });
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this) _instance = null;
         }
 
         private void EnsureLocal()
