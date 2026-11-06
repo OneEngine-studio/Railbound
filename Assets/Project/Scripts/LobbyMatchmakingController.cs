@@ -30,12 +30,26 @@ namespace Railbound.Networking
         [Tooltip("Prefab for player character (from Assets/SandBox/Networking/Prefabs/TPS Character.prefab).")]
         [SerializeField] private GameObject playerPrefab;
 
+        [Header("Matchmaking")]
+        [Tooltip("How long to wait for the Nakama backend before continuing with a local match.")]
+        [SerializeField] private float nakamaTimeoutSeconds = 8f;
+
         [Header("UI Feedback")]
         [Tooltip("Optional text field to display matchmaking / deployment status.")]
         [SerializeField] private TextMeshProUGUI statusText;
 
         public string CurrentMatchId { get; private set; }
         public bool IsDeploying { get; private set; }
+
+        /// <summary>Raised with every deployment status line (e.g. "CREATING NAKAMA MATCH...", "LOADING MAP-1...", "DEPLOY FAILED", "CANCELLED").</summary>
+        public event Action<string> StatusChanged;
+
+        /// <summary>True while a deployment can still be cancelled (before the gameplay scene starts loading).</summary>
+        public bool CanCancel => IsDeploying && !_sceneLoadStarted;
+
+        private bool _cancelRequested;
+        private bool _sceneLoadStarted;
+        private bool _startedHostHere;
 
         private void Awake()
         {
@@ -74,22 +88,43 @@ namespace Railbound.Networking
             }
 
             IsDeploying = true;
+            _cancelRequested = false;
+            _sceneLoadStarted = false;
+            _startedHostHere = false;
             UpdateStatus("CREATING NAKAMA MATCH...");
 
             try
             {
-                // 1. Create Nakama Match
-                await CreateNakamaMatchAsync();
+                // 1. Create Nakama Match (bounded wait: an unreachable backend must not freeze the lobby for a minute,
+                //    and the player can cancel while we wait; on timeout we continue with a local match like on any Nakama error)
+                var nakamaTask = CreateNakamaMatchAsync();
+                float waited = 0f;
+                while (!nakamaTask.IsCompleted && !_cancelRequested && waited < nakamaTimeoutSeconds)
+                {
+                    await Task.Delay(100);
+                    waited += 0.1f;
+                }
+                if (_cancelRequested) { AbortDeploy(); return; }
+                if (!nakamaTask.IsCompleted)
+                {
+                    Debug.LogWarning($"[LobbyMatchmaker] Nakama did not answer within {nakamaTimeoutSeconds:0}s; continuing with a local match.");
+                    CurrentMatchId = $"local_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
+                }
 
                 // 2. Prepare Netcode NetworkManager & Start Host
                 UpdateStatus("STARTING NETCODE HOST...");
+                bool alreadyRunning = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
                 if (!EnsureNetcodeHost())
                 {
                     throw new InvalidOperationException("Failed to start Unity Netcode Host.");
                 }
+                _startedHostHere = !alreadyRunning;
+                if (_cancelRequested) { AbortDeploy(); return; }
 
                 // 3. Load Target Gameplay Scene (MAP-1)
+                _sceneLoadStarted = true;
                 UpdateStatus("LOADING MAP-1...");
+                await Task.Delay(450);   // let the lobby's loading overlay fade in before the scene load takes over
                 LoadGameplayScene();
             }
             catch (Exception ex)
@@ -98,6 +133,26 @@ namespace Railbound.Networking
                 UpdateStatus("DEPLOY FAILED");
                 IsDeploying = false;
             }
+        }
+
+        /// <summary>Cancels a deployment that has not started loading the gameplay scene yet.</summary>
+        public void CancelDeploy()
+        {
+            if (!CanCancel) return;
+            _cancelRequested = true;
+            // the awaited steps are short; Deploy() notices the flag right after the current step finishes
+        }
+
+        private void AbortDeploy()
+        {
+            if (_startedHostHere && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                NetworkManager.Singleton.Shutdown();
+            }
+            _startedHostHere = false;
+            _cancelRequested = false;
+            IsDeploying = false;
+            UpdateStatus("CANCELLED");
         }
 
         private async Task CreateNakamaMatchAsync()
@@ -145,14 +200,11 @@ namespace Railbound.Networking
             var netMgr = NetworkManager.Singleton;
             if (netMgr == null)
             {
-                Debug.Log("[LobbyMatchmaker] NetworkManager singleton not found; instantiating runtime NetworkManager...");
-                var netMgrGo = new GameObject("NetworkManager");
-                DontDestroyOnLoad(netMgrGo);
-
-                netMgr = netMgrGo.AddComponent<NetworkManager>();
-                var transport = netMgrGo.AddComponent<UnityTransport>();
-                transport.SetConnectionData("127.0.0.1", netcodePort, "0.0.0.0");
-                netMgrGo.AddComponent<NetworkHotkeyManager>();
+                // The lobby scene has no NetworkManager. A runtime-created one has no NetworkConfig (it threw here) and would
+                // not know the gameplay scene's prefabs, so do not host from the lobby: hand off to the gameplay scene, whose
+                // own NetworkManager / TacticalMultiplayerOverlay connects the player to the game server.
+                Debug.Log("[LobbyMatchmaker] No NetworkManager in the lobby; handing off to the gameplay scene to connect.");
+                return true;
             }
 
             LoadPlayerPrefabIfNull();
@@ -195,7 +247,7 @@ namespace Railbound.Networking
             else
             {
                 Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Unity SceneManager.");
-                SceneManager.LoadScene(targetGameplayScene);
+                SceneManager.LoadSceneAsync(targetGameplayScene);   // async: the loading overlay keeps animating
             }
         }
 
@@ -206,6 +258,7 @@ namespace Railbound.Networking
             {
                 statusText.text = message;
             }
+            StatusChanged?.Invoke(message);
         }
     }
 }
