@@ -319,7 +319,7 @@ namespace Project.Vehicles
 
         private void ApplyDriverCrashDamage(float impactSpeed)
         {
-            DriveVehicles[] drivers = FindObjectsOfType<DriveVehicles>();
+            DriveVehicles[] drivers = FindObjectsByType<DriveVehicles>(FindObjectsSortMode.None);
             foreach (DriveVehicles d in drivers)
             {
                 if (d != null && d.CurrentVehicle == _vehicle)
@@ -349,7 +349,7 @@ namespace Project.Vehicles
             }
 
             // Eject driver safely before explosion
-            DriveVehicles[] drivers = FindObjectsOfType<DriveVehicles>();
+            DriveVehicles[] drivers = FindObjectsByType<DriveVehicles>(FindObjectsSortMode.None);
             foreach (DriveVehicles d in drivers)
             {
                 if (d != null && d.CurrentVehicle == _vehicle)

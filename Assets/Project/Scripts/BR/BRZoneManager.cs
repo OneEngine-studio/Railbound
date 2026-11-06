@@ -21,7 +21,7 @@ namespace Railbound.BR
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<BRZoneManager>();
+                    _instance = FindFirstObjectByType<BRZoneManager>();
                 }
                 return _instance;
             }

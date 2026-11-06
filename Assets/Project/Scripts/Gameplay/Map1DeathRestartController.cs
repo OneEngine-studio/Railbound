@@ -274,7 +274,7 @@ namespace Railbound.Gameplay
             GUILayout.Label(countdownStr, _countdownStyle);
             GUILayout.Space(6);
 
-            GUILayout.Label("Disconnecting from server (134.185.84.226) & reloading MAP-1...", _detailStyle);
+            GUILayout.Label($"Disconnecting from server ({ServerConfig.GameServerAddress}) & reloading MAP-1...", _detailStyle);
 
             GUILayout.EndVertical();
             GUILayout.EndArea();

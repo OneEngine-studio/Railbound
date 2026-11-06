@@ -14,7 +14,7 @@ namespace Railbound.UI
     public class TacticalMultiplayerOverlay : MonoBehaviour
     {
         [Header("Dedicated Server Configuration")]
-        [SerializeField] private string serverAddress = "134.185.84.226";
+        [SerializeField] private string serverAddress = ServerConfig.GameServerAddress;
         [SerializeField] private ushort serverPort = 7777;
         [SerializeField] private bool autoConnectClientOnStart = true;
 

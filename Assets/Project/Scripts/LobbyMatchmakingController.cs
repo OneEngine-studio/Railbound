@@ -120,12 +120,8 @@ namespace Railbound.Networking
 
                 // Fallback: Standalone device authentication on Nakama server
                 Debug.Log("[LobbyMatchmaker] AuthenticationService not active or socket offline; attempting direct Nakama socket...");
-                string scheme = "http";
-                string host = "161.118.255.172";
-                int port = 7350;
-                string serverKey = "defaultkey";
-
-                var client = new Client(scheme, host, port, serverKey, UnityWebRequestAdapter.Instance);
+                var client = new Client(ServerConfig.NakamaScheme, ServerConfig.NakamaHost, ServerConfig.NakamaPort,
+                    ServerConfig.NakamaServerKey, UnityWebRequestAdapter.Instance);
                 string deviceId = SystemInfo.deviceUniqueIdentifier;
                 if (string.IsNullOrEmpty(deviceId) || deviceId == SystemInfo.unsupportedIdentifier)
                     deviceId = Guid.NewGuid().ToString("N");
