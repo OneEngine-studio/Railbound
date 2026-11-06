@@ -330,14 +330,14 @@ namespace Railbound.UI
         private bool isPressed;
         private float activePulseTimer;
 
-        private static readonly Color NormalBg = new Color(0.06f, 0.11f, 0.16f, 0.90f);
-        private static readonly Color HoverBg = new Color(0.00f, 0.52f, 0.72f, 0.92f);
-        private static readonly Color PressBg = new Color(0.00f, 0.78f, 1.00f, 0.98f);
+        private static readonly Color NormalBg = new Color(0.05f, 0.055f, 0.065f, 0.90f);
+        private static readonly Color HoverBg = new Color(0.20f, 0.21f, 0.24f, 0.95f);
+        private static readonly Color PressBg = new Color(0.62f, 0.64f, 0.70f, 0.98f);
 
-        private static readonly Color NormalFrame = new Color(0.00f, 0.784f, 1.00f, 0.72f);
-        private static readonly Color HoverFrame = new Color(0.35f, 0.92f, 1.00f, 1.00f);
+        private static readonly Color NormalFrame = new Color(1.00f, 1.00f, 1.00f, 0.55f);
+        private static readonly Color HoverFrame = new Color(1.00f, 1.00f, 1.00f, 1.00f);
 
-        private static readonly Color NormalText = new Color(0.88f, 0.96f, 1.00f, 1.00f);
+        private static readonly Color NormalText = new Color(0.93f, 0.94f, 0.96f, 1.00f);
         private static readonly Color HoverText = new Color(1.00f, 1.00f, 1.00f, 1.00f);
 
         private void Awake()
@@ -384,7 +384,7 @@ namespace Railbound.UI
             {
                 Color targetAccent = highlight
                     ? new Color(1f, 1f, 1f, 1f)
-                    : new Color(0f, 0.784f, 1f, 0.9f);
+                    : new Color(1f, 1f, 1f, 0.55f);
                 accentImage.color = Color.Lerp(accentImage.color, targetAccent, Time.unscaledDeltaTime * 14f);
             }
 

@@ -30,8 +30,8 @@ namespace Railbound.UI
         public static RailboundYellowHUDController Instance { get; private set; }
 
         [Header("Colors & Theme")]
-        public static readonly Color YellowAccent = new Color(1.0f, 0.816f, 0.0f, 1.0f);     // #FFD000
-        public static readonly Color YellowBright = new Color(1.0f, 0.894f, 0.36f, 1.0f);    // #FFE45C
+        public static readonly Color YellowAccent = new Color(0.97f, 0.975f, 1.0f, 1.0f);     // accent is now white (name kept for the existing references)
+        public static readonly Color YellowBright = new Color(1.0f, 1.0f, 1.0f, 1.0f);
         public static readonly Color DarkBg = new Color(0.043f, 0.075f, 0.110f, 0.95f);      // #0B131C
         public static readonly Color DarkSteel = new Color(0.095f, 0.133f, 0.176f, 0.90f);   // #18222D
         public static readonly Color TextPrimary = new Color(0.94f, 0.95f, 0.96f, 1.0f);     // #F0F3F5
@@ -377,7 +377,8 @@ namespace Railbound.UI
                 }
                 if (navLabels != null && i < navLabels.Length && navLabels[i] != null)
                 {
-                    navLabels[i].color = isSelected ? YellowAccent : TextPrimary;
+                    // MW look: the selected tab is a white block (Indicator_Selected) with dark text, the rest stay soft white
+                    navLabels[i].color = isSelected ? new Color(0.05f, 0.055f, 0.065f, 1f) : new Color(0.96f, 0.96f, 0.97f, 0.78f);
                     navLabels[i].fontStyle = isSelected ? FontStyles.Bold : FontStyles.Normal;
                 }
             }
