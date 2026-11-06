@@ -53,6 +53,8 @@ namespace Railbound.UI
             ? operators[currentOperatorIndex] : null;
 
         public int CurrentOperatorIndex => currentOperatorIndex;
+        public Transform SpawnAnchor => characterSpawnAnchor != null ? characterSpawnAnchor : transform;
+        public OperatorDefinition GetOperator(int index) => (operators != null && index >= 0 && index < operators.Count) ? operators[index] : null;
         public int TotalOperators => operators != null ? operators.Count : 0;
 
         private void Awake()
@@ -216,7 +218,13 @@ namespace Railbound.UI
 
         private void ApplyOperatorVisualVariant(int index)
         {
-            if (currentCharacterInstance == null) return;
+            TintOperator(currentCharacterInstance, index);
+        }
+
+        /// <summary>Per-operator uniform tint; also used for party members' models.</summary>
+        public static void TintOperator(GameObject model, int index)
+        {
+            if (model == null) return;
 
             // Subtle tactical uniform tint variation per operator class so switching operators is visually distinct
             Color[] classTints = new Color[]
@@ -228,7 +236,7 @@ namespace Railbound.UI
             };
 
             Color tint = classTints[Mathf.Abs(index) % classTints.Length];
-            var renderers = currentCharacterInstance.GetComponentsInChildren<Renderer>(true);
+            var renderers = model.GetComponentsInChildren<Renderer>(true);
             var propBlock = new MaterialPropertyBlock();
             foreach (var r in renderers)
             {

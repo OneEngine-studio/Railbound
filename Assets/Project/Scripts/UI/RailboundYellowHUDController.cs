@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.Networking;
 using TMPro;
 using Michsky.UI.Reach;
 using Railbound.Networking;
@@ -153,6 +154,7 @@ namespace Railbound.UI
 
             SyncProfileData();
             UpdateOperatorDisplay();
+            SetupDeployStates();
 
             // Hook operator change
             if (LobbyCharacterPreviewManager.Instance != null)
@@ -166,16 +168,38 @@ namespace Railbound.UI
             // Keyboard shortcuts
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                OnDeployClicked();
+                if (deployState == DeployState.Idle || deployState == DeployState.Failed) OnDeployClicked();
             }
             else if (Input.GetKeyDown(KeyCode.Escape))
             {
-                OnSettingsOrBackClicked();
+                if (deployState == DeployState.Deploying) CancelDeploy();
+                else if (deployState == DeployState.Idle || deployState == DeployState.Failed) OnSettingsOrBackClicked();
             }
             else if (Input.GetKeyDown(KeyCode.F1))
             {
                 OnInviteClicked();
             }
+
+            TickDeployState();
+        }
+
+        private Coroutine pingCoroutine;
+
+        // The Reach panel manager toggles the Multiplayer panel's active state right after load, which stops coroutines,
+        // so (re)start the server ping every time this component is enabled.
+        private void OnEnable()
+        {
+            if (footerPingText != null)
+            {
+                if (pingCoroutine != null) StopCoroutine(pingCoroutine);
+                pingCoroutine = StartCoroutine(PingRoutine());
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
+            if (LobbyParty.Instance != null) LobbyParty.Instance.Changed -= RefreshSquad;
         }
 
         // ----------------------------------------------------
@@ -240,6 +264,8 @@ namespace Railbound.UI
             if (headerPlayerLevel != null) headerPlayerLevel.text = levelStr;
             if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = xpProgress;
 
+            LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+
             if (headerCoinsText != null) headerCoinsText.text = "2,450";
             if (headerStarsText != null) headerStarsText.text = "850";
 
@@ -260,6 +286,8 @@ namespace Railbound.UI
             if (headerOperatorName != null) headerOperatorName.text = opName;
             if (headerOperatorRole != null) headerOperatorRole.text = opRole;
             if (floatingOperatorName != null) floatingOperatorName.text = opName;
+            if (LobbyCharacterPreviewManager.Instance != null)
+                LobbyParty.Instance.SetLocal(null, null, LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex);
         }
 
         // ----------------------------------------------------
@@ -387,17 +415,76 @@ namespace Railbound.UI
             }
         }
 
+        // ----------------------------------------------------
+        // 3b. DEPLOY / MATCHMAKING STATES
+        //     Idle -> Deploying (cancellable) -> Loading (overlay) | Failed (retry)
+        // ----------------------------------------------------
+        private enum DeployState { Idle, Deploying, Loading, Failed }
+        private DeployState deployState = DeployState.Idle;
+        private float deployStateStart;
+        private string deployStage = "";
+
+        private Sprite deployIdleSprite;
+        private Color deployIdleColor = Color.white;
+        private Color deployIdleLabelColor = Color.white;
+        private string idleSubtitle = "";
+        private Color idleSubtitleColor = Color.white;
+        private CanvasGroup lockTags, lockMap, lockFill;
+        private TextMeshProUGUI keyHintText;
+        private Transform keyHintRoot, playTriangle;
+        private LobbyMatchmakingController hookedMatchmaker;
+
+        private CanvasGroup loadingOverlay;
+        private RectTransform loadingBar;
+        private TextMeshProUGUI loadingSub;
+        private float loadingTarget;
+
+        private static readonly Color Dim = new Color(0.96f, 0.96f, 0.97f, 0.62f);
+
+        private void SetupDeployStates()
+        {
+            if (deployButtonBg != null) { deployIdleSprite = deployButtonBg.sprite; deployIdleColor = deployButtonBg.color; }
+            if (deployButtonLabel != null) deployIdleLabelColor = deployButtonLabel.color;
+            if (modeSubtitleText != null) { idleSubtitle = modeSubtitleText.text; idleSubtitleColor = modeSubtitleText.color; }
+            if (deployButton != null)
+            {
+                keyHintRoot = deployButton.transform.Find("KeyHint");
+                if (keyHintRoot != null) keyHintText = keyHintRoot.GetComponentInChildren<TextMeshProUGUI>(true);
+                playTriangle = deployButton.transform.Find("PlayTriangle");
+            }
+            Transform card = modeTitleText != null ? modeTitleText.transform.parent : null;
+            if (card != null)
+            {
+                lockTags = EnsureGroup(card.Find("Tag_30P"));
+                lockMap = EnsureGroup(card.Find("Tag_Map"));
+                lockFill = EnsureGroup(card.Find("FillSquad_Row"));
+            }
+
+            var mm = LobbyMatchmakingController.Instance;
+            if (mm != null)
+            {
+                hookedMatchmaker = mm;
+                mm.StatusChanged += OnMatchmakingStatus;
+            }
+            RefreshDeployVisuals();
+        }
+
+        private static CanvasGroup EnsureGroup(Transform t)
+        {
+            if (t == null) return null;
+            var g = t.GetComponent<CanvasGroup>();
+            if (g == null) g = t.gameObject.AddComponent<CanvasGroup>();
+            return g;
+        }
+
         private void OnDeployClicked()
         {
-            if (isDeploying) return;
-            isDeploying = true;
+            if (deployState == DeployState.Deploying) { CancelDeploy(); return; }
+            if (deployState == DeployState.Loading) return;
+
             PlayDeploySound();
             Debug.Log("[YellowHUD] DEPLOY CLICKED! Initiating matchmaking...");
-
-            if (deployButtonLabel != null)
-            {
-                deployButtonLabel.text = "SEARCHING...";
-            }
+            SetDeployState(DeployState.Deploying, "FINDING MATCH");
 
             var bridge = ReachLobbyBridge.Instance;
             if (bridge != null)
@@ -407,6 +494,198 @@ namespace Railbound.UI
             else if (LobbyMatchmakingController.Instance != null)
             {
                 LobbyMatchmakingController.Instance.Deploy();
+            }
+            else
+            {
+                SetDeployState(DeployState.Failed, "MATCHMAKER UNAVAILABLE");
+            }
+        }
+
+        private void CancelDeploy()
+        {
+            var mm = LobbyMatchmakingController.Instance;
+            PlayClickSound();
+            if (mm != null && mm.CanCancel)
+            {
+                deployStage = "CANCELLING";
+                mm.CancelDeploy();
+            }
+            else if (mm == null)
+            {
+                SetDeployState(DeployState.Idle, "");
+            }
+        }
+
+        private void OnMatchmakingStatus(string message)
+        {
+            string m = (message ?? "").ToUpperInvariant();
+            if (m.Contains("FAILED")) SetDeployState(DeployState.Failed, "DEPLOY FAILED - CHECK YOUR CONNECTION");
+            else if (m.Contains("CANCEL") && !m.Contains("CANCELLING")) SetDeployState(DeployState.Idle, "");
+            else if (m.Contains("LOADING")) SetDeployState(DeployState.Loading, "LOADING MAP");
+            else if (m.Contains("STARTING")) { deployStage = "CONNECTING"; RefreshDeployVisuals(); }
+            else if (m.Contains("CREATING")) { deployStage = "FINDING MATCH"; RefreshDeployVisuals(); }
+        }
+
+        private void SetDeployState(DeployState state, string stage)
+        {
+            if (state != deployState && (deployState == DeployState.Idle || deployState == DeployState.Failed))
+                deployStateStart = Time.unscaledTime;
+            deployState = state;
+            deployStage = stage;
+            isDeploying = state == DeployState.Deploying || state == DeployState.Loading;
+            RefreshDeployVisuals();
+            loadingTarget = state == DeployState.Loading ? 1f : 0f;
+            if (state == DeployState.Loading) EnsureLoadingOverlay();
+        }
+
+        private void RefreshDeployVisuals()
+        {
+            bool busy = deployState == DeployState.Deploying || deployState == DeployState.Loading;
+
+            if (deployButtonBg != null)
+            {
+                if (busy)
+                {
+                    var chip = Resources.Load<Sprite>("HUD/Hud_Chip");
+                    if (chip != null) deployButtonBg.sprite = chip;
+                    deployButtonBg.color = new Color(1f, 1f, 1f, 0.92f);
+                }
+                else
+                {
+                    deployButtonBg.sprite = deployIdleSprite;
+                    deployButtonBg.color = deployState == DeployState.Failed ? new Color(1f, 0.55f, 0.52f, 1f) : deployIdleColor;
+                }
+            }
+
+            if (deployButtonLabel != null)
+            {
+                switch (deployState)
+                {
+                    case DeployState.Idle: deployButtonLabel.text = "DEPLOY"; deployButtonLabel.color = deployIdleLabelColor; break;
+                    case DeployState.Deploying: deployButtonLabel.text = "CANCEL"; deployButtonLabel.color = TextPrimary; break;
+                    case DeployState.Loading: deployButtonLabel.text = "LOADING..."; deployButtonLabel.color = Dim; break;
+                    case DeployState.Failed: deployButtonLabel.text = "RETRY"; deployButtonLabel.color = deployIdleLabelColor; break;
+                }
+            }
+
+            if (playTriangle != null) playTriangle.gameObject.SetActive(!busy);
+            if (keyHintRoot != null) keyHintRoot.gameObject.SetActive(deployState != DeployState.Loading);
+            if (keyHintText != null) keyHintText.text = deployState == DeployState.Deploying ? "ESC" : "SPACE";
+            if (deployButton != null) deployButton.interactable = deployState != DeployState.Loading;
+
+            float a = busy ? 0.4f : 1f;
+            foreach (var g in new[] { lockTags, lockMap, lockFill })
+                if (g != null) { g.alpha = a; g.interactable = !busy; g.blocksRaycasts = !busy; }
+
+            if (modeSubtitleText != null)
+            {
+                if (deployState == DeployState.Idle) { modeSubtitleText.text = idleSubtitle; modeSubtitleText.color = idleSubtitleColor; }
+                else if (deployState == DeployState.Failed) { modeSubtitleText.text = deployStage; modeSubtitleText.color = RedWarning; }
+            }
+        }
+
+        private void TickDeployState()
+        {
+            if (deployState == DeployState.Deploying || deployState == DeployState.Loading)
+            {
+                int secs = Mathf.FloorToInt(Time.unscaledTime - deployStateStart);
+                string line = $"{deployStage}   {secs / 60}:{secs % 60:00}";
+                if (modeSubtitleText != null) { modeSubtitleText.text = line; modeSubtitleText.color = YellowAccent; }
+                if (loadingSub != null) loadingSub.text = line;
+            }
+
+            if (loadingOverlay != null)
+            {
+                loadingOverlay.alpha = Mathf.MoveTowards(loadingOverlay.alpha, loadingTarget, Time.unscaledDeltaTime * 4f);
+                loadingOverlay.blocksRaycasts = loadingOverlay.alpha > 0.01f;
+                if (loadingBar != null)
+                {
+                    float k = (Mathf.Sin(Time.unscaledTime * 2.4f) + 1f) * 0.5f;
+                    loadingBar.anchoredPosition = new Vector2(Mathf.Lerp(-170f, 170f, k), 0f);
+                }
+            }
+        }
+
+        private void EnsureLoadingOverlay()
+        {
+            if (loadingOverlay != null) return;
+            var canvas = GetComponentInParent<Canvas>();
+            Transform parent = canvas != null ? canvas.rootCanvas.transform : transform;
+            int layer = parent.gameObject.layer;
+
+            var go = new GameObject("Deploy_Loading_Overlay", typeof(RectTransform), typeof(CanvasGroup));
+            go.layer = layer; go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform; rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            var cv = go.AddComponent<Canvas>(); cv.overrideSorting = true; cv.sortingOrder = 900;
+            go.AddComponent<GraphicRaycaster>();
+            loadingOverlay = go.GetComponent<CanvasGroup>(); loadingOverlay.alpha = 0f;
+
+            var dim = NewUi("Dim", go.transform, layer); Stretch(dim);
+            var img = dim.gameObject.AddComponent<Image>(); img.color = new Color(0.02f, 0.025f, 0.032f, 0.9f);
+
+            TMP_FontAsset font = deployButtonLabel != null ? deployButtonLabel.font : null;
+            var title = NewText("Title", go.transform, layer, "DEPLOYING", 56, TextPrimary, font);
+            title.rectTransform.anchoredPosition = new Vector2(0f, 46f);
+            loadingSub = NewText("Stage", go.transform, layer, "LOADING MAP", 26, Dim, font);
+            loadingSub.rectTransform.anchoredPosition = new Vector2(0f, -8f);
+
+            var track = NewUi("BarTrack", go.transform, layer);
+            track.anchorMin = track.anchorMax = new Vector2(0.5f, 0.5f); track.sizeDelta = new Vector2(520f, 4f); track.anchoredPosition = new Vector2(0f, -60f);
+            var ti = track.gameObject.AddComponent<Image>(); ti.color = new Color(1f, 1f, 1f, 0.14f);
+            loadingBar = NewUi("Bar", track, layer);
+            loadingBar.anchorMin = loadingBar.anchorMax = new Vector2(0.5f, 0.5f); loadingBar.sizeDelta = new Vector2(180f, 4f);
+            var bi = loadingBar.gameObject.AddComponent<Image>(); bi.color = YellowAccent;
+        }
+
+        private static RectTransform NewUi(string name, Transform parent, int layer)
+        {
+            var go = new GameObject(name, typeof(RectTransform)); go.layer = layer; go.transform.SetParent(parent, false);
+            return (RectTransform)go.transform;
+        }
+
+        private static void Stretch(RectTransform r)
+        {
+            r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = Vector2.zero; r.offsetMax = Vector2.zero;
+        }
+
+        private static TextMeshProUGUI NewText(string name, Transform parent, int layer, string text, float size, Color col, TMP_FontAsset font)
+        {
+            var r = NewUi(name, parent, layer);
+            r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f); r.sizeDelta = new Vector2(900f, size + 16f);
+            var t = r.gameObject.AddComponent<TextMeshProUGUI>();
+            t.text = text; t.fontSize = size; t.fontStyle = FontStyles.Bold; t.alignment = TextAlignmentOptions.Center; t.color = col;
+            t.characterSpacing = 4f; t.enableWordWrapping = false; t.raycastTarget = false;
+            if (font != null) t.font = font;
+            return t;
+        }
+
+        // Real backend ping for the footer chip (Nakama health endpoint).
+        private IEnumerator PingRoutine()
+        {
+            var wait = new WaitForSecondsRealtime(10f);
+            while (true)
+            {
+                string url = $"{ServerConfig.NakamaScheme}://{ServerConfig.NakamaHost}:{ServerConfig.NakamaPort}/healthcheck";
+                float t0 = Time.realtimeSinceStartup;
+                using (var req = UnityWebRequest.Get(url))
+                {
+                    req.timeout = 4;
+                    var op = req.SendWebRequest();
+                    // UnityWebRequest.timeout does not cover a connect to an unreachable host, so enforce our own limit
+                    float waited = 0f;
+                    while (!op.isDone && waited < 4f) { waited += Time.unscaledDeltaTime; yield return null; }
+                    if (!op.isDone) req.Abort();
+                    bool ok = op.isDone && req.result == UnityWebRequest.Result.Success;
+                    int ms = Mathf.RoundToInt((Time.realtimeSinceStartup - t0) * 1000f);
+                    if (footerPingText != null)
+                    {
+                        footerPingText.text = ok
+                            ? $"SERVER ONLINE   |   PING {ms} MS   |   v{Application.version}"
+                            : $"SERVER OFFLINE   |   PING --   |   v{Application.version}";
+                        footerPingText.color = ok ? Dim : new Color(1f, 0.45f, 0.42f, 0.9f);
+                    }
+                }
+                yield return wait;
             }
         }
 
@@ -420,10 +699,83 @@ namespace Railbound.UI
                 invitePlayerBtn.onClick.AddListener(OnInviteClicked);
             }
 
-            if (squadCountText != null)
+            CacheBadgeVisuals();
+            var party = LobbyParty.Instance;
+            party.Changed += RefreshSquad;
+            RefreshSquad();
+        }
+
+        // ---- squad panel is driven by LobbyParty (local player + up to 2 friends = 3 players) ----
+        private Sprite badgeReadySprite, badgeNotReadySprite, iconReadySprite, iconNotReadySprite;
+        private Color badgeReadyTextColor = Color.black, badgeNotReadyTextColor = new Color(1f, 0.38f, 0.36f, 1f);
+
+        private void CacheBadgeVisuals()
+        {
+            if (squadRows == null) return;
+            if (squadRows.Length > 1 && squadRows[1] != null && squadRows[1].readyBadgeBg != null)
             {
-                squadCountText.text = "3 / 4 PLAYERS";
+                badgeReadySprite = squadRows[1].readyBadgeBg.sprite;
+                if (squadRows[1].readyBadgeText != null) badgeReadyTextColor = squadRows[1].readyBadgeText.color;
+                var ic = squadRows[1].readyBadgeBg.transform.Find("Icon");
+                if (ic != null && ic.GetComponent<Image>() != null) iconReadySprite = ic.GetComponent<Image>().sprite;
             }
+            if (squadRows.Length > 2 && squadRows[2] != null && squadRows[2].readyBadgeBg != null)
+            {
+                badgeNotReadySprite = squadRows[2].readyBadgeBg.sprite;
+                if (squadRows[2].readyBadgeText != null) badgeNotReadyTextColor = squadRows[2].readyBadgeText.color;
+                var ic = squadRows[2].readyBadgeBg.transform.Find("Icon");
+                if (ic != null && ic.GetComponent<Image>() != null) iconNotReadySprite = ic.GetComponent<Image>().sprite;
+            }
+        }
+
+        private void RefreshSquad()
+        {
+            var party = LobbyParty.Instance;
+            var members = party.Members;
+
+            if (squadRows != null)
+            {
+                for (int i = 0; i < squadRows.Length; i++)
+                {
+                    var row = squadRows[i];
+                    if (row == null || row.root == null) continue;
+                    bool has = i < members.Count && i < LobbyParty.MaxMembers;
+
+                    var cg = row.root.GetComponent<CanvasGroup>();
+                    if (cg == null) cg = row.root.AddComponent<CanvasGroup>();
+                    cg.alpha = has ? 1f : 0.35f;
+
+                    if (row.nameText != null) row.nameText.text = has ? members[i].displayName : "OPEN SLOT";
+                    if (row.levelText != null) row.levelText.text = has ? members[i].levelText : "";
+
+                    if (row.readyBadgeBg != null)
+                    {
+                        row.readyBadgeBg.gameObject.SetActive(has);
+                        if (has)
+                        {
+                            bool ready = members[i].ready;
+                            var sp = ready ? badgeReadySprite : badgeNotReadySprite;
+                            if (sp != null) row.readyBadgeBg.sprite = sp;
+                            if (row.readyBadgeText != null)
+                            {
+                                row.readyBadgeText.text = ready ? "READY" : "NOT READY";
+                                row.readyBadgeText.color = ready ? badgeReadyTextColor : badgeNotReadyTextColor;
+                            }
+                            var ic = row.readyBadgeBg.transform.Find("Icon");
+                            var icImg = ic != null ? ic.GetComponent<Image>() : null;
+                            var isp = ready ? iconReadySprite : iconNotReadySprite;
+                            if (icImg != null && isp != null) icImg.sprite = isp;
+                        }
+                    }
+                }
+            }
+
+            if (squadCountText != null) squadCountText.text = $"{members.Count} / {LobbyParty.MaxMembers} PLAYERS";
+            if (invitePlayerBtn != null) invitePlayerBtn.gameObject.SetActive(!party.IsFull);
+
+            // the panel is only as tall as it needs to be: no empty invite row once the party is full
+            var panel = squadCountText != null ? squadCountText.transform.parent as RectTransform : null;
+            if (panel != null) panel.sizeDelta = new Vector2(panel.sizeDelta.x, party.IsFull ? 306f : 372f);
         }
 
         private void OnInviteClicked()
@@ -466,7 +818,7 @@ namespace Railbound.UI
 
             if (footerPingText != null)
             {
-                footerPingText.text = "DATACENTER: SINGAPORE   |   PING: 42ms   |   v1.0.6";
+                footerPingText.text = "CHECKING SERVER...";
             }
         }
 
