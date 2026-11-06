@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using HD = UnityEngine.Rendering.HighDefinition;
 
 namespace Michsky.UI.Reach
 {
@@ -206,6 +208,57 @@ namespace Michsky.UI.Reach
         // MODERN GRAPHICS & URP EXTENSIONS (OPTION 1)
         // ==========================================
 
+        // ==========================================
+        // HDRP SUPPORT: the pause-menu Visuals options drive the map's own HDRP volumes / camera
+        // ==========================================
+
+        private static bool IsHDRP => GraphicsSettings.currentRenderPipeline is HD.HDRenderPipelineAsset;
+
+        private float renderScalePercent = 100f;
+        private bool dynResScalerSet;
+
+        /// <summary>Runtime copies of every global volume's profile in the loaded map(s); the saved assets are never touched.</summary>
+        private List<VolumeProfile> HdProfiles()
+        {
+            var list = new List<VolumeProfile>();
+            foreach (var v in FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (v == null || !v.isGlobal || v.sharedProfile == null) continue;
+                var p = v.profile;
+                if (p != null) list.Add(p);
+            }
+            return list;
+        }
+
+        private void HdEach<T>(Action<T> apply) where T : VolumeComponent
+        {
+            foreach (var p in HdProfiles())
+                if (p.TryGet<T>(out var c) && c != null) apply(c);
+        }
+
+        private HD.HDAdditionalCameraData HdCamera()
+        {
+            if (mainCamera == null) mainCamera = Camera.main;
+            if (mainCamera == null) return null;
+            var d = mainCamera.GetComponent<HD.HDAdditionalCameraData>();
+            if (d == null) d = mainCamera.gameObject.AddComponent<HD.HDAdditionalCameraData>();
+            return d;
+        }
+
+        public void SetVolumetricFog(bool enabled)
+        {
+            PlayerPrefs.SetInt("Graphics_VolumetricFog", enabled ? 1 : 0);
+            if (!IsHDRP) return;
+            HdEach<HD.Fog>(f => f.enableVolumetricFog.Override(enabled));
+        }
+
+        public void SetFog(bool enabled)
+        {
+            PlayerPrefs.SetInt("Graphics_Fog", enabled ? 1 : 0);
+            if (!IsHDRP) return;
+            HdEach<HD.Fog>(f => f.enabled.Override(enabled));
+        }
+
         private VolumeProfile GetSafeProfile()
         {
             if (postProcessingVolume == null) return null;
@@ -234,6 +287,19 @@ namespace Michsky.UI.Reach
 
         public void SetBrightness(float value01)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetFloat("Graphics_Brightness", value01);
+                float offset = (Mathf.Clamp01(value01) - 0.5f) * 3f;         // 0.5 = the map's own exposure
+                foreach (var v in FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (v == null || !v.isGlobal || v.sharedProfile == null) continue;
+                    // the authored (asset) value is the baseline, so repeated changes never accumulate
+                    if (v.sharedProfile.TryGet<HD.Exposure>(out var authored) && v.profile.TryGet<HD.Exposure>(out var live))
+                        live.compensation.Override(authored.compensation.value + offset);
+                }
+                return;
+            }
             PlayerPrefs.SetFloat("Graphics_Brightness", value01);
             try
             {
@@ -271,6 +337,23 @@ namespace Michsky.UI.Reach
 
         public void SetAntiAliasing(int index)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_AntiAliasing", index);
+                var hd = HdCamera();
+                if (hd == null) return;
+                switch (index)
+                {
+                    case 0: hd.antialiasing = HD.HDAdditionalCameraData.AntialiasingMode.None; break;
+                    case 1: hd.antialiasing = HD.HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing; break;
+                    case 2:
+                        hd.antialiasing = HD.HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+                        hd.SMAAQuality = HD.HDAdditionalCameraData.SMAAQualityLevel.High;
+                        break;
+                    default: hd.antialiasing = HD.HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing; break;
+                }
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_AntiAliasing", index);
             if (mainCamera == null) mainCamera = Camera.main;
             if (mainCamera == null) return;
@@ -312,6 +395,19 @@ namespace Michsky.UI.Reach
 
         public void SetRenderScale(float scale)
         {
+            if (IsHDRP)
+            {
+                // HDRP dynamic resolution: the percentage is clamped by the HDRP asset's min / max percentage
+                renderScalePercent = Mathf.Clamp(scale, 0.5f, 2f) * 100f;
+                if (!dynResScalerSet)
+                {
+                    DynamicResolutionHandler.SetDynamicResScaler(() => renderScalePercent, DynamicResScalePolicyType.ReturnsPercentage);
+                    dynResScalerSet = true;
+                }
+                var hd = HdCamera();
+                if (hd != null) hd.allowDynamicResolution = true;
+                return;
+            }
             if (urpAsset != null)
             {
                 urpAsset.renderScale = Mathf.Clamp(scale, 0.5f, 2.0f);
@@ -320,6 +416,14 @@ namespace Michsky.UI.Reach
 
         public void SetFSR(bool enabled)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_FSR", enabled ? 1 : 0);
+                if (mainCamera == null) mainCamera = Camera.main;
+                if (mainCamera != null)
+                    DynamicResolutionHandler.SetUpscaleFilter(mainCamera, enabled ? DynamicResUpscaleFilter.EdgeAdaptiveScalingUpres : DynamicResUpscaleFilter.CatmullRom);
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_FSR", enabled ? 1 : 0);
             if (urpAsset != null)
             {
@@ -329,6 +433,7 @@ namespace Michsky.UI.Reach
 
         public void SetFSRSharpness(float sharpness01)
         {
+            if (IsHDRP) { PlayerPrefs.SetFloat("Graphics_FSRSharpness", sharpness01); return; }   // HDRP takes the sharpness from the render pipeline asset
             PlayerPrefs.SetFloat("Graphics_FSRSharpness", sharpness01);
             if (urpAsset != null)
             {
@@ -350,6 +455,12 @@ namespace Michsky.UI.Reach
 
         public void SetAmbientOcclusion(bool enabled)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_SSAO", enabled ? 1 : 0);
+                HdEach<HD.ScreenSpaceAmbientOcclusion>(a => a.active = enabled);
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_SSAO", enabled ? 1 : 0);
             if (ssaoFeature == null) FindSSAOFeature();
             if (ssaoFeature != null)
@@ -360,6 +471,18 @@ namespace Michsky.UI.Reach
 
         public void SetShadowQuality(int index)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_ShadowQuality", index);
+                int level = Mathf.Clamp(index, 0, 3);
+                foreach (var l in FindObjectsByType<HD.HDAdditionalLightData>(FindObjectsSortMode.None))
+                {
+                    var lt = l != null ? l.GetComponent<Light>() : null;
+                    if (lt == null || lt.type != LightType.Directional) continue;
+                    try { l.SetShadowResolutionLevel(level); } catch (Exception) { }
+                }
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_ShadowQuality", index);
             if (urpAsset == null) return;
 
@@ -397,6 +520,11 @@ namespace Michsky.UI.Reach
 
         public void SetShadowDistance(float distance)
         {
+            if (IsHDRP)
+            {
+                HdEach<HD.HDShadowSettings>(sh => sh.maxShadowDistance.Override(distance));
+                return;
+            }
             if (urpAsset != null)
             {
                 urpAsset.shadowDistance = distance;
@@ -405,6 +533,12 @@ namespace Michsky.UI.Reach
 
         public void SetMotionBlur(bool enabled)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_MotionBlur", enabled ? 1 : 0);
+                HdEach<HD.MotionBlur>(m => m.active = enabled);
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_MotionBlur", enabled ? 1 : 0);
             try
             {
@@ -419,6 +553,12 @@ namespace Michsky.UI.Reach
 
         public void SetBloom(bool enabled)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_Bloom", enabled ? 1 : 0);
+                HdEach<HD.Bloom>(b => b.active = enabled);
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_Bloom", enabled ? 1 : 0);
             try
             {
@@ -433,6 +573,12 @@ namespace Michsky.UI.Reach
 
         public void SetDepthOfField(bool enabled)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetInt("Graphics_DepthOfField", enabled ? 1 : 0);
+                HdEach<HD.DepthOfField>(d => d.active = enabled);
+                return;
+            }
             PlayerPrefs.SetInt("Graphics_DepthOfField", enabled ? 1 : 0);
             try
             {
@@ -447,6 +593,23 @@ namespace Michsky.UI.Reach
 
         public void SetFilmGrain(float intensity01)
         {
+            if (IsHDRP)
+            {
+                PlayerPrefs.SetFloat("Graphics_FilmGrain", intensity01);
+                bool any = false;
+                HdEach<HD.FilmGrain>(g => { any = true; g.active = intensity01 > 0.01f; g.intensity.Override(Mathf.Clamp01(intensity01)); });
+                if (!any && intensity01 > 0.01f)
+                {
+                    var profiles = HdProfiles();
+                    if (profiles.Count > 0)
+                    {
+                        var g = profiles[0].Add<HD.FilmGrain>(true);
+                        g.type.Override(HD.FilmGrainLookup.Medium1);
+                        g.intensity.Override(Mathf.Clamp01(intensity01));
+                    }
+                }
+                return;
+            }
             PlayerPrefs.SetFloat("Graphics_FilmGrain", intensity01);
             try
             {
@@ -598,6 +761,14 @@ namespace Michsky.UI.Reach
             if (PlayerPrefs.HasKey("Graphics_AsyncUpload"))
             {
                 SetAsyncUpload(PlayerPrefs.GetInt("Graphics_AsyncUpload") == 1);
+            }
+            if (PlayerPrefs.HasKey("Graphics_VolumetricFog"))
+            {
+                SetVolumetricFog(PlayerPrefs.GetInt("Graphics_VolumetricFog") == 1);
+            }
+            if (PlayerPrefs.HasKey("Graphics_Fog"))
+            {
+                SetFog(PlayerPrefs.GetInt("Graphics_Fog") == 1);
             }
         }
     }
