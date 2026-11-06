@@ -112,14 +112,7 @@ namespace Railbound.UI
                 go.transform.localScale = Vector3.one * 0.001f;   // pops in (see Update)
                 LobbyCharacterPreviewManager.TintOperator(go, m.operatorIndex);
 
-                var anim = go.GetComponent<Animator>();
-                if (anim != null)
-                {
-                    anim.enabled = true; anim.applyRootMotion = false;
-                    anim.Update(0f);
-                    var st = anim.GetCurrentAnimatorStateInfo(0);
-                    anim.Play(st.fullPathHash, 0, Random.value);   // desync the idle loops
-                }
+                LobbyActorRig.Attach(go, mirror: !left);     // own idle, grounding, look-at and emotes; neighbours mirror each other
                 spawned[m.id] = new Spawned { go = go, operatorIndex = m.operatorIndex, born = Time.unscaledTime, pos = pos, yaw = yaw, scale = modelScale };
             }
 
@@ -195,7 +188,9 @@ namespace Railbound.UI
                 float k = Mathf.Clamp01((t - s.born) / 0.45f);
                 float e = 1f - (1f - k) * (1f - k);
                 s.go.transform.localScale = Vector3.one * (s.scale * Mathf.Lerp(0.92f, 1f, e));
-                s.go.transform.localPosition = Vector3.Lerp(s.go.transform.localPosition, s.pos, Time.unscaledDeltaTime * 8f);
+                var lp = s.go.transform.localPosition;   // x/z only: the rig owns the height (keeps the feet on the floor)
+                lp.x = Mathf.Lerp(lp.x, s.pos.x, Time.unscaledDeltaTime * 8f); lp.z = Mathf.Lerp(lp.z, s.pos.z, Time.unscaledDeltaTime * 8f);
+                s.go.transform.localPosition = lp;
                 s.go.SetActive(k > 0.02f);
             }
 
