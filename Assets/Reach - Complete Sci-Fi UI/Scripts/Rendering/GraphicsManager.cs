@@ -245,6 +245,77 @@ namespace Michsky.UI.Reach
             return d;
         }
 
+        // ---------------- exposure ----------------
+        public void SetExposureAutomatic() { ApplyExposureMode(HD.ExposureMode.AutomaticHistogram, 0); }
+        public void SetExposureFixed() { ApplyExposureMode(HD.ExposureMode.Fixed, 1); }
+
+        private void ApplyExposureMode(HD.ExposureMode mode, int saved)
+        {
+            PlayerPrefs.SetInt("Graphics_ExposureMode", saved);
+            if (!IsHDRP) return;
+            HdEach<HD.Exposure>(e => e.mode.Override(mode));
+        }
+
+        /// <summary>0..1 slider, 0.5 = the map's own exposure compensation (+/- 2 EV).</summary>
+        public void SetExposureCompensation(float value01)
+        {
+            PlayerPrefs.SetFloat("Graphics_ExposureComp", value01);
+            if (!IsHDRP) return;
+            float offset = (Mathf.Clamp01(value01) - 0.5f) * 4f;
+            foreach (var v in FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (v == null || !v.isGlobal || v.sharedProfile == null) continue;
+                if (v.sharedProfile.TryGet<HD.Exposure>(out var authored) && v.profile.TryGet<HD.Exposure>(out var live))
+                    live.compensation.Override(authored.compensation.value + offset);
+            }
+        }
+
+        /// <summary>0 = slow, 1 = normal (the map's own), 2 = fast eye adaptation for automatic exposure.</summary>
+        public void SetExposureAdaptation(int index)
+        {
+            PlayerPrefs.SetInt("Graphics_ExposureAdapt", index);
+            if (!IsHDRP) return;
+            float k = index <= 0 ? 0.4f : index == 1 ? 1f : 2.5f;
+            foreach (var v in FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (v == null || !v.isGlobal || v.sharedProfile == null) continue;
+                if (v.sharedProfile.TryGet<HD.Exposure>(out var authored) && v.profile.TryGet<HD.Exposure>(out var live))
+                {
+                    live.adaptationMode.Override(HD.AdaptationMode.Progressive);
+                    live.adaptationSpeedDarkToLight.Override(authored.adaptationSpeedDarkToLight.value * k);
+                    live.adaptationSpeedLightToDark.Override(authored.adaptationSpeedLightToDark.value * k);
+                }
+            }
+        }
+
+        // ---------------- NVIDIA DLSS ----------------
+        /// <summary>True when the GPU / driver can run DLSS (an NVIDIA RTX card with a recent driver).</summary>
+        public static bool IsDLSSSupported => IsHDRP && HD.HDDynamicResolutionPlatformCapabilities.DLSSDetected;
+
+        public void SetDLSS(bool enabled)
+        {
+            PlayerPrefs.SetInt("Graphics_DLSS", enabled ? 1 : 0);
+            if (!IsHDRP) return;
+            var hd = HdCamera();
+            if (hd == null) return;
+            hd.allowDeepLearningSuperSampling = enabled;
+            if (enabled) hd.allowDynamicResolution = true;
+        }
+
+        // index: 0 Ultra Performance, 1 Performance, 2 Balanced, 3 Quality, 4 DLAA (native resolution anti-aliasing)
+        private static readonly uint[] DlssQualityMap = { 3u, 0u, 1u, 2u, 4u };
+
+        public void SetDLSSQuality(int index)
+        {
+            PlayerPrefs.SetInt("Graphics_DLSSQuality", index);
+            if (!IsHDRP) return;
+            var hd = HdCamera();
+            if (hd == null) return;
+            hd.deepLearningSuperSamplingUseCustomQualitySettings = true;
+            hd.deepLearningSuperSamplingQuality = DlssQualityMap[Mathf.Clamp(index, 0, DlssQualityMap.Length - 1)];
+            hd.deepLearningSuperSamplingUseOptimalSettings = true;
+        }
+
         public void SetVolumetricFog(bool enabled)
         {
             PlayerPrefs.SetInt("Graphics_VolumetricFog", enabled ? 1 : 0);
@@ -290,13 +361,20 @@ namespace Michsky.UI.Reach
             if (IsHDRP)
             {
                 PlayerPrefs.SetFloat("Graphics_Brightness", value01);
-                float offset = (Mathf.Clamp01(value01) - 0.5f) * 3f;         // 0.5 = the map's own exposure
+                float post = (Mathf.Clamp01(value01) - 0.5f) * 2f;            // 0.5 = unchanged, +/- 1 EV
+                bool any = false;
                 foreach (var v in FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 {
                     if (v == null || !v.isGlobal || v.sharedProfile == null) continue;
-                    // the authored (asset) value is the baseline, so repeated changes never accumulate
-                    if (v.sharedProfile.TryGet<HD.Exposure>(out var authored) && v.profile.TryGet<HD.Exposure>(out var live))
-                        live.compensation.Override(authored.compensation.value + offset);
+                    if (!v.profile.TryGet<HD.ColorAdjustments>(out var live)) continue;
+                    float authored = v.sharedProfile.TryGet<HD.ColorAdjustments>(out var a0) ? a0.postExposure.value : 0f;
+                    live.postExposure.Override(authored + post);
+                    any = true;
+                }
+                if (!any)
+                {
+                    var profiles = HdProfiles();
+                    if (profiles.Count > 0) profiles[0].Add<HD.ColorAdjustments>(false).postExposure.Override(post);
                 }
                 return;
             }
@@ -769,6 +847,26 @@ namespace Michsky.UI.Reach
             if (PlayerPrefs.HasKey("Graphics_Fog"))
             {
                 SetFog(PlayerPrefs.GetInt("Graphics_Fog") == 1);
+            }
+            if (PlayerPrefs.HasKey("Graphics_ExposureMode"))
+            {
+                if (PlayerPrefs.GetInt("Graphics_ExposureMode") == 1) SetExposureFixed(); else SetExposureAutomatic();
+            }
+            if (PlayerPrefs.HasKey("Graphics_ExposureComp"))
+            {
+                SetExposureCompensation(PlayerPrefs.GetFloat("Graphics_ExposureComp"));
+            }
+            if (PlayerPrefs.HasKey("Graphics_ExposureAdapt"))
+            {
+                SetExposureAdaptation(PlayerPrefs.GetInt("Graphics_ExposureAdapt"));
+            }
+            if (PlayerPrefs.HasKey("Graphics_DLSSQuality"))
+            {
+                SetDLSSQuality(PlayerPrefs.GetInt("Graphics_DLSSQuality"));
+            }
+            if (PlayerPrefs.HasKey("Graphics_DLSS"))
+            {
+                SetDLSS(PlayerPrefs.GetInt("Graphics_DLSS") == 1);
             }
         }
     }
