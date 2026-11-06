@@ -320,6 +320,7 @@ namespace JUTPS.InventorySystem
                                 switchManager.SwitchToItem(ItemInInventoryToUnlock.ItemSwitchID);
                             }*/
                             InventoryToAddItem.IsPickingItem = true;
+                            Railbound.Audio.PickupSound.Play(InventoryToAddItem.gameObject);
 
                             if (InventoryToAddItem.AutoEquipPickedUpItems)
                             {
@@ -352,6 +353,7 @@ namespace JUTPS.InventorySystem
 
                             Debug.Log(InventoryToAddItem.gameObject.name + " picked the item: " + ItemToAdd.ItemName);
                             InventoryToAddItem.IsPickingItem = true;
+                            Railbound.Audio.PickupSound.Play(InventoryToAddItem.gameObject);
                             return;
                         }
                     }

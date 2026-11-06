@@ -16,6 +16,12 @@ namespace Railbound.Gameplay
     {
         public static Map1DeathRestartController Instance { get; private set; }
 
+        /// <summary>
+        /// The physics step the whole game runs at. The camera / slow-motion scripts and the Project Settings use the same
+        /// value, so jump arcs, gravity and step-up feel identical on every spawn.
+        /// </summary>
+        public const float GameFixedTimestep = 0.015f;
+
         [Header("Restart Configuration")]
         [Tooltip("Time in seconds to wait after player death before restarting MAP-1.")]
         [SerializeField] private float restartDelay = 3.0f;
@@ -66,7 +72,7 @@ namespace Railbound.Gameplay
 
             // Ensure normal time scale upon scene load
             Time.timeScale = 1.0f;
-            Time.fixedDeltaTime = 0.02f;
+            Time.fixedDeltaTime = GameFixedTimestep;
         }
 
         private void Start()
@@ -90,7 +96,7 @@ namespace Railbound.Gameplay
             isRestarting = false;
             restartTimer = 0f;
             Time.timeScale = 1.0f;
-            Time.fixedDeltaTime = 0.02f;
+            Time.fixedDeltaTime = GameFixedTimestep;
             FindAndRegisterActivePlayer();
         }
 
@@ -195,7 +201,7 @@ namespace Railbound.Gameplay
             if (enableDeathSlowMotion)
             {
                 Time.timeScale = deathTimeScale;
-                Time.fixedDeltaTime = 0.02f * Time.timeScale;
+                Time.fixedDeltaTime = GameFixedTimestep * Time.timeScale;
             }
 
             // Count down in unscaled real time so slow-mo does not delay the actual countdown
@@ -209,7 +215,7 @@ namespace Railbound.Gameplay
 
             // Restore normal time scale before scene change
             Time.timeScale = 1.0f;
-            Time.fixedDeltaTime = 0.02f;
+            Time.fixedDeltaTime = GameFixedTimestep;
 
             // Cleanly shut down Netcode client session if active to avoid socket leaks
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient)

@@ -339,7 +339,7 @@ namespace Railbound.UI
                 _sonarRebindCoroutine = StartCoroutine(ListenForCustomKey(entry, "Player_Sonar_Key", KeyCode.I, code =>
                 {
                     var playerSonar = FindFirstObjectByType<PlayerSonarSkill>();
-                    if (playerSonar != null) playerSonar.triggerKey = code;
+                    if (playerSonar != null) { playerSonar.triggerKey = code; playerSonar.RefreshKeyHint(); }
                 }));
             }
             else if (entry.isHealAction)
@@ -476,7 +476,7 @@ namespace Railbound.UI
             PlayerPrefs.Save();
 
             var playerSonar = FindFirstObjectByType<PlayerSonarSkill>();
-            if (playerSonar != null) playerSonar.triggerKey = KeyCode.I;
+            if (playerSonar != null) { playerSonar.triggerKey = KeyCode.I; playerSonar.RefreshKeyHint(); }
 
             var medkitSys = FindFirstObjectByType<PlayerMedkitSystem>();
             if (medkitSys != null) medkitSys.SetHealKey(KeyCode.H);

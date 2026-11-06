@@ -106,6 +106,9 @@ public class JUNetworkPlayer : NetworkBehaviour
             {
                 rb.isKinematic = false;
                 rb.useGravity = true;
+                // Keep interpolation OFF: JU TPS turns the character by writing transform.rotation every frame, and Rigidbody
+                // interpolation overwrites that with the last physics pose, which breaks strafe / backwards (A, S, D) movement.
+                rb.interpolation = RigidbodyInterpolation.None;
             }
             if (anim != null) anim.enabled = true;
             if (sonarSkill != null) sonarSkill.enabled = true;
@@ -174,7 +177,7 @@ public class JUNetworkPlayer : NetworkBehaviour
                 characterController.UseDefaultControllerInput = false;
                 characterController.enabled = false;
             }
-            if (rb != null) rb.isKinematic = true; 
+            if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }   // NetworkTransform interpolates remote players
             if (sonarSkill != null) sonarSkill.enabled = false;
 
             // Keep visual retargeter active so remote soldier animates smoothly with networked bones

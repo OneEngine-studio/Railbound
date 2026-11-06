@@ -199,7 +199,7 @@ namespace Railbound.Gameplay
 
             if (added > 0)
             {
-                PlayAudio(medkitPickupSfx, 0.85f);
+                // Pickup sound is played by Railbound.Audio.PickupSound from MedkitPickup.
                 OnMedkitsChanged?.Invoke(currentMedkits);
                 ShowNotification($"<color=#00E676>+{added} MEDKIT ACQUIRED</color> [{healKey}] To Heal");
                 return true;

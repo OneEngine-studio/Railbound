@@ -15,7 +15,7 @@ namespace Railbound.Gameplay
     public class PlayerSurvivalTerrorController : MonoBehaviour
     {
         [Header("Health & Threat Tuning")]
-        public float maxSurvivalHealth = 50f; // Low HP pool for extreme lethality & tension
+        public float maxSurvivalHealth = 100f; // Player health pool
         public float dangerThreshold = 0.55f;  // Below 55% = Danger
         public float criticalThreshold = 0.30f; // Below 30% = Pure Terror / 1 hit from death
 
