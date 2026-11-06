@@ -41,6 +41,7 @@ namespace Railbound.UI
 
         private GameObject currentCharacterInstance;
         private Animator currentAnimator;
+        private LobbyActorRig currentRig;
         private float targetYRotation = 0f;
         private float currentYRotation = 0f;
         private bool isDragging = false;
@@ -205,11 +206,7 @@ namespace Railbound.UI
             currentCharacterInstance.transform.localScale = Vector3.one;
 
             currentAnimator = currentCharacterInstance.GetComponent<Animator>();
-            if (currentAnimator != null)
-            {
-                currentAnimator.enabled = true;
-                currentAnimator.applyRootMotion = false;
-            }
+            currentRig = LobbyActorRig.Attach(currentCharacterInstance, mirror: false);   // idle, grounding, look-at, emotes
 
             ApplyOperatorVisualVariant(index);
 
@@ -250,31 +247,8 @@ namespace Railbound.UI
 
         public void PlayEmote(int emoteId)
         {
-            if (currentAnimator == null)
-            {
-                if (currentCharacterInstance != null)
-                    currentAnimator = currentCharacterInstance.GetComponent<Animator>();
-            }
-
-            if (currentAnimator != null)
-            {
-                currentAnimator.applyRootMotion = false;
-                currentAnimator.SetInteger("EmoteID", emoteId);
-                currentAnimator.SetTrigger("PlayEmote");
-
-                // Also crossfade directly to state name to guarantee immediate transition
-                string stateName = emoteId switch
-                {
-                    1 => "Emote_Salute",
-                    2 => "Emote_Wave",
-                    3 => "Emote_Flex",
-                    4 => "Emote_Victory",
-                    _ => "Military_Idle"
-                };
-                currentAnimator.CrossFadeInFixedTime(stateName, 0.2f, 0, 0f);
-                Debug.Log($"[LobbyPreview] Triggered Emote ID: {emoteId} ({stateName})");
-            }
-
+            if (currentRig == null && currentCharacterInstance != null) currentRig = currentCharacterInstance.GetComponent<LobbyActorRig>();
+            if (currentRig != null) currentRig.PlayEmote(emoteId);
             OnEmoteTriggered?.Invoke(emoteId);
         }
 

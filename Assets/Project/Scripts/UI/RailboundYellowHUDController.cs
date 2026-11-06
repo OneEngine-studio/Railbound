@@ -166,6 +166,8 @@ namespace Railbound.UI
         private void Update()
         {
             // Keyboard shortcuts
+            if (LobbyEmoteWheel.IsOpen) { TickDeployState(); return; }   // the emote wheel owns the keys while it is open
+
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 if (deployState == DeployState.Idle || deployState == DeployState.Failed) OnDeployClicked();
@@ -790,6 +792,13 @@ namespace Railbound.UI
         // ----------------------------------------------------
         private void BindEmotes()
         {
+            // the old row of four chips is replaced by the Emotes section (button + wheel)
+            Transform bar = btnEmoteSalute != null ? btnEmoteSalute.transform.parent : null;
+            if (bar != null) bar.gameObject.SetActive(false);
+            var emoteCanvas = GetComponentInParent<Canvas>();
+            Transform emoteRoot = emoteCanvas != null ? emoteCanvas.rootCanvas.transform : transform;
+            LobbyEmoteWheel.Create(emoteRoot, bar != null ? bar.parent : transform, deployButtonLabel != null ? deployButtonLabel.font : null);
+
             if (btnEmoteSalute != null) btnEmoteSalute.onClick.AddListener(() => TriggerEmote(1));
             if (btnEmoteWave != null) btnEmoteWave.onClick.AddListener(() => TriggerEmote(2));
             if (btnEmoteFlex != null) btnEmoteFlex.onClick.AddListener(() => TriggerEmote(3));
