@@ -199,6 +199,7 @@ namespace Railbound.UI
         private void OnDestroy()
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
+            if (LobbyParty.Instance != null) LobbyParty.Instance.Changed -= RefreshSquad;
         }
 
         // ----------------------------------------------------
@@ -263,6 +264,8 @@ namespace Railbound.UI
             if (headerPlayerLevel != null) headerPlayerLevel.text = levelStr;
             if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = xpProgress;
 
+            LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+
             if (headerCoinsText != null) headerCoinsText.text = "2,450";
             if (headerStarsText != null) headerStarsText.text = "850";
 
@@ -283,6 +286,8 @@ namespace Railbound.UI
             if (headerOperatorName != null) headerOperatorName.text = opName;
             if (headerOperatorRole != null) headerOperatorRole.text = opRole;
             if (floatingOperatorName != null) floatingOperatorName.text = opName;
+            if (LobbyCharacterPreviewManager.Instance != null)
+                LobbyParty.Instance.SetLocal(null, null, LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex);
         }
 
         // ----------------------------------------------------
@@ -694,10 +699,83 @@ namespace Railbound.UI
                 invitePlayerBtn.onClick.AddListener(OnInviteClicked);
             }
 
-            if (squadCountText != null)
+            CacheBadgeVisuals();
+            var party = LobbyParty.Instance;
+            party.Changed += RefreshSquad;
+            RefreshSquad();
+        }
+
+        // ---- squad panel is driven by LobbyParty (local player + up to 2 friends = 3 players) ----
+        private Sprite badgeReadySprite, badgeNotReadySprite, iconReadySprite, iconNotReadySprite;
+        private Color badgeReadyTextColor = Color.black, badgeNotReadyTextColor = new Color(1f, 0.38f, 0.36f, 1f);
+
+        private void CacheBadgeVisuals()
+        {
+            if (squadRows == null) return;
+            if (squadRows.Length > 1 && squadRows[1] != null && squadRows[1].readyBadgeBg != null)
             {
-                squadCountText.text = "3 / 4 PLAYERS";
+                badgeReadySprite = squadRows[1].readyBadgeBg.sprite;
+                if (squadRows[1].readyBadgeText != null) badgeReadyTextColor = squadRows[1].readyBadgeText.color;
+                var ic = squadRows[1].readyBadgeBg.transform.Find("Icon");
+                if (ic != null && ic.GetComponent<Image>() != null) iconReadySprite = ic.GetComponent<Image>().sprite;
             }
+            if (squadRows.Length > 2 && squadRows[2] != null && squadRows[2].readyBadgeBg != null)
+            {
+                badgeNotReadySprite = squadRows[2].readyBadgeBg.sprite;
+                if (squadRows[2].readyBadgeText != null) badgeNotReadyTextColor = squadRows[2].readyBadgeText.color;
+                var ic = squadRows[2].readyBadgeBg.transform.Find("Icon");
+                if (ic != null && ic.GetComponent<Image>() != null) iconNotReadySprite = ic.GetComponent<Image>().sprite;
+            }
+        }
+
+        private void RefreshSquad()
+        {
+            var party = LobbyParty.Instance;
+            var members = party.Members;
+
+            if (squadRows != null)
+            {
+                for (int i = 0; i < squadRows.Length; i++)
+                {
+                    var row = squadRows[i];
+                    if (row == null || row.root == null) continue;
+                    bool has = i < members.Count && i < LobbyParty.MaxMembers;
+
+                    var cg = row.root.GetComponent<CanvasGroup>();
+                    if (cg == null) cg = row.root.AddComponent<CanvasGroup>();
+                    cg.alpha = has ? 1f : 0.35f;
+
+                    if (row.nameText != null) row.nameText.text = has ? members[i].displayName : "OPEN SLOT";
+                    if (row.levelText != null) row.levelText.text = has ? members[i].levelText : "";
+
+                    if (row.readyBadgeBg != null)
+                    {
+                        row.readyBadgeBg.gameObject.SetActive(has);
+                        if (has)
+                        {
+                            bool ready = members[i].ready;
+                            var sp = ready ? badgeReadySprite : badgeNotReadySprite;
+                            if (sp != null) row.readyBadgeBg.sprite = sp;
+                            if (row.readyBadgeText != null)
+                            {
+                                row.readyBadgeText.text = ready ? "READY" : "NOT READY";
+                                row.readyBadgeText.color = ready ? badgeReadyTextColor : badgeNotReadyTextColor;
+                            }
+                            var ic = row.readyBadgeBg.transform.Find("Icon");
+                            var icImg = ic != null ? ic.GetComponent<Image>() : null;
+                            var isp = ready ? iconReadySprite : iconNotReadySprite;
+                            if (icImg != null && isp != null) icImg.sprite = isp;
+                        }
+                    }
+                }
+            }
+
+            if (squadCountText != null) squadCountText.text = $"{members.Count} / {LobbyParty.MaxMembers} PLAYERS";
+            if (invitePlayerBtn != null) invitePlayerBtn.gameObject.SetActive(!party.IsFull);
+
+            // the panel is only as tall as it needs to be: no empty invite row once the party is full
+            var panel = squadCountText != null ? squadCountText.transform.parent as RectTransform : null;
+            if (panel != null) panel.sizeDelta = new Vector2(panel.sizeDelta.x, party.IsFull ? 306f : 372f);
         }
 
         private void OnInviteClicked()
