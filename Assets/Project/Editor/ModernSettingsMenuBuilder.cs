@@ -12,27 +12,27 @@ using UnityEngine.UI;
 namespace Michsky.UI.Reach
 {
     // NOTE: this builder used to run automatically after every script reload ([InitializeOnLoad]); it deletes and
-    // rebuilds the Graphics tab + VRAM widget and saves MAP-1 each time, which silently overwrote hand edits to the
-    // settings menu. It now only runs when invoked from Tools > Build Modern Settings in MAP-1.
+    // rebuilds the Graphics tab + VRAM widget and saves MAP-BR each time, which silently overwrote hand edits to the
+    // settings menu. It now only runs when invoked from Tools > Build Modern Settings in MAP-BR.
     public class ModernSettingsMenuBuilder : MonoBehaviour
     {
 
-        [MenuItem("Tools/Build Modern Settings in MAP-1")]
+        [MenuItem("Tools/Build Modern Settings in MAP-BR")]
         public static void BuildMenu()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
-            if (!activeScene.name.Contains("MAP-1"))
+            if (!activeScene.name.Contains("MAP-BR"))
             {
-                EditorSceneManager.OpenScene("Assets/Project/MAP-1.unity");
+                EditorSceneManager.OpenScene("Assets/TerrainDemoScene_HDRP/Scenes/MAP-BR.unity");
             }
 
             // 1. Locate Canvas - Pause Menu
             var canvas = Resources.FindObjectsOfTypeAll<GameObject>()
-                .FirstOrDefault(go => go.name == "Canvas - Pause Menu" && go.scene.name == "MAP-1");
+                .FirstOrDefault(go => go.name == "Canvas - Pause Menu" && go.scene.name == "MAP-BR");
 
             if (canvas == null)
             {
-                Debug.LogError("[SettingsBuilder] Canvas - Pause Menu not found in MAP-1!");
+                Debug.LogError("[SettingsBuilder] Canvas - Pause Menu not found in MAP-BR!");
                 return;
             }
 
@@ -444,7 +444,7 @@ namespace Michsky.UI.Reach
             EditorSceneManager.MarkSceneDirty(activeScene);
             EditorSceneManager.SaveScene(activeScene);
 
-            Debug.Log("<color=green><b>[SettingsBuilder]</b> Modern Warfare VRAM UI & Black Background successfully built in MAP-1!</color>");
+            Debug.Log("<color=green><b>[SettingsBuilder]</b> Modern Warfare VRAM UI & Black Background successfully built in MAP-BR!</color>");
         }
 
         private static void BuildVRAMWidget(Transform descArea)

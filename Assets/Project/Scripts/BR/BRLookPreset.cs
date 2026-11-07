@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 namespace Railbound.BR
 {
     /// <summary>
-    /// Switches MAP-1 between a bright Day look and the golden-hour Sunset look.
+    /// Switches MAP-BR between a bright Day look and the golden-hour Sunset look.
     /// It locks the day/night cycle to the preset's hour and enables the matching post-processing / fog volume.
     /// Change Active in the inspector (it applies in the editor and at match start).
     /// </summary>

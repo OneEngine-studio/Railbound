@@ -14,7 +14,7 @@ namespace Railbound.Networking
     /// When the user clicks DEPLOY:
     /// 1. Connects/ensures the Nakama socket and creates a real-time Nakama match.
     /// 2. Starts Unity Netcode as Host (spawning the local player).
-    /// 3. Seamlessly transitions the scene to MAP-1 with synchronized Netcode scene management.
+    /// 3. Seamlessly transitions the scene to MAP-BR with synchronized Netcode scene management.
     /// </summary>
     public class LobbyMatchmakingController : MonoBehaviour
     {
@@ -22,7 +22,7 @@ namespace Railbound.Networking
 
         [Header("Scene Configuration")]
         [Tooltip("The target gameplay scene to load upon match deployment.")]
-        [SerializeField] private string targetGameplayScene = "MAP-1";
+        [SerializeField] private string targetGameplayScene = "MAP-BR";
 
         [Header("Netcode Configuration")]
         [Tooltip("Default transport port for Netcode.")]
@@ -41,7 +41,7 @@ namespace Railbound.Networking
         public string CurrentMatchId { get; private set; }
         public bool IsDeploying { get; private set; }
 
-        /// <summary>Raised with every deployment status line (e.g. "CREATING NAKAMA MATCH...", "LOADING MAP-1...", "DEPLOY FAILED", "CANCELLED").</summary>
+        /// <summary>Raised with every deployment status line (e.g. "CREATING NAKAMA MATCH...", "LOADING MAP-BR...", "DEPLOY FAILED", "CANCELLED").</summary>
         public event Action<string> StatusChanged;
 
         /// <summary>True while a deployment can still be cancelled (before the gameplay scene starts loading).</summary>
@@ -77,7 +77,7 @@ namespace Railbound.Networking
         }
 
         /// <summary>
-        /// Initiates the full deployment flow: creates Nakama match, starts Netcode host, and loads MAP-1.
+        /// Initiates the full deployment flow: creates Nakama match, starts Netcode host, and loads MAP-BR.
         /// </summary>
         public async void Deploy()
         {
@@ -121,9 +121,9 @@ namespace Railbound.Networking
                 _startedHostHere = !alreadyRunning;
                 if (_cancelRequested) { AbortDeploy(); return; }
 
-                // 3. Load Target Gameplay Scene (MAP-1)
+                // 3. Load Target Gameplay Scene (MAP-BR)
                 _sceneLoadStarted = true;
-                UpdateStatus("LOADING MAP-1...");
+                UpdateStatus("LOADING MAP-BR...");
                 await Task.Delay(450);   // let the lobby's loading overlay fade in before the scene load takes over
                 LoadGameplayScene();
             }

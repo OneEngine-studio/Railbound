@@ -303,7 +303,7 @@ namespace Railbound.UI
 
         private void HandleReadyClicked()
         {
-            Debug.Log("[LobbyUI] DEPLOY clicked - initiating match and scene transition to MAP-1");
+            Debug.Log("[LobbyUI] DEPLOY clicked - initiating match and scene transition to MAP-BR");
             if (readyText != null) readyText.text = "DEPLOYING...";
             onReadyClicked?.Invoke();
 
