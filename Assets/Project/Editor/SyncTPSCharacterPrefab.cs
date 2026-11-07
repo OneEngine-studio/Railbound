@@ -16,9 +16,9 @@ namespace Railbound.Editor
         public static string Sync()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
-            if (!activeScene.name.Contains("MAP-1"))
+            if (!activeScene.name.Contains("MAP-BR"))
             {
-                EditorSceneManager.OpenScene("Assets/Project/MAP-1.unity");
+                EditorSceneManager.OpenScene("Assets/TerrainDemoScene_HDRP/Scenes/MAP-BR.unity");
             }
 
             GameObject scenePlayer = GameObject.Find("TPS Character");
@@ -28,7 +28,7 @@ namespace Railbound.Editor
             }
             if (scenePlayer == null)
             {
-                return "ERROR: Scene player 'TPS Character' not found in MAP-1!";
+                return "ERROR: Scene player 'TPS Character' not found in MAP-BR!";
             }
 
             string prefabPath = "Assets/SandBox/Networking/Prefabs/TPS Character.prefab";

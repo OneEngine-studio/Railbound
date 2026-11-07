@@ -25,7 +25,7 @@ namespace Project.Editor
             };
         }
 
-        [MenuItem("Tools/Railbound/Apply AAA Graphics & Lighting to MAP-1")]
+        [MenuItem("Tools/Railbound/Apply AAA Graphics & Lighting to MAP-BR")]
         public static void ApplyAAAGraphicsAndLighting()
         {
             Debug.Log("<color=cyan><b>[AAALighting]</b> Starting AAA Lighting, Post-Processing & Volume Setup...</color>");
@@ -33,11 +33,11 @@ namespace Project.Editor
             // 1. Upgrade HDRP Pipeline Assets
             UpgradeHDRPAssets();
 
-            // 2. Open MAP-1 scene if not active
+            // 2. Open MAP-BR scene if not active
             var activeScene = EditorSceneManager.GetActiveScene();
-            if (!activeScene.name.Contains("MAP-1"))
+            if (!activeScene.name.Contains("MAP-BR"))
             {
-                activeScene = EditorSceneManager.OpenScene("Assets/Project/MAP-1.unity");
+                activeScene = EditorSceneManager.OpenScene("Assets/TerrainDemoScene_HDRP/Scenes/MAP-BR.unity");
             }
 
             // 3. Clean up obsolete and duplicate empty volumes

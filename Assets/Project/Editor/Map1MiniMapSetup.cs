@@ -10,21 +10,21 @@ namespace Railbound.Editor
     public static class Map1MiniMapSetup
     {
         /// <summary>
-        /// Makes sure MAP-1 has a MiniMapRoot with the <see cref="Map1MiniMapController"/> (the controller builds the whole
+        /// Makes sure MAP-BR has a MiniMapRoot with the <see cref="Map1MiniMapController"/> (the controller builds the whole
         /// minimap / full map UI itself at runtime from the terrain) and that the player has a sonar skill.
         /// </summary>
-        [MenuItem("Tools/Setup MAP-1 Minimap and Sonar")]
+        [MenuItem("Tools/Setup MAP-BR Minimap and Sonar")]
         public static string Setup()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
-            if (!activeScene.name.Contains("MAP-1"))
+            if (!activeScene.name.Contains("MAP-BR"))
             {
-                activeScene = EditorSceneManager.OpenScene("Assets/Project/MAP-1.unity");
+                activeScene = EditorSceneManager.OpenScene("Assets/TerrainDemoScene_HDRP/Scenes/MAP-BR.unity");
             }
 
             var uiParentGO = GameObject.Find("User Interface/UI");
             if (uiParentGO == null) uiParentGO = GameObject.Find("User Interface");
-            if (uiParentGO == null) return "Error: User Interface not found in MAP-1!";
+            if (uiParentGO == null) return "Error: User Interface not found in MAP-BR!";
 
             Transform existing = uiParentGO.transform.Find("MiniMapRoot");
             GameObject rootGO;
@@ -54,7 +54,7 @@ namespace Railbound.Editor
 
             EditorSceneManager.MarkSceneDirty(activeScene);
             EditorSceneManager.SaveScene(activeScene);
-            return "SUCCESS: MAP-1 minimap controller and sonar skill configured and saved.";
+            return "SUCCESS: MAP-BR minimap controller and sonar skill configured and saved.";
         }
     }
 }
