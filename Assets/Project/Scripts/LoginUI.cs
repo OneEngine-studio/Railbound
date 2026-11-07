@@ -49,10 +49,10 @@ public partial class LoginUI : MonoBehaviour
     private bool termsAccepted = false;
     private GameObject ageCheckmark;
     private GameObject termsCheckmark;
-    // Warzone Yellow HUD palette: dark steel boxes, tactical yellow when checked
-    private static readonly Color uncheckedColor = new Color(0.095f, 0.133f, 0.176f, 0.9f);
-    private static readonly Color checkedColor = new Color(1.0f, 0.816f, 0.0f, 1f); // #FFD000
-    private static readonly Color checkTickColor = new Color(0.05f, 0.06f, 0.08f, 1f);
+    // Monochrome palette: dark boxes, white when checked
+    private static readonly Color uncheckedColor = new Color(0.09f, 0.09f, 0.09f, 1f);
+    private static readonly Color checkedColor = new Color(1f, 1f, 1f, 1f);
+    private static readonly Color checkTickColor = new Color(0f, 0f, 0f, 1f);
 
     [Header("Error Popup")]
     public CanvasGroup errorPopupCanvasGroup;
@@ -334,10 +334,9 @@ public partial class LoginUI : MonoBehaviour
 
                 if (www.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
                 {
-                    ShowErrorPopup("SERVER UNREACHABLE",
-                        "Cannot connect to the game server at " + AuthenticationService.Instance.ApiBaseUrl +
-                        ". Please check your internet connection and try again.",
-                        "error", "retry", () => _ = CheckServerConnection());
+                    ShowErrorPopup("UNABLE TO CONNECT",
+                        "We couldn't reach the Railbound servers. Check your internet connection and try again.",
+                        "error", "retry_only", () => _ = CheckServerConnection());
                     if (ServerStatusText) ServerStatusText.text = "Offline";
                     if (OnlineDot) OnlineDot.color = Color.red;
                 }
@@ -354,8 +353,8 @@ public partial class LoginUI : MonoBehaviour
             SetLoading(false);
             Debug.LogWarning($"[LoginUI] Server check failed: {ex.Message}");
             ShowErrorPopup("CONNECTION ERROR",
-                "Unable to reach the game server. Please check your network connection.",
-                "error", "retry", () => _ = CheckServerConnection());
+                "We couldn't reach the Railbound servers. Check your internet connection and try again.",
+                "error", "retry_only", () => _ = CheckServerConnection());
         }
     }
 
