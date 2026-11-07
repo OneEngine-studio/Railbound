@@ -117,7 +117,7 @@ namespace Railbound.UI
             }
 
             bool show = player != null && player.isActiveAndEnabled;
-            float target = show && Time.timeScale > 0.01f ? 1f : 0f;
+            float target = show && Time.timeScale > 0.01f && !DeathScreenUI.IsShowing ? 1f : 0f;
             rootGroup.alpha = Mathf.MoveTowards(rootGroup.alpha, target, Time.unscaledDeltaTime * 5f);
             if (!show) return;
 

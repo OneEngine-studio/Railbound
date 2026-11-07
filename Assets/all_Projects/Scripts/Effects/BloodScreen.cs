@@ -10,6 +10,10 @@ namespace JUTPS.FX
     public class BloodScreen : MonoBehaviour
     {
         public static BloodScreen instance;
+
+        [Tooltip("Keep a permanent blood tint while health is low. Off by default: the low-health vignette, grading and audio (PlayerSurvivalTerrorController) handle that now.")]
+        public bool tintByHealth = false;
+        [Range(0f, 1f)] public float hitFlashAlpha = 0.5f;
         JUTPS.CharacterBrain.JUCharacterBrain pl;
         Image img;
         float healthvalue;
@@ -29,13 +33,13 @@ namespace JUTPS.FX
             if (pl.CharacterHealth != null)
             {
                 healthvalue = Mathf.Lerp(healthvalue, pl.CharacterHealth.Health / pl.CharacterHealth.MaxHealth, 15 * Time.deltaTime);
-                currentColor = Color.Lerp(Color.white, Color.clear, healthvalue);
+                currentColor = tintByHealth ? Color.Lerp(Color.white, Color.clear, healthvalue) : Color.clear;
                 img.color = Color.Lerp(img.color, currentColor, 5 * Time.deltaTime);
             }
         }
         private void PlayerHasHited()
         {
-            img.color = Color.white;
+            img.color = new Color(1f, 1f, 1f, hitFlashAlpha);
         }
         public static void PlayerTakingDamaged()
         {

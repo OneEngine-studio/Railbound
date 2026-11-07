@@ -10,7 +10,7 @@ namespace Railbound.Gameplay
     /// <summary>
     /// Manages player death detection and automatic scene restart for MAP-1.
     /// Supports both local offline player (TPS Character) and networked player (JUNetworkPlayer).
-    /// Displays a tactical "KILLED IN ACTION" HUD overlay with countdown before cleanly reloading MAP-1.
+    /// Shows the DeathScreenUI (ELIMINATED + countdown) before cleanly reloading the map.
     /// </summary>
     public class Map1DeathRestartController : MonoBehaviour
     {
@@ -36,17 +36,6 @@ namespace Railbound.Gameplay
         [SerializeField] private JUHealth activeHealth;
         [SerializeField] private bool isRestarting = false;
         [SerializeField] private float restartTimer = 0f;
-
-        // UI Styles
-        private GUIStyle _fullscreenVignetteStyle;
-        private GUIStyle _bannerBoxStyle;
-        private GUIStyle _subHeaderStyle;
-        private GUIStyle _deathHeaderStyle;
-        private GUIStyle _countdownStyle;
-        private GUIStyle _detailStyle;
-        private Texture2D _vignetteTex;
-        private Texture2D _bannerTex;
-        private bool _stylesInitialized = false;
 
         private void Awake()
         {
@@ -193,6 +182,9 @@ namespace Railbound.Gameplay
 
             Debug.LogWarning($"[Map1DeathRestartController] Local player killed! Initiating MAP-1 restart countdown ({restartDelay:F1}s)...");
 
+            // elimination sound: 3D at the body, local player only, closes slowly after the respawn
+            DeathAudio.Play(activePlayer != null ? activePlayer.transform.position + Vector3.up : Vector3.zero);
+            Railbound.UI.DeathScreenUI.Show(restartDelay, () => restartTimer, SceneManager.GetActiveScene().name);
             StartCoroutine(DeathRestartCoroutine());
         }
 
@@ -233,106 +225,6 @@ namespace Railbound.Gameplay
 
             Debug.Log($"[Map1DeathRestartController] Restarting scene '{sceneName}' now...");
             SceneManager.LoadScene(sceneName);
-        }
-
-        private void OnGUI()
-        {
-            if (!isRestarting) return;
-
-            // Skip rendering in headless dedicated server builds
-            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
-
-            InitStyles();
-
-            float screenW = Screen.width;
-            float screenH = Screen.height;
-
-            // 1. Semi-transparent dark red tactical vignette overlay
-            if (_vignetteTex != null)
-            {
-                GUI.DrawTexture(new Rect(0, 0, screenW, screenH), _vignetteTex, ScaleMode.StretchToFill);
-            }
-
-            // 2. Central Tactical Banner
-            float bannerW = Mathf.Min(680, screenW - 40);
-            float bannerH = 220;
-            float bannerX = (screenW - bannerW) * 0.5f;
-            float bannerY = (screenH - bannerH) * 0.38f;
-
-            Rect bannerRect = new Rect(bannerX, bannerY, bannerW, bannerH);
-            GUI.Box(bannerRect, GUIContent.none, _bannerBoxStyle);
-
-            GUILayout.BeginArea(new Rect(bannerX + 20, bannerY + 16, bannerW - 40, bannerH - 32));
-            GUILayout.BeginVertical();
-
-            GUILayout.Label("── MISSION FAILED ──", _subHeaderStyle);
-            GUILayout.Space(2);
-            GUILayout.Label("KILLED IN ACTION", _deathHeaderStyle);
-            GUILayout.Space(8);
-
-            string countdownStr = $"RESTARTING OPERATION IN {Mathf.Max(0f, restartTimer):0.0}s";
-            GUILayout.Label(countdownStr, _countdownStyle);
-            GUILayout.Space(6);
-
-            GUILayout.Label($"Disconnecting from server ({ServerConfig.GameServerAddress}) & reloading MAP-1...", _detailStyle);
-
-            GUILayout.EndVertical();
-            GUILayout.EndArea();
-        }
-
-        private void InitStyles()
-        {
-            if (_stylesInitialized) return;
-
-            // Red/Dark tactical vignette texture
-            _vignetteTex = new Texture2D(1, 1);
-            _vignetteTex.SetPixel(0, 0, new Color(0.25f, 0.02f, 0.02f, 0.65f));
-            _vignetteTex.Apply();
-
-            // Dark military banner background texture
-            _bannerTex = new Texture2D(1, 1);
-            _bannerTex.SetPixel(0, 0, new Color(0.04f, 0.05f, 0.07f, 0.95f));
-            _bannerTex.Apply();
-
-            _bannerBoxStyle = new GUIStyle(GUI.skin.box)
-            {
-                normal = { background = _bannerTex },
-                padding = new RectOffset(20, 20, 20, 20)
-            };
-
-            _subHeaderStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(1.0f, 0.35f, 0.35f) }
-            };
-
-            _deathHeaderStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 32,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(1.0f, 0.12f, 0.12f) }
-            };
-
-            _countdownStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 17,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(0.0f, 0.95f, 1.0f) }
-            };
-
-            _detailStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Normal,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(0.7f, 0.75f, 0.85f) }
-            };
-
-            _stylesInitialized = true;
         }
     }
 }
