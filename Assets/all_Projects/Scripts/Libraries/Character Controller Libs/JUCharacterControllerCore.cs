@@ -287,9 +287,6 @@ namespace JUTPS.CharacterBrain
             // Get necessary references
             anim = GetComponent<Animator>();
             rb = GetComponent<Rigidbody>();
-            // Physics runs at a fixed rate while frames render at another one; without interpolation the body (and the camera that follows it)
-            // visibly steps, which is most obvious in the fast vertical motion of a jump.
-            if (rb != null && !rb.isKinematic && rb.interpolation == RigidbodyInterpolation.None) rb.interpolation = RigidbodyInterpolation.Interpolate;
             coll = GetComponent<Collider>();
             if (WhatIsGround == 0) WhatIsGround = LayerMask.GetMask("Default", "Terrain", "Walls", "VehicleMeshCollider", "Vehicle");
             if (WhatIsWall == 0) WhatIsWall = LayerMask.GetMask("Default", "Terrain", "Walls", "VehicleMeshCollider", "Vehicle");
