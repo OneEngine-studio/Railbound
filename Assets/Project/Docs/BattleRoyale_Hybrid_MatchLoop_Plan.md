@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary & Design Vision
 
-Railbound's core Battle Royale mode is engineered for **fast-paced, high-intensity tactical combat** centered around the **Iron Valley Freight Depot** (`MAP-BR.unity`).
+Railbound's core Battle Royale mode is engineered for **fast-paced, high-intensity tactical combat** centered around the **Iron Valley Freight Depot** (`MAP-1.unity`).
 
 | Metric | Specification |
 | :--- | :--- |
@@ -32,7 +32,7 @@ flowchart TD
     C -- "30s Timer Expires (e.g., 4 Real Players)" --> E["Lock Matchmaking with Current Players<br/>Real Players = 4"]
     D --> F["Calculate Bot Quota:<br/>BotsToSpawn = 20 - RealPlayers = 10"]
     E --> G["Calculate Bot Quota:<br/>BotsToSpawn = 20 - RealPlayers = 16"]
-    F --> H["Netcode Loads MAP-BR.unity (Host/Server)"]
+    F --> H["Netcode Loads MAP-1.unity (Host/Server)"]
     G --> H
     H --> I["Server Spawns Real Players (Client Input)"]
     H --> J["Server Spawns AI Bots (Server Authority)"]
@@ -137,7 +137,7 @@ flowchart TD
 - If timer expires with $N$ players &rarr; launch with $N$ real players and set $\text{BotQuota} = 20 - N$.
 
 #### Phase 2: Infiltration & Insertion (30s staging)
-- **Scene:** `Assets/TerrainDemoScene_HDRP/Scenes/MAP-BR.unity`
+- **Scene:** `Assets/Project/MAP-1.unity`
 - Real players spawn on the moving **Perimeter Freight Train** or drop from altitude.
 - The server spawns the AI bot quota distributed across 4 outer POIs:
   1. Sunken Quarry & Derailed Train (`-150, -2, 130`)
@@ -346,7 +346,7 @@ When ready to proceed with implementation, execute across these 4 phases:
 ┌────────────────────────────────────────────────────────────────────────┐
 │ PHASE 1: CORE MATCH COORDINATOR & BOT BACKFILL                         │
 │ • Create BRMatchCoordinator.cs & BRBotSpawner.cs                       │
-│ • Place 12 POI spawn nodes in MAP-BR.unity                              │
+│ • Place 12 POI spawn nodes in MAP-1.unity                              │
 │ • Test dynamic bot instantiation based on human player count           │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
@@ -368,7 +368,7 @@ When ready to proceed with implementation, execute across these 4 phases:
 │ PHASE 4: NAKAMA MATCHMAKING QUEUE & POST-MATCH SYNC                    │
 │ • Upgrade LobbyMatchmakingController.cs with 30s queue countdown       │
 │ • Implement post-match telemetry submission to Nakama Leaderboards     │
-│ • Test end-to-end match loop from GameLobby -> MAP-BR -> GameLobby     │
+│ • Test end-to-end match loop from GameLobby -> MAP-1 -> GameLobby     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 

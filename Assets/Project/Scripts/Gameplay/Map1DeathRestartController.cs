@@ -8,7 +8,7 @@ using JUTPS;
 namespace Railbound.Gameplay
 {
     /// <summary>
-    /// Manages player death detection and automatic scene restart for MAP-BR.
+    /// Manages player death detection and automatic scene restart for MAP-1.
     /// Supports both local offline player (TPS Character) and networked player (JUNetworkPlayer).
     /// Shows the DeathScreenUI (ELIMINATED + countdown) before cleanly reloading the map.
     /// </summary>
@@ -23,7 +23,7 @@ namespace Railbound.Gameplay
         public const float GameFixedTimestep = 0.015f;
 
         [Header("Restart Configuration")]
-        [Tooltip("Time in seconds to wait after player death before restarting MAP-BR.")]
+        [Tooltip("Time in seconds to wait after player death before restarting MAP-1.")]
         [SerializeField] private float restartDelay = 3.0f;
 
         [Tooltip("Slow down time slightly upon death for dramatic tactical feedback.")]
@@ -180,7 +180,7 @@ namespace Railbound.Gameplay
             isRestarting = true;
             restartTimer = restartDelay;
 
-            Debug.LogWarning($"[Map1DeathRestartController] Local player killed! Initiating MAP-BR restart countdown ({restartDelay:F1}s)...");
+            Debug.LogWarning($"[Map1DeathRestartController] Local player killed! Initiating MAP-1 restart countdown ({restartDelay:F1}s)...");
 
             // elimination sound: 3D at the body, local player only, closes slowly after the respawn
             DeathAudio.Play(activePlayer != null ? activePlayer.transform.position + Vector3.up : Vector3.zero);
@@ -212,7 +212,7 @@ namespace Railbound.Gameplay
             // Cleanly shut down Netcode client session if active to avoid socket leaks
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient)
             {
-                Debug.Log("[Map1DeathRestartController] Disconnecting Netcode client prior to restarting MAP-BR...");
+                Debug.Log("[Map1DeathRestartController] Disconnecting Netcode client prior to restarting MAP-1...");
                 NetworkManager.Singleton.Shutdown();
             }
 
@@ -221,7 +221,7 @@ namespace Railbound.Gameplay
             Cursor.visible = true;
 
             string sceneName = SceneManager.GetActiveScene().name;
-            if (string.IsNullOrEmpty(sceneName)) sceneName = "MAP-BR";
+            if (string.IsNullOrEmpty(sceneName)) sceneName = "MAP-1";
 
             Debug.Log($"[Map1DeathRestartController] Restarting scene '{sceneName}' now...");
             SceneManager.LoadScene(sceneName);
