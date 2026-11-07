@@ -78,10 +78,6 @@ namespace JUTPS.CharacterBrain
 
         public float RotationSpeed = 2;
         public float JumpForce = 3f;
-        [Tooltip("Upper limit for the jump height, whatever JumpForce says (impulse is clamped to sqrt(2 * g * height) * mass). In this project 1.25 gives a real apex of about 0.85 m, because part of the launch is lost to the jump animation and ground contact.")]
-        public float MaxJumpHeight = 1.25f;
-        [Tooltip("How far above the ground (metres) a jump can still start, so a jump pressed a moment after leaving a ledge still works.")]
-        public float JumpGroundTolerance = 0.2f;
         public float StoppingSpeed = 2;
         public float AirInfluenceControll = 0.5f;
         public float MaxWalkableAngle = 45;
@@ -724,21 +720,6 @@ namespace JUTPS.CharacterBrain
             if (FreezeUpDirection) transform.rotation = Quaternion.FromToRotation(transform.up, UpDirection) * transform.rotation;
 
         }
-        /// <summary>
-        /// True only while the feet are actually on a walkable slope. IsGrounded alone is not enough: the ground check box reaches
-        /// ~0.4 m below the feet, so for the last 40 cm of every jump or ledge drop IsGrounded is already true. Treating that as
-        /// "standing on a slope" overwrote the vertical velocity every step, which made landings crawl down at ~0.2 m/s.
-        /// </summary>
-        protected bool IsOnWalkableSlopeSurface()
-        {
-            if (!(IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)) return false;
-            float feetAboveGround = Vector3.Dot(transform.position - GroundPoint, transform.up);
-            // a capsule resting on a slope sits a little above the straight-down hit point; allow for that plus a small margin
-            float radius = coll is CapsuleCollider cap ? cap.radius : 0.3f;
-            float restGap = radius * (1f / Mathf.Max(0.5f, Mathf.Cos(GroundAngle * Mathf.Deg2Rad)) - 1f);
-            return feetAboveGround < restGap + 0.04f;
-        }
-
         public virtual void MoveForward(float SpeedMultiplier)
         {
             if (SetRigidbodyVelocity)
@@ -750,7 +731,7 @@ namespace JUTPS.CharacterBrain
                 }
 
                 var localVelocity = transform.InverseTransformDirection(rb.velocity);
-                if (IsOnWalkableSlopeSurface())
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
                 {
                     rb.velocity = moveDir * SpeedMultiplier * Speed;
                 }
@@ -769,14 +750,11 @@ namespace JUTPS.CharacterBrain
             if (SetRigidbodyVelocity)
             {
                 Vector3 moveDir = Movement;
-                bool onSlope = IsOnWalkableSlopeSurface();
-                if (onSlope)
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
                 {
                     moveDir = Vector3.ProjectOnPlane(Movement, GroundNormal).normalized;
                 }
-                var localVel = transform.InverseTransformDirection(rb.velocity);
-                // keep falling / rising speed unless the feet are really on a slope
-                rb.velocity = onSlope ? moveDir * SpeedMultiplier * Speed : moveDir * SpeedMultiplier * Speed + transform.up * localVel.y;
+                rb.velocity = moveDir * SpeedMultiplier * Speed;
             }
             else
             {
@@ -794,7 +772,7 @@ namespace JUTPS.CharacterBrain
                 }
 
                 var localVelocity = DirectionMovement.InverseTransformDirection(rb.velocity);
-                if (IsOnWalkableSlopeSurface())
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
                 {
                     rb.velocity = moveDir * SpeedMultiplier * Speed;
                 }
@@ -824,7 +802,7 @@ namespace JUTPS.CharacterBrain
                 }
 
                 var localVelocity = transform.InverseTransformDirection(rb.velocity);
-                if (IsOnWalkableSlopeSurface())
+                if (IsGrounded && GroundAngle > 0.5f && GroundAngle <= MaxWalkableAngle && GroundNormal != Vector3.zero)
                 {
                     rb.velocity = moveDir * SpeedMultiplier * Speed;
                 }
@@ -1782,21 +1760,9 @@ namespace JUTPS.CharacterBrain
             IsRunning = Running;
         }
 
-        /// <summary>
-        /// Feet within <paramref name="tolerance"/> of the ground. IsGrounded alone is generous (its box reaches ~0.4 m under the feet),
-        /// so a held or buffered jump could re-trigger while still descending, which looked like constant hopping on slopes.
-        /// </summary>
-        protected bool FeetNearGround(float tolerance)
-        {
-            if (GroundNormal == Vector3.zero) return false;
-            float radius = coll is CapsuleCollider cap ? cap.radius : 0.3f;
-            float restGap = radius * (1f / Mathf.Max(0.5f, Mathf.Cos(GroundAngle * Mathf.Deg2Rad)) - 1f);
-            return Vector3.Dot(transform.position - GroundPoint, transform.up) <= restGap + tolerance;
-        }
-
         public virtual void _Jump()
         {
-            if (IsGrounded == false || IsJumping == true || IsRolling == true || IsDriving == true || CanJump == false || IsProne || IsRagdolled || !FeetNearGround(JumpGroundTolerance))
+            if (IsGrounded == false || IsJumping == true || IsRolling == true || IsDriving == true || CanJump == false || IsProne || IsRagdolled)
             {
                 _GetUp();
 
@@ -1814,13 +1780,7 @@ namespace JUTPS.CharacterBrain
             IsCrouched = false;
 
             //Add Force
-            float jumpImpulse = 200f * JumpForce;
-            if (MaxJumpHeight > 0f)
-            {
-                float maxImpulse = rb.mass * Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * MaxJumpHeight);
-                jumpImpulse = Mathf.Min(jumpImpulse, maxImpulse);
-            }
-            rb.AddForce(transform.up * jumpImpulse, ForceMode.Impulse);
+            rb.AddForce(transform.up * 200 * JumpForce, ForceMode.Impulse);
             if (SetRigidbodyVelocity == false)
             {
                 rb.AddForce(DirectionTransform.forward * LastVelMult * rb.mass * Speed, ForceMode.Impulse);
