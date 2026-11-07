@@ -45,6 +45,10 @@ namespace Project.Character
         [Tooltip("Vertical offset to account for thick combat boot soles and ankle bone height.")]
         public float FootHeightOffset = 0.14f;
 
+        [Header("Ground Contact")]
+        [Tooltip("Plant the feet on the terrain at startup by running the JU foot-placement IK on the animation rig. The legs still follow the animation bone-by-bone (natural knees); the two-bone leg solve is switched off because it made the legs stiff and splayed.")]
+        public bool plantFeetOnGround = true;
+
         public Transform SourceLeftUpperLeg;
         public Transform SourceLeftLowerLeg;
         public Transform SourceLeftFoot;
@@ -99,6 +103,12 @@ namespace Project.Character
         private void Awake()
         {
             AutoRebindAllBones();
+            if (plantFeetOnGround)
+            {
+                var placer = GetComponentInParent<JUTPS.JUFootPlacement>();
+                if (placer != null) placer.enabled = true;
+                AlignLegsToFootPlacement = false;
+            }
         }
 
         private void OnEnable()

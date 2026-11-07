@@ -19,6 +19,9 @@ namespace JUTPS
         public bool WalkOnRunButton = true;
 
         public bool DecreaseSpeedOnJump = false;
+        [Tooltip("Seconds a jump press is remembered while waiting to land.")]
+        public float JumpBufferTime = 0.12f;
+        private float _jumpBufferTimer;
         public bool BlockVerticalInput;
         public bool BlockHorizontalInput;
         public bool BlockFireModeOnCursorVisible = false;
@@ -148,10 +151,16 @@ namespace JUTPS
                 _GetUp();
             }
 
-            //Jump
-            if (JUInput.GetButton(JUInput.Buttons.JumpButton) && IsJumping == false)
+            //Jump: one jump per key press (a held key no longer bunny-hops), with a short buffer so a press just before landing still counts
+            if (JUInput.GetButtonDown(JUInput.Buttons.JumpButton)) _jumpBufferTimer = JumpBufferTime;
+            if (_jumpBufferTimer > 0f)
             {
-                _Jump();
+                _jumpBufferTimer -= Time.deltaTime;
+                if (IsJumping == false)
+                {
+                    _Jump();
+                    if (IsJumping) _jumpBufferTimer = 0f;
+                }
             }
             //New Jump Delay
             _NewJumpDelay(0.2f, DecreaseSpeedOnJump);
