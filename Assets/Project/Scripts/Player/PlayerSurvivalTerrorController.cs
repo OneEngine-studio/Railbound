@@ -30,6 +30,12 @@ namespace Railbound.Gameplay
         public AudioClip heavyBreathingClip;
         public AudioClip tinnitusClip;
         public AudioClip criticalStingClip;
+        [Tooltip("Looping heartbeat / bass-pulse bed (Resources/Audio). If it is missing the short lub-dub clip is played beat by beat instead.")]
+        public AudioClip heartbeatBedClip;
+        [Tooltip("The bed is looped from 0 to this time (the file fades out after it), in seconds.")]
+        public float heartbeatLoopEnd = 31f;
+        [Tooltip("Extra body sounds on top of the heartbeat: breathing hiss, tinnitus ring and the critical sting. Off by default - only the heartbeat is heard.")]
+        public bool bodySounds = false;
         [Range(0f, 1f)] public float heartbeatVolume = 0.95f;
         [Range(0f, 1f)] public float breathingVolume = 0.7f;
         [Range(0f, 1f)] public float tinnitusVolume = 0.14f;
@@ -48,7 +54,7 @@ namespace Railbound.Gameplay
 
         private JUHealth health;
         private PlayerMedkitSystem medkit;
-        private AudioSource beatSource, breathSource, ringSource, stingSource;
+        private AudioSource beatSource, bedSource, breathSource, ringSource, stingSource;
         private AudioLowPassFilter lowPass;
         private AudioListener listener;
         private Volume gradeVolume;
@@ -61,13 +67,23 @@ namespace Railbound.Gameplay
         private TMP_FontAsset fontBold, fontSemi;
 
         private float intensity;      // smoothed 0..1
+        private float muffle;         // smoothed 0..1 low-pass amount
+        private float bedLevel, bedMax = 0.05f;
+        private readonly float[] bedSamples = new float[256];
         private float beatTimer, beatPulse;
         private bool wasCritical;
-        private float nextListenerScan;
+        private float nextListenerScan, muffleTarget;
 
         // ---------------- lifecycle ----------------
         private void Start()
         {
+            // body sounds and the screen effects belong to the local player only: never run them for remote players
+            var netObj = GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null && Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening && !netObj.IsOwner)
+            {
+                enabled = false;
+                return;
+            }
             health = GetComponent<JUHealth>();
             medkit = GetComponent<PlayerMedkitSystem>();
             if (medkit == null) medkit = PlayerMedkitSystem.Instance;
@@ -114,6 +130,8 @@ namespace Railbound.Gameplay
             if (critical && !wasCritical && stingSource != null && criticalStingClip != null) stingSource.PlayOneShot(criticalStingClip, 0.9f);
             wasCritical = critical;
 
+            muffleTarget = dead ? 1f : Mathf.SmoothStep(0f, 1f, intensity);
+            muffle = Mathf.MoveTowards(muffle, muffleTarget, (dead ? 1.6f : 1.2f) * Time.unscaledDeltaTime);
             UpdateHeartbeat(dead);
             UpdateAudioMix(dead);
             UpdateVisuals(critical, dead);
@@ -122,6 +140,8 @@ namespace Railbound.Gameplay
         // ---------------- heartbeat / audio ----------------
         private void UpdateHeartbeat(bool dead)
         {
+            if (bedSource != null && heartbeatBedClip != null) { UpdateHeartbeatBed(); return; }
+
             beatPulse = Mathf.MoveTowards(beatPulse, 0f, Time.deltaTime * 3.2f);
             if (dead || intensity < 0.02f) { beatTimer = 0f; return; }
 
@@ -141,15 +161,48 @@ namespace Railbound.Gameplay
             }
         }
 
+        // the heartbeat bed loops continuously; its volume follows the intensity and the vignette pulse follows its loudness
+        private void UpdateHeartbeatBed()
+        {
+            float vol = heartbeatVolume * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.02f, 0.7f, intensity));
+            // short dip around the loop point so the jump back to the start does not click
+            float loopFade = 1f;
+            if (heartbeatLoopEnd > 0.5f && bedSource.isPlaying)
+            {
+                float t = bedSource.time;
+                if (t >= heartbeatLoopEnd) { bedSource.time = 0f; t = 0f; }
+                float toEnd = heartbeatLoopEnd - t;
+                if (toEnd < 0.12f) loopFade = Mathf.Clamp01(toEnd / 0.12f);
+                else if (t < 0.12f) loopFade = Mathf.Clamp01(t / 0.12f);
+            }
+            bedSource.volume = vol * loopFade;
+            bedSource.pitch = Mathf.Lerp(0.98f, 1.08f, intensity);
+            if (vol > 0.001f && !bedSource.isPlaying) bedSource.Play();
+            if (vol <= 0.001f && bedSource.isPlaying) bedSource.Pause();
+
+            // loudness of the track -> pulse (normalised against a slowly decaying peak)
+            float target = 0f;
+            if (bedSource.isPlaying)
+            {
+                bedSource.GetOutputData(bedSamples, 0);
+                float sum = 0f; for (int i = 0; i < bedSamples.Length; i++) sum += bedSamples[i] * bedSamples[i];
+                bedLevel = Mathf.Sqrt(sum / bedSamples.Length);
+                bedMax = Mathf.Max(bedMax * (1f - 0.1f * Time.unscaledDeltaTime), bedLevel, 0.01f);
+                target = Mathf.Clamp01(bedLevel / bedMax);
+            }
+            float rise = 14f, fall = 4.5f;
+            beatPulse = target > beatPulse ? Mathf.MoveTowards(beatPulse, target, rise * Time.unscaledDeltaTime) : Mathf.MoveTowards(beatPulse, target, fall * Time.unscaledDeltaTime);
+        }
+
         private void UpdateAudioMix(bool dead)
         {
             if (breathSource != null)
             {
-                breathSource.volume = dead ? 0f : breathingVolume * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 1f, intensity));
+                breathSource.volume = breathingVolume * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 1f, intensity));
                 breathSource.pitch = Mathf.Lerp(0.92f, 1.28f, intensity);
             }
             if (ringSource != null)
-                ringSource.volume = dead ? 0f : tinnitusVolume * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.7f, 1f, intensity));
+                ringSource.volume = tinnitusVolume * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.7f, 1f, intensity));
 
             // muffle the whole world as the player fades
             if (lowPass == null && Time.unscaledTime >= nextListenerScan)
@@ -163,11 +216,12 @@ namespace Railbound.Gameplay
                     lowPass.lowpassResonanceQ = 1f;
                 }
             }
-            if (lowPass != null)
+            if (lowPass != null && !DeathAudio.IsClosing)   // after a respawn the death sound opens the filter back up itself
             {
-                float k = dead ? 0f : Mathf.SmoothStep(0f, 1f, intensity);
-                // logarithmic so the sweep sounds even
-                float cutoff = Mathf.Exp(Mathf.Lerp(Mathf.Log(22000f), Mathf.Log(Mathf.Max(200f, muffledCutoff)), k));
+                float k = muffle;
+                // logarithmic so the sweep sounds even; dying muffles the world further than low health does
+                float low = Mathf.Max(200f, dead ? muffledCutoff * 0.6f : muffledCutoff);
+                float cutoff = Mathf.Exp(Mathf.Lerp(Mathf.Log(22000f), Mathf.Log(low), k));
                 lowPass.cutoffFrequency = cutoff;
                 lowPass.enabled = k > 0.005f;
             }
@@ -182,7 +236,7 @@ namespace Railbound.Gameplay
         private void UpdateVisuals(bool critical, bool dead)
         {
             if (rootGroup == null) return;
-            rootGroup.alpha = dead ? 0f : 1f;
+            rootGroup.alpha = Mathf.MoveTowards(rootGroup.alpha, dead ? 0f : 1f, Time.unscaledDeltaTime * (dead ? 3f : 6f));
 
             float pulse = beatPulse * beatPulse;
             // vignette: always breathing a little with the heartbeat, harder near death
@@ -220,6 +274,7 @@ namespace Railbound.Gameplay
         // ---------------- build ----------------
         private void LoadClips()
         {
+            if (heartbeatBedClip == null) heartbeatBedClip = Resources.Load<AudioClip>("Audio/tomas_herudek-heartbeat-and-fast-bass-pulses-529667");
             if (heartbeatClip == null) heartbeatClip = Resources.Load<AudioClip>("SoundClips/LowHealth/lowhealth_heartbeat");
             if (heavyBreathingClip == null) heavyBreathingClip = Resources.Load<AudioClip>("SoundClips/LowHealth/lowhealth_breath");
             if (tinnitusClip == null) tinnitusClip = Resources.Load<AudioClip>("SoundClips/LowHealth/lowhealth_tinnitus");
@@ -231,8 +286,12 @@ namespace Railbound.Gameplay
         private AudioSource NewSource(string name, bool loop, AudioClip clip)
         {
             var go = new GameObject(name); go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, 1.6f, 0f);   // at the head
             var s = go.AddComponent<AudioSource>();
-            s.playOnAwake = false; s.loop = loop; s.spatialBlend = 0f; s.volume = 0f; s.clip = clip; s.bypassEffects = true; s.bypassListenerEffects = true;   // keep the player's own body sounds clear while the world muffles
+            s.playOnAwake = false; s.loop = loop; s.volume = 0f; s.clip = clip;
+            // 3D, but full volume anywhere near the player and spread wide so it never pings left/right as the camera orbits
+            s.spatialBlend = 1f; s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = 10f; s.maxDistance = 45f; s.spread = 150f; s.dopplerLevel = 0f;
+            s.bypassEffects = true; s.bypassListenerEffects = true;   // keep the player's own body sounds clear while the world muffles
             if (loop && clip != null) s.Play();
             return s;
         }
@@ -240,6 +299,9 @@ namespace Railbound.Gameplay
         private void BuildAudio()
         {
             beatSource = NewSource("Heartbeat", false, null); beatSource.volume = 1f;
+            bedSource = NewSource("Heartbeat Bed", true, heartbeatBedClip);
+            if (bedSource.isPlaying) bedSource.Pause();
+            if (!bodySounds) return;   // heartbeat only
             breathSource = NewSource("Breathing", true, heavyBreathingClip);
             ringSource = NewSource("Tinnitus", true, tinnitusClip);
             stingSource = NewSource("Critical Sting", false, null); stingSource.volume = 1f;

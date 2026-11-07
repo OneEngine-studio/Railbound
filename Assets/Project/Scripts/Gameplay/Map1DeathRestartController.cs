@@ -182,6 +182,8 @@ namespace Railbound.Gameplay
 
             Debug.LogWarning($"[Map1DeathRestartController] Local player killed! Initiating MAP-1 restart countdown ({restartDelay:F1}s)...");
 
+            // elimination sound: 3D at the body, local player only, closes slowly after the respawn
+            DeathAudio.Play(activePlayer != null ? activePlayer.transform.position + Vector3.up : Vector3.zero);
             Railbound.UI.DeathScreenUI.Show(restartDelay, () => restartTimer, SceneManager.GetActiveScene().name);
             StartCoroutine(DeathRestartCoroutine());
         }
