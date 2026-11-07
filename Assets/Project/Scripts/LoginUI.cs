@@ -334,10 +334,9 @@ public partial class LoginUI : MonoBehaviour
 
                 if (www.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
                 {
-                    ShowErrorPopup("SERVER UNREACHABLE",
-                        "Cannot connect to the game server at " + AuthenticationService.Instance.ApiBaseUrl +
-                        ". Please check your internet connection and try again.",
-                        "error", "retry", () => _ = CheckServerConnection());
+                    ShowErrorPopup("UNABLE TO CONNECT",
+                        "We couldn't reach the Railbound servers. Check your internet connection and try again.",
+                        "error", "retry_only", () => _ = CheckServerConnection());
                     if (ServerStatusText) ServerStatusText.text = "Offline";
                     if (OnlineDot) OnlineDot.color = Color.red;
                 }
@@ -354,8 +353,8 @@ public partial class LoginUI : MonoBehaviour
             SetLoading(false);
             Debug.LogWarning($"[LoginUI] Server check failed: {ex.Message}");
             ShowErrorPopup("CONNECTION ERROR",
-                "Unable to reach the game server. Please check your network connection.",
-                "error", "retry", () => _ = CheckServerConnection());
+                "We couldn't reach the Railbound servers. Check your internet connection and try again.",
+                "error", "retry_only", () => _ = CheckServerConnection());
         }
     }
 

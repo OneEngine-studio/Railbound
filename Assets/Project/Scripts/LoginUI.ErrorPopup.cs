@@ -51,7 +51,7 @@ public partial class LoginUI
 
     /// <summary>Show a styled Battle Royale error popup.
     /// type: "error" (red), "warning" (orange), "info" (cyan)
-    /// mode: "ok" = single CONFIRM, "retry" = TRY AGAIN + CANCEL, "cancel_only" = CANCEL only
+    /// mode: "ok" = single CONFIRM, "retry" = TRY AGAIN + CANCEL, "retry_only" = TRY AGAIN only, "cancel_only" = CANCEL only
     /// onRetry: callback when TRY AGAIN is pressed
     /// </summary>
     public void ShowErrorPopup(string title, string message, string type = "error", string mode = "ok", System.Action onRetry = null)
@@ -64,11 +64,9 @@ public partial class LoginUI
 
         _onRetryAction = onRetry;
 
-        // Pick accent color based on type
-        string hex = type == "error" ? errorColor : type == "warning" ? warningColor : infoColor;
-        ColorUtility.TryParseHtmlString(hex, out Color accent);
-        Color darkAccent = accent * 0.5f;
-        darkAccent.a = accent.a;
+        // Monochrome dialog: every type uses white accents (type only affects the log line)
+        Color accent = Color.white;
+        Color darkAccent = new Color(0.5f, 0.5f, 0.5f, 1f);
 
         // Title
         if (errorPopupTitle)
@@ -114,10 +112,19 @@ public partial class LoginUI
             {
                 // Two buttons: TRY AGAIN (left) + CANCEL (right)
                 okLabel.text = "TRY AGAIN";
-                okRT.anchorMin = new Vector2(0.12f, 0.04f);
-                okRT.anchorMax = new Vector2(0.47f, 0.18f);
+                okRT.anchorMin = new Vector2(0.10f, 0.07f);
+                okRT.anchorMax = new Vector2(0.49f, 0.22f);
                 errorPopupOKButton.gameObject.SetActive(true);
                 if (errorPopupCancelButton) errorPopupCancelButton.gameObject.SetActive(true);
+            }
+            else if (mode == "retry_only")
+            {
+                // One TRY AGAIN button: the player cannot dismiss into a screen with nothing to do
+                okLabel.text = "TRY AGAIN";
+                okRT.anchorMin = new Vector2(0.25f, 0.07f);
+                okRT.anchorMax = new Vector2(0.75f, 0.22f);
+                errorPopupOKButton.gameObject.SetActive(true);
+                if (errorPopupCancelButton) errorPopupCancelButton.gameObject.SetActive(false);
             }
             else if (mode == "cancel_only")
             {
@@ -125,8 +132,8 @@ public partial class LoginUI
                 if (errorPopupCancelButton)
                 {
                     var cCancelRT = errorPopupCancelButton.GetComponent<RectTransform>();
-                    cCancelRT.anchorMin = new Vector2(0.25f, 0.04f);
-                    cCancelRT.anchorMax = new Vector2(0.75f, 0.18f);
+                    cCancelRT.anchorMin = new Vector2(0.25f, 0.07f);
+                    cCancelRT.anchorMax = new Vector2(0.75f, 0.22f);
                     var cLabel = errorPopupCancelButton.transform.Find("Label")?.GetComponent<TMP_Text>();
                     if (cLabel) cLabel.text = "CANCEL";
                     errorPopupCancelButton.gameObject.SetActive(true);
@@ -136,8 +143,8 @@ public partial class LoginUI
             {
                 // Single CONFIRM button centered
                 okLabel.text = "CONFIRM";
-                okRT.anchorMin = new Vector2(0.25f, 0.04f);
-                okRT.anchorMax = new Vector2(0.75f, 0.18f);
+                okRT.anchorMin = new Vector2(0.25f, 0.07f);
+                okRT.anchorMax = new Vector2(0.75f, 0.22f);
                 errorPopupOKButton.gameObject.SetActive(true);
                 if (errorPopupCancelButton) errorPopupCancelButton.gameObject.SetActive(false);
             }
