@@ -40,6 +40,16 @@ namespace Project.Character
         [Tooltip("Target hips offset applied when character is prone so the mesh lies flat on terrain.")]
         public Vector3 ProneHipsOffset = Vector3.zero;
 
+        [Header("Run Torso Twist")]
+        [Tooltip("The run and sprint animations swing the shoulders about 50 degrees left and right on every stride, which looks like the whole body twisting. " +
+                 "While moving (not aiming or firing), the shoulders' yaw swing is reduced by the amount below, on the animation rig, so every skin and the weapon follow it.")]
+        public bool reduceRunTorsoTwist = true;
+        private const float TorsoTwistReduction = 0.6f;     // 0 = animation as it is, 1 = shoulders never twist
+        private const float TorsoTwistMaxCorrection = 35f;   // degrees
+        private float torsoTwistWeight;
+        private Quaternion torsoAnimatedLocal, torsoDampedLocal;
+        private bool torsoCached;
+
         [Header("Leg IK Alignment (Prevents Terrain & Shin Clipping)")]
         public bool AlignLegsToFootPlacement = true;
         [Tooltip("Vertical offset to account for thick combat boot soles and ankle bone height.")]
@@ -271,6 +281,8 @@ namespace Project.Character
                 }
             }
 
+            if (reduceRunTorsoTwist && !isProne && Application.isPlaying) DampRunTorsoTwist();
+
             // 1. Sync Hips world position with vertical/proportional offset
             Vector3 effectiveHipsOffset = isProne ? ProneHipsOffset : HipsPositionOffset;
             TargetHips.position = SourceHips.position + transform.TransformDirection(effectiveHipsOffset);
@@ -335,6 +347,42 @@ namespace Project.Character
                     m.TargetBone.rotation = m.SourceBone.rotation * m.RotationOffset;
                 }
             }
+        }
+
+        // Reduces the left/right swing of the shoulder line (relative to the character's facing) on the animation rig while the
+        // character moves. Rotating the lowest spine bone about the vertical axis carries the chest, arms, head and weapon with it,
+        // so hands and weapon stay consistent. Aiming / firing is left alone: there the controller steers the upper body on purpose.
+        private void DampRunTorsoTwist()
+        {
+            var cc = CharacterController;
+            Animator animator = cc != null ? cc.GetComponent<Animator>() : GetComponentInParent<Animator>();
+            if (animator == null || !animator.isHuman) return;
+
+            bool active = cc != null && cc.IsMoving && cc.IsGrounded && !cc.IsJumping && !cc.FiringMode && !cc.IsAiming && !cc.IsRolling && !cc.IsDriving && !cc.IsRagdolled;
+            torsoTwistWeight = Mathf.MoveTowards(torsoTwistWeight, active ? 1f : 0f, 6f * Time.deltaTime);
+            if (torsoTwistWeight <= 0.001f) { torsoCached = false; return; }
+
+            Transform spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            Transform leftArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            Transform rightArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            if (spine == null || leftArm == null || rightArm == null) return;
+
+            // The animator only re-poses the bones when it updates (fixed step), but this runs every rendered frame. If the spine still holds
+            // last frame's corrected pose, go back to the animated pose first so the correction never stacks up.
+            if (torsoCached && Quaternion.Angle(spine.localRotation, torsoDampedLocal) < 0.01f) spine.localRotation = torsoAnimatedLocal;
+            else torsoAnimatedLocal = spine.localRotation;
+
+            Transform root = animator.transform;
+            Vector3 up = root.up;
+            Vector3 shoulderLine = Vector3.ProjectOnPlane(rightArm.position - leftArm.position, up);
+            Vector3 facingRight = Vector3.ProjectOnPlane(root.right, up);
+            if (shoulderLine.sqrMagnitude < 1e-6f || facingRight.sqrMagnitude < 1e-6f) return;
+
+            float yaw = Vector3.SignedAngle(facingRight, shoulderLine, up);
+            float correction = Mathf.Clamp(-yaw * TorsoTwistReduction * torsoTwistWeight, -TorsoTwistMaxCorrection, TorsoTwistMaxCorrection);
+            spine.rotation = Quaternion.AngleAxis(correction, up) * spine.rotation;
+            torsoDampedLocal = spine.localRotation;
+            torsoCached = true;
         }
 
         private static void SolveArmTwoBoneIK(
