@@ -49,10 +49,10 @@ public partial class LoginUI : MonoBehaviour
     private bool termsAccepted = false;
     private GameObject ageCheckmark;
     private GameObject termsCheckmark;
-    // Warzone Yellow HUD palette: dark steel boxes, tactical yellow when checked
-    private static readonly Color uncheckedColor = new Color(0.095f, 0.133f, 0.176f, 0.9f);
-    private static readonly Color checkedColor = new Color(1.0f, 0.816f, 0.0f, 1f); // #FFD000
-    private static readonly Color checkTickColor = new Color(0.05f, 0.06f, 0.08f, 1f);
+    // Monochrome palette: dark boxes, white when checked
+    private static readonly Color uncheckedColor = new Color(0.09f, 0.09f, 0.09f, 1f);
+    private static readonly Color checkedColor = new Color(1f, 1f, 1f, 1f);
+    private static readonly Color checkTickColor = new Color(0f, 0f, 0f, 1f);
 
     [Header("Error Popup")]
     public CanvasGroup errorPopupCanvasGroup;
