@@ -231,8 +231,27 @@ jobs:
         run: |
           $ErrorActionPreference = "Continue"
 
-          $env:REGISTRY_PASSWORD | docker login registry.kushanherath.me `
-            -u $env:REGISTRY_USER --password-stdin
+          $user = if ($env:REGISTRY_USER) { $env:REGISTRY_USER.Trim() } else { "" }
+          $pass = if ($env:REGISTRY_PASSWORD) { $env:REGISTRY_PASSWORD.Trim() } else { "" }
+
+          # Fall back to local Docker Desktop credential store on the self-hosted runner if needed
+          if ((-not $user -or -not $pass) -and (Get-Command docker-credential-desktop -ErrorAction SilentlyContinue)) {
+            $localCreds = "registry.kushanherath.me" | docker-credential-desktop get 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($localCreds) {
+              $user = $localCreds.Username
+              $pass = $localCreds.Secret
+            }
+          }
+
+          $pass | docker login registry.kushanherath.me -u $user --password-stdin
+
+          if ($LASTEXITCODE -ne 0 -and (Get-Command docker-credential-desktop -ErrorAction SilentlyContinue)) {
+            Write-Host "Repo secret login failed; retrying with local Docker Desktop credentials..."
+            $localCreds = "registry.kushanherath.me" | docker-credential-desktop get 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($localCreds) {
+              $localCreds.Secret | docker login registry.kushanherath.me -u $localCreds.Username --password-stdin
+            }
+          }
 
           if ($LASTEXITCODE -ne 0) {
             throw "Private registry login failed"
