@@ -45,7 +45,7 @@ namespace Railbound.UI
         [SerializeField] private TextMeshProUGUI versionText;
 
         [Header("Loading")]
-        [SerializeField] private string defaultScene = "MAP-1";
+        [SerializeField] private string defaultScene = "MAP-2";
         [SerializeField] private float minLoadTime = 4f;
         [SerializeField] private float fadeTime = 0.6f;
         [SerializeField] private float tipInterval = 6f;

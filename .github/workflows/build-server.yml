@@ -1,6 +1,6 @@
 name: Build & push dedicated server
 
-# On every push to main: build the Linux dedicated server (MAP-1) with Unity,
+# On every push to main: build the Linux dedicated server (MAP-2) with Unity,
 # pack it into the Docker image and push it to Docker Hub.
 #
 # Runs on a SELF-HOSTED Windows runner (your PC) so no Unity license secret is needed:

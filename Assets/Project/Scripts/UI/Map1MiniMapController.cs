@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace Railbound.UI
 {
     /// <summary>
-    /// Clean grid-based automap for MAP-1.
+    /// Clean grid-based automap for MAP-2.
     ///  - A small widescreen minimap (top-left) that follows the camera and rotates with the view.
     ///  - Press <see cref="mapKey"/> (M) for a large north-up map with the 200 m grid, grid references and a details panel.
     /// The map base is a RenderTexture baked from the terrain heightmap (see <see cref="MapTerrainBaker"/>) and shown

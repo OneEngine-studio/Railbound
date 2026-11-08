@@ -15,9 +15,9 @@ namespace Railbound.Editor
         public static string Setup()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
-            if (!activeScene.name.Contains("MAP-1"))
+            if (!activeScene.name.Contains("MAP-2"))
             {
-                EditorSceneManager.OpenScene("Assets/Project/MAP-1.unity");
+                EditorSceneManager.OpenScene("Assets/TerrainDemoScene_HDRP/Scenes/MAP-2.unity");
             }
 
             // 1. Completely Remove all Zombie AI and Zombie Spawners
@@ -44,7 +44,7 @@ namespace Railbound.Editor
             var allGOs = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var go in allGOs)
             {
-                if (go != null && go.scene.name == "MAP-1" && go.name.ToLower().Contains("zomb"))
+                if (go != null && go.scene.name == "MAP-2" && go.name.ToLower().Contains("zomb"))
                 {
                     Undo.DestroyObjectImmediate(go);
                     removedZombies++;
@@ -84,7 +84,7 @@ namespace Railbound.Editor
             groupGO = new GameObject("[BR] AI Combatants");
             Undo.RegisterCreatedObjectUndo(groupGO, "Create [BR] AI Combatants");
 
-            // 5. Tactical Battle Royale Spawn Positions across MAP-1 (1600m)
+            // 5. Tactical Battle Royale Spawn Positions across MAP-2 (1600m)
             var spawnConfigs = new List<(string name, Vector3 pos, float yaw)>
             {
                 // Central Train Depot & Loading Platforms

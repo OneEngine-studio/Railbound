@@ -19,21 +19,21 @@ namespace Railbound.Editor
     /// </summary>
     public static class NetcodeServerBuildPipeline
     {
-        private const string MainGameScene = "Assets/Project/MAP-1.unity";
+        private const string MainGameScene = "Assets/TerrainDemoScene_HDRP/Scenes/MAP-2.unity";
         private const string LinuxBuildPath = "Builds/Server/Linux/RailboundServer.x86_64";
         private const string WindowsBuildPath = "Builds/Server/Windows/RailboundServer.exe";
         private const string WindowsClientBuildPath = "Builds/Client/Windows/Railbound.exe";
         private const string PlayerPrefabPath = "Assets/SandBox/Networking/Prefabs/TPS Character.prefab";
         private const string NetworkPrefabsAssetPath = "Assets/DefaultNetworkPrefabs.asset";
 
-        [MenuItem("Tools/Railbound/Netcode/Setup [NETWORKING] in MAP-1 Scene", false, 10)]
+        [MenuItem("Tools/Railbound/Netcode/Setup [NETWORKING] in MAP-2 Scene", false, 10)]
         public static void SetupNetworkingInActiveScene()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
             if (!activeScene.path.Equals(MainGameScene, StringComparison.OrdinalIgnoreCase))
             {
-                if (EditorUtility.DisplayDialog("Open MAP-1 Scene?", 
-                    $"Current active scene is '{activeScene.name}'. Open MAP-1 to setup networking?", "Yes", "No"))
+                if (EditorUtility.DisplayDialog("Open MAP-2 Scene?", 
+                    $"Current active scene is '{activeScene.name}'. Open MAP-2 to setup networking?", "Yes", "No"))
                 {
                     EditorSceneManager.OpenScene(MainGameScene);
                 }
@@ -99,7 +99,7 @@ namespace Railbound.Editor
             EditorSceneManager.MarkSceneDirty(activeScene);
             EditorSceneManager.SaveOpenScenes();
 
-            Debug.Log("<color=#00FF88>[NetcodeSetup] [NETWORKING] successfully configured and saved in MAP-1!</color>");
+            Debug.Log("<color=#00FF88>[NetcodeSetup] [NETWORKING] successfully configured and saved in MAP-2!</color>");
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace Railbound.Editor
             return PerformServerBuild(BuildTarget.StandaloneWindows64, StandaloneBuildSubtarget.Server, WindowsBuildPath);
         }
 
-        [MenuItem("Tools/Railbound/Netcode/Build Windows Client (MAP-1)", false, 22)]
+        [MenuItem("Tools/Railbound/Netcode/Build Windows Client (MAP-2)", false, 22)]
         public static bool BuildWindowsClient()
         {
             return PerformClientBuild(BuildTarget.StandaloneWindows64, WindowsClientBuildPath);
