@@ -187,6 +187,7 @@ namespace Railbound.UI
                 if (nm == null)
                 {
                     stage = "PREPARING NETWORK";
+                    if (elapsed > connectTimeoutSeconds) failure = "NETWORK UNAVAILABLE";
                 }
                 else
                 {

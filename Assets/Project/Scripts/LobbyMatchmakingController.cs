@@ -28,6 +28,8 @@ namespace Railbound.Networking
         [Header("Netcode Configuration")]
         [Tooltip("Default transport port for Netcode.")]
         [SerializeField] private ushort netcodePort = 7777;
+        [Tooltip("Seconds the client may take to connect to the allocated game server before the deployment fails.")]
+        [SerializeField] private float serverConnectTimeoutSeconds = 20f;
         [Tooltip("Prefab for player character (from Assets/SandBox/Networking/Prefabs/TPS Character.prefab).")]
         [SerializeField] private GameObject playerPrefab;
 
@@ -152,6 +154,16 @@ namespace Railbound.Networking
                 _startedHostHere = !alreadyRunning;
                 if (_cancelRequested) { AbortDeploy(); return; }
 
+                // 2b. A client of the allocated server: wait until the server accepted us (it then loads the map on this client)
+                if (MatchConnection.HasAllocation && NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient)
+                {
+                    if (!await WaitForServerConnectionAsync())
+                    {
+                        if (_cancelRequested) { AbortDeploy(); return; }
+                        throw new InvalidOperationException($"Could not connect to the game server {MatchConnection.Host}:{MatchConnection.Port}.");
+                    }
+                }
+
                 // 3. Load Target Gameplay Scene (MAP-2)
                 _sceneLoadStarted = true;
                 UpdateStatus("LOADING MAP-2...");
@@ -274,6 +286,32 @@ namespace Railbound.Networking
             return false;
         }
 
+        /// <summary>Waits until the Netcode client is connected to the allocated game server. On failure it shuts the client down and forgets the allocation.</summary>
+        private async Task<bool> WaitForServerConnectionAsync()
+        {
+            var nm = NetworkManager.Singleton;
+            string server = MatchConnection.Host + ":" + MatchConnection.Port;
+            float waited = 0f;
+            while (nm != null && nm.IsListening && !nm.IsConnectedClient && !_cancelRequested && waited < serverConnectTimeoutSeconds)
+            {
+                UpdateStatus($"CONNECTING TO GAME SERVER  {server}  {Mathf.CeilToInt(serverConnectTimeoutSeconds - waited)}s");
+                await Task.Delay(250);
+                waited += 0.25f;
+            }
+
+            if (nm != null && nm.IsConnectedClient)
+            {
+                UpdateStatus("CONNECTED TO GAME SERVER");
+                Debug.Log($"[LobbyMatchmaker] Connected to the game server {server} as client {nm.LocalClientId}.");
+                return true;
+            }
+
+            Debug.LogWarning($"[LobbyMatchmaker] Connection to {server} failed or timed out after {waited:0}s.");
+            if (nm != null && nm.IsListening) nm.Shutdown();
+            MatchConnection.Clear();
+            return false;
+        }
+
         /// <summary>Cancels a deployment that has not started loading the gameplay scene yet.</summary>
         public void CancelDeploy()
         {
@@ -336,6 +374,45 @@ namespace Railbound.Networking
 
         private bool EnsureNetcodeHost()
         {
+            if (MatchConnection.HasAllocation)
+            {
+                // Nakama allocated a dedicated game server for this match. Never host a second, local copy of the match here:
+                // connect to the allocated server as a client. The NetworkManager that lives on since the login scene is the one
+                // that does it (the one in the gameplay scene is a duplicate and gets destroyed), and the server's Netcode scene
+                // management then loads the map on this client.
+                var clientMgr = NetworkManager.Singleton;
+                if (clientMgr == null)
+                {
+                    Debug.Log("[LobbyMatchmaker] No NetworkManager in the lobby; handing off to the gameplay scene to connect.");
+                    return true;
+                }
+                if (clientMgr.IsListening)
+                {
+                    Debug.Log("[LobbyMatchmaker] Netcode is already running; not starting a second client.");
+                    return true;
+                }
+
+                var clientTransport = clientMgr.GetComponent<UnityTransport>();
+                if (clientTransport == null)
+                {
+                    Debug.LogError("[LobbyMatchmaker] The NetworkManager has no UnityTransport; cannot connect to the game server.");
+                    return false;
+                }
+
+                LoadPlayerPrefabIfNull();
+                if (playerPrefab != null) clientMgr.NetworkConfig.PlayerPrefab = playerPrefab;
+                clientMgr.NetworkConfig.EnableSceneManagement = true;
+                clientTransport.SetConnectionData(MatchConnection.Host, MatchConnection.Port);
+
+                if (!clientMgr.StartClient())
+                {
+                    Debug.LogError($"[LobbyMatchmaker] Netcode client failed to start for {MatchConnection.Host}:{MatchConnection.Port}.");
+                    return false;
+                }
+                Debug.Log($"[LobbyMatchmaker] Netcode client started -> dedicated server {MatchConnection.Host}:{MatchConnection.Port} (not hosting).");
+                return true;
+            }
+
             var netMgr = NetworkManager.Singleton;
             if (netMgr == null)
             {
@@ -378,6 +455,13 @@ namespace Railbound.Networking
         private void LoadGameplayScene()
         {
             var netMgr = NetworkManager.Singleton;
+            if (netMgr != null && netMgr.IsClient && !netMgr.IsServer && netMgr.IsConnectedClient)
+            {
+                // Connected to a dedicated server with scene management: the server tells this client which scene to load.
+                // Loading it here as well would load the map twice and break the scene synchronisation.
+                Debug.Log($"[LobbyMatchmaker] Connected to the game server; waiting for it to load '{targetGameplayScene}' on this client.");
+                return;
+            }
             if (netMgr != null && netMgr.IsListening && netMgr.IsServer)
             {
                 Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Netcode SceneManager.");
