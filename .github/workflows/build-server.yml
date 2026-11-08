@@ -1,24 +1,5 @@
-name: Build & push dedicated server
 
-# On every push to main: build the Linux dedicated server (MAP-2) with Unity,
-# pack it into the Docker image and push it to Docker Hub.
-#
-# Runs on a SELF-HOSTED Windows runner (your PC) so no Unity license secret is needed:
-# the Unity Editor installed and activated on that machine is used directly.
-#
-# One-time setup:
-#   1. GitHub repo -> Settings -> Actions -> Runners -> New self-hosted runner (Windows),
-#      install it and add the label "unity" when configuring (./config.cmd ... --labels unity).
-#      Tip: use a SHORT folder such as C:\r so Windows paths stay under the length limit.
-#   2. Unity 2023.1.22f1 with "Linux Build Support (Mono)" + "Linux Dedicated Server Build Support".
-#      Open Unity Hub once and stay signed in so the Personal license is active.
-#   3. Docker Desktop installed on the same PC.
-#   4. Repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (Docker Hub access token, write access).
-#   Optional repo variables: UNITY_PATH (default below), DEPLOY_GITOPS=true + secret GITOPS_TOKEN
-#   to also bump the image tag in the railbound-gitops repo.
-#
-# Note: the first run imports the whole project into a fresh Library folder and is slow;
-# later runs reuse it (the runner workspace is kept between runs).
+name: Build & push dedicated server
 
 on:
   push:
@@ -36,190 +17,314 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: kushanrandika/railbound-server
-  UNITY_DEFAULT_PATH: C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Unity.exe
-  # The map (Assets/TerrainDemoScene_HDRP, ~4 GB) is git-ignored, so a fresh checkout does not have it. The runner is the dev PC,
-  # so it is copied from the working project. Override with the repo variable MAP_ASSETS_DIR.
-  MAP_ASSETS_DEFAULT: C:\Users\kushan\Railbound\Assets\TerrainDemoScene_HDRP
+  IMAGE: registry.kushanherath.me/railbound-server
+
+  UNITY_DEFAULT_PATH: 'C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Unity.exe'
+
+  MAP_ASSETS_DEFAULT: 'C:\Users\kushan\Railbound\Assets\TerrainDemoScene_HDRP'
+
   GITOPS_REPO: OneEngine-studio/railbound-gitops
-  # every chart that runs the server image gets the new tag (the old static server and the Agones fleet)
+
   GITOPS_VALUES: charts/game-server/values.yaml charts/agones-fleet/values.yaml
 
 jobs:
   build-and-push:
     runs-on: [self-hosted, windows, unity]
     timeout-minutes: 180
+
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
+
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           lfs: true
-          clean: false   # keep the imported Library folder between runs
+          clean: false
 
-      - name: Copy the git-ignored map assets into the workspace
+      # 2. Copy git-ignored map assets
+      - name: Copy map assets
         shell: powershell
         run: |
-          $src = if ("${{ vars.MAP_ASSETS_DIR }}") { "${{ vars.MAP_ASSETS_DIR }}" } else { $env:MAP_ASSETS_DEFAULT }
-          if (-not (Test-Path "$src\Scenes\MAP-2.unity")) {
-            throw "Map assets not found at '$src' (expected Scenes\MAP-2.unity). Set the repo variable MAP_ASSETS_DIR to the folder on this PC."
+          $src = if ("${{ vars.MAP_ASSETS_DIR }}") {
+            "${{ vars.MAP_ASSETS_DIR }}"
+          } else {
+            $env:MAP_ASSETS_DEFAULT
           }
-          # only new or changed files are copied, so later runs are fast
+
+          if (-not (Test-Path "$src\Scenes\MAP-2.unity")) {
+            throw "Map assets not found at '$src'"
+          }
+
           robocopy "$src" "Assets\TerrainDemoScene_HDRP" /E /XO /NFL /NDL /NJH /NJS /NP | Out-Null
-          if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
-          if (Test-Path "$src.meta") { Copy-Item "$src.meta" "Assets\TerrainDemoScene_HDRP.meta" -Force }
-          Write-Host "Map assets ready in Assets\TerrainDemoScene_HDRP"
+
+          if ($LASTEXITCODE -ge 8) {
+            throw "robocopy failed with exit code $LASTEXITCODE"
+          }
+
+          if (Test-Path "$src.meta") {
+            Copy-Item "$src.meta" "Assets\TerrainDemoScene_HDRP.meta" -Force
+          }
+
+          Write-Host "Map assets ready"
+
           exit 0
 
-      - name: Build Linux dedicated server (Unity batch mode)
+      # 3. Build Unity Linux dedicated server
+      - name: Build Linux dedicated server
         shell: powershell
         run: |
-          $unity = if ($env:UNITY_PATH) { $env:UNITY_PATH } elseif ("${{ vars.UNITY_PATH }}") { "${{ vars.UNITY_PATH }}" } else { $env:UNITY_DEFAULT_PATH }
-          if (-not (Test-Path $unity)) { throw "Unity not found at $unity (set repo variable UNITY_PATH)" }
-          if (Test-Path Builds/Server/Linux) { Remove-Item -Recurse -Force Builds/Server/Linux }
+          $unity = if ($env:UNITY_PATH) {
+            $env:UNITY_PATH
+          } elseif ("${{ vars.UNITY_PATH }}") {
+            "${{ vars.UNITY_PATH }}"
+          } else {
+            $env:UNITY_DEFAULT_PATH
+          }
+
+          if (-not (Test-Path $unity)) {
+            throw "Unity not found at $unity"
+          }
+
+          if (Test-Path Builds/Server/Linux) {
+            Remove-Item -Recurse -Force Builds/Server/Linux
+          }
+
           $log = Join-Path $PWD "unity-build.log"
           $importLog = Join-Path $PWD "unity-import.log"
 
-          # Runs Unity and returns its exit code. Unity.exe is a GUI program, so it is started with Start-Process; the job waits for
-          # the Unity process itself only. (Start-Process -Wait also waits for every child Unity left behind, and a crashed Unity
-          # leaves children behind: the job hung for hours.) Whatever a crashed editor orphaned is stopped afterwards.
           function Invoke-Unity([string[]]$UnityArgs, [int]$TimeoutMinutes) {
             $p = Start-Process -FilePath $unity -ArgumentList $UnityArgs -PassThru
+
             $finished = $p.WaitForExit($TimeoutMinutes * 60 * 1000)
-            if (-not $finished) { Write-Host "Unity did not finish within $TimeoutMinutes minutes, stopping it."; $p.Kill() }
+
+            if (-not $finished) {
+              Write-Host "Unity timeout. Stopping process."
+              $p.Kill()
+            }
+
             for ($pass = 0; $pass -lt 2; $pass++) {
               Get-CimInstance Win32_Process -Filter "ParentProcessId=$($p.Id)" -ErrorAction SilentlyContinue |
-                ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+                ForEach-Object {
+                  Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+                }
             }
-            if (-not $finished) { return -1 }
+
+            if (-not $finished) {
+              return -1
+            }
+
             return $p.ExitCode
           }
 
-          # 1) Import the project once on its own. A fresh workspace has an empty Library; importing and building in one run
-          #    crashed Unity inside BuildPlayer (Mono assertion while collecting import dependencies). A failure here is not fatal:
-          #    the build run below imports whatever is left.
-          $importCode = Invoke-Unity @('-batchmode', '-nographics', '-quit', '-projectPath', "`"$PWD`"", '-logFile', "`"$importLog`"") 90
-          Write-Host "Unity import run finished with exit code $importCode"
+          # Import Unity project
+          $importCode = Invoke-Unity @(
+            '-batchmode',
+            '-nographics',
+            '-quit',
+            '-projectPath',
+            "`"$PWD`"",
+            '-logFile',
+            "`"$importLog`""
+          ) 90
 
-          # 2) Build the server. One retry, because the second attempt starts from an already imported Library.
+          Write-Host "Unity import exit code: $importCode"
+
+          # Build Linux server
           $code = -1
-          for ($attempt = 1; $attempt -le 2 -and $code -ne 0; $attempt++) {
-            Write-Host "Unity server build, attempt $attempt"
-            $code = Invoke-Unity @(
-              '-batchmode', '-nographics',
-              '-projectPath', "`"$PWD`"",
-              '-executeMethod', 'Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI',
-              '-logFile', "`"$log`""
-            ) 90
-            Write-Host "Attempt $attempt finished with exit code $code"
-          }
-          if ($code -ne 0) {
-            if (Test-Path $log) { Get-Content $log -Tail 80 } else { Write-Host "Unity wrote no log file (it did not start; check the Unity license on this PC)." }
-            throw "Unity build failed with exit code $code"
-          }
-          if (-not (Test-Path Builds/Server/Linux/RailboundServer.x86_64)) { throw "Server binary missing" }
-          Get-ChildItem Builds/Server/Linux | Select-Object -First 10
 
-      - name: Upload Unity log on failure
+          for ($attempt = 1; $attempt -le 2 -and $code -ne 0; $attempt++) {
+
+            Write-Host "Unity build attempt $attempt"
+
+            $code = Invoke-Unity @(
+              '-batchmode',
+              '-nographics',
+              '-projectPath',
+              "`"$PWD`"",
+              '-executeMethod',
+              'Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI',
+              '-logFile',
+              "`"$log`""
+            ) 90
+
+            Write-Host "Build exit code: $code"
+          }
+
+          if ($code -ne 0) {
+            if (Test-Path $log) {
+              Get-Content $log -Tail 80
+            }
+
+            throw "Unity build failed"
+          }
+
+          if (-not (Test-Path Builds/Server/Linux/RailboundServer.x86_64)) {
+            throw "Server binary missing"
+          }
+
+          Get-ChildItem Builds/Server/Linux
+
+      # 4. Upload Unity logs if build fails
+      - name: Upload Unity logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: unity-build-log
+          name: unity-build-logs
           path: |
             unity-build.log
             unity-import.log
 
-      # PowerShell on purpose: "shell: bash" resolves to the WSL launcher (WindowsApps/bash.exe) on this PC, which cannot write
-      # to the Windows path in $GITHUB_OUTPUT and left this step hanging.
-      - name: Compute image tag
+      # 5. Generate unique Docker image tag
+      - name: Generate image tag
         id: meta
         shell: powershell
         run: |
           $tag = "sha-" + $env:GITHUB_SHA.Substring(0, 8)
+
           Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag" -Encoding ascii
+
           Write-Host "Image tag: $tag"
 
-      - name: Make sure Docker is running
+      # 6. Make sure Docker Desktop is running
+      - name: Start Docker Desktop
         shell: powershell
         run: |
-          # GitHub runs PowerShell steps with $ErrorActionPreference = "Stop". In Windows PowerShell 5.1 that turns ANY text a native
-          # program writes to stderr into a terminating error (docker prints its connection error and the whole BuildKit progress
-          # there), so the step died at the first docker call. The exit codes are checked explicitly below.
           $ErrorActionPreference = "Continue"
+
           docker info *> $null
+
           if ($LASTEXITCODE -ne 0) {
+
             $dd = "$env:LOCALAPPDATA\Programs\DockerDesktop\Docker Desktop.exe"
-            if (-not (Test-Path $dd)) { $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe" }
+
+            if (-not (Test-Path $dd)) {
+              $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+            }
+
             Start-Process $dd
+
             for ($i = 0; $i -lt 60; $i++) {
               Start-Sleep 5
+
               docker info *> $null
-              if ($LASTEXITCODE -eq 0) { break }
+
+              if ($LASTEXITCODE -eq 0) {
+                break
+              }
             }
           }
-          docker info *> $null
-          if ($LASTEXITCODE -ne 0) { throw "Docker daemon is not running" }
 
-      - name: Docker Hub login
+          docker info *> $null
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker daemon is not running"
+          }
+
+      # 7. Login to your OCI private registry
+      - name: Login to private registry
         shell: powershell
         env:
-          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REGISTRY_USER: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          # GitHub runs PowerShell steps with $ErrorActionPreference = "Stop". In Windows PowerShell 5.1 that turns ANY text a native
-          # program writes to stderr into a terminating error (docker prints its connection error and the whole BuildKit progress
-          # there), so the step died at the first docker call. The exit codes are checked explicitly below.
           $ErrorActionPreference = "Continue"
-          $env:DH_TOKEN | docker login -u $env:DH_USER --password-stdin
-          if ($LASTEXITCODE -ne 0) { throw "docker login failed" }
 
+          $env:REGISTRY_PASSWORD | docker login registry.kushanherath.me `
+            -u $env:REGISTRY_USER --password-stdin
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Private registry login failed"
+          }
+
+      # 8. Build and push Docker image
       - name: Build and push image
         shell: powershell
         run: |
-          # GitHub runs PowerShell steps with $ErrorActionPreference = "Stop". In Windows PowerShell 5.1 that turns ANY text a native
-          # program writes to stderr into a terminating error (docker prints its connection error and the whole BuildKit progress
-          # there), so the step died at the first docker call. The exit codes are checked explicitly below.
           $ErrorActionPreference = "Continue"
-          # Small build context: only the Dockerfile and the server build.
-          $ctx = Join-Path $env:RUNNER_TEMP "docker-ctx"
-          if (Test-Path $ctx) { Remove-Item -Recurse -Force $ctx }
-          New-Item -ItemType Directory -Path "$ctx\Builds\Server" | Out-Null
-          Copy-Item -Recurse Builds/Server/Linux "$ctx\Builds\Server\Linux"
-          Copy-Item Dockerfile $ctx
-          $tag = "${{ steps.meta.outputs.tag }}"
-          docker build -t "$env:IMAGE`:$tag" -t "$env:IMAGE`:latest" $ctx
-          if ($LASTEXITCODE -ne 0) { throw "docker build failed" }
-          docker push "$env:IMAGE`:$tag"
-          if ($LASTEXITCODE -ne 0) { throw "docker push (tag) failed" }
-          docker push "$env:IMAGE`:latest"
-          if ($LASTEXITCODE -ne 0) { throw "docker push (latest) failed" }
 
+          # Create small Docker build context
+          $ctx = Join-Path $env:RUNNER_TEMP "docker-ctx"
+
+          if (Test-Path $ctx) {
+            Remove-Item -Recurse -Force $ctx
+          }
+
+          New-Item -ItemType Directory -Path "$ctx\Builds\Server" | Out-Null
+
+          Copy-Item -Recurse Builds/Server/Linux "$ctx\Builds\Server\Linux"
+
+          Copy-Item Dockerfile $ctx
+
+          $tag = "${{ steps.meta.outputs.tag }}"
+
+          # Build image with two tags
+          docker build `
+            -t "$env:IMAGE`:$tag" `
+            -t "$env:IMAGE`:latest" `
+            $ctx
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker build failed"
+          }
+
+          # Push unique commit tag
+          docker push "$env:IMAGE`:$tag"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker push failed for commit tag"
+          }
+
+          # Push latest tag
+          docker push "$env:IMAGE`:latest"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Docker push failed for latest"
+          }
+
+          Write-Host "Successfully pushed images:"
+          Write-Host "$env:IMAGE`:$tag"
+          Write-Host "$env:IMAGE`:latest"
+
+  # 9. Update GitOps repository
   deploy-gitops:
     needs: build-and-push
+
     if: vars.DEPLOY_GITOPS == 'true'
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout GitOps repo
+      - name: Checkout GitOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITOPS_REPO }}
           token: ${{ secrets.GITOPS_TOKEN }}
           ref: main
 
-      # A unique tag (not "latest") makes Kubernetes pull the new image;
-      # ArgoCD (automated sync) then rolls the pod.
-      - name: Bump image tag in values.yaml
+      # Update image tags in Helm values
+      - name: Update Helm image tags
         run: |
           for f in $GITOPS_VALUES; do
             sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$f"
           done
+
           git --no-pager diff -- $GITOPS_VALUES
 
-      - name: Commit and push
+      # Commit and push changes
+      - name: Commit and push GitOps changes
         run: |
           git config user.name "railbound-ci"
           git config user.email "ci@railbound.invalid"
+
           git add $GITOPS_VALUES
-          git diff --cached --quiet && { echo "No change"; exit 0; }
+
+          git diff --cached --quiet && {
+            echo "No changes detected"
+            exit 0
+          }
+
           git commit -m "ci(game-server): deploy ${{ needs.build-and-push.outputs.tag }}"
+
           git push origin HEAD:main
