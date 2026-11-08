@@ -231,27 +231,20 @@ jobs:
         run: |
           $ErrorActionPreference = "Continue"
 
-          $user = if ($env:REGISTRY_USER) { $env:REGISTRY_USER.Trim() } else { "" }
+          $user = if ($env:REGISTRY_USER) { $env:REGISTRY_USER.Trim() } else { "registryadmin" }
           $pass = if ($env:REGISTRY_PASSWORD) { $env:REGISTRY_PASSWORD.Trim() } else { "" }
 
-          # Fall back to local Docker Desktop credential store on the self-hosted runner if needed
-          if ((-not $user -or -not $pass) -and (Get-Command docker-credential-desktop -ErrorAction SilentlyContinue)) {
-            $localCreds = "registry.kushanherath.me" | docker-credential-desktop get 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($localCreds) {
-              $user = $localCreds.Username
-              $pass = $localCreds.Secret
-            }
+          # Create an isolated Docker config without credsStore so it works in headless runner sessions
+          $dockerCfgDir = Join-Path $env:RUNNER_TEMP "docker-config"
+          if (-not (Test-Path $dockerCfgDir)) {
+            New-Item -ItemType Directory -Path $dockerCfgDir -Force | Out-Null
           }
+          [System.IO.File]::WriteAllText("$dockerCfgDir\config.json", '{"auths":{}}', (New-Object System.Text.UTF8Encoding($false)))
+          $env:DOCKER_CONFIG = $dockerCfgDir
+          Add-Content -Path $env:GITHUB_ENV -Value "DOCKER_CONFIG=$dockerCfgDir" -Encoding ascii
 
-          $pass | docker login registry.kushanherath.me -u $user --password-stdin
-
-          if ($LASTEXITCODE -ne 0 -and (Get-Command docker-credential-desktop -ErrorAction SilentlyContinue)) {
-            Write-Host "Repo secret login failed; retrying with local Docker Desktop credentials..."
-            $localCreds = "registry.kushanherath.me" | docker-credential-desktop get 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($localCreds) {
-              $localCreds.Secret | docker login registry.kushanherath.me -u $localCreds.Username --password-stdin
-            }
-          }
+          Write-Host "Logging into registry.kushanherath.me (user len: $($user.Length), pass len: $($pass.Length))..."
+          docker login registry.kushanherath.me -u $user -p $pass
 
           if ($LASTEXITCODE -ne 0) {
             throw "Private registry login failed"
