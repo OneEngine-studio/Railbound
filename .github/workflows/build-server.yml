@@ -78,12 +78,18 @@ jobs:
           if (-not (Test-Path $unity)) { throw "Unity not found at $unity (set repo variable UNITY_PATH)" }
           if (Test-Path Builds/Server/Linux) { Remove-Item -Recurse -Force Builds/Server/Linux }
           $log = Join-Path $PWD "unity-build.log"
-          & $unity -batchmode -nographics -projectPath "$PWD" `
-            -executeMethod Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI `
-            -logFile $log
-          $code = $LASTEXITCODE
+          # Unity.exe is a GUI program: calling it with & returns at once without waiting and without an exit code, which made
+          # this step fail after 6 seconds ("Cannot find path unity-build.log"). Start-Process -Wait waits for the build.
+          $unityArgs = @(
+            '-batchmode', '-nographics',
+            '-projectPath', "`"$PWD`"",
+            '-executeMethod', 'Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI',
+            '-logFile', "`"$log`""
+          )
+          $proc = Start-Process -FilePath $unity -ArgumentList $unityArgs -Wait -PassThru
+          $code = $proc.ExitCode
           if ($code -ne 0) {
-            Get-Content $log -Tail 80
+            if (Test-Path $log) { Get-Content $log -Tail 80 } else { Write-Host "Unity wrote no log file (it did not start; check the Unity license on this PC)." }
             throw "Unity build failed with exit code $code"
           }
           if (-not (Test-Path Builds/Server/Linux/RailboundServer.x86_64)) { throw "Server binary missing" }
