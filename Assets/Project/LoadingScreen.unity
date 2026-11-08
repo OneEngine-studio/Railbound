@@ -1183,7 +1183,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: MAP-BR
+  m_text: MAP-2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 4652ec2f3a1009845ac180627188f64a, type: 2}
   m_sharedMaterial: {fileID: 581266391126303532, guid: 4652ec2f3a1009845ac180627188f64a,
@@ -1373,7 +1373,7 @@ MonoBehaviour:
   tipCounterText: {fileID: 1236223623}
   tipGroup: {fileID: 1603981194}
   versionText: {fileID: 2093246920}
-  defaultScene: MAP-BR
+  defaultScene: MAP-2
   minLoadTime: 4
   fadeTime: 0.6
   tipInterval: 6

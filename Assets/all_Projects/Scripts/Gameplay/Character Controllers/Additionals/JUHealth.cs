@@ -28,6 +28,12 @@ namespace JUTPS
 		[JUHeader("Stats")]
 		public bool IsDead;
 
+		/// <summary>Set by the code that is about to deal damage (bullets) so the victim can remember who hit it.</summary>
+		public static GameObject PendingAttacker;
+		/// <summary>Who damaged this character last, and when (Time.time). Used for kill credit.</summary>
+		[System.NonSerialized] public GameObject LastAttacker;
+		[System.NonSerialized] public float LastAttackTime = -999f;
+
 		void Start()
 		{
 			LimitHealth();
@@ -43,6 +49,12 @@ namespace JUTPS
 		}
 		public void DoDamage(float damage, Vector3 hitPosition = default(Vector3))
 		{
+			if (PendingAttacker != null && PendingAttacker != gameObject)
+			{
+				LastAttacker = PendingAttacker;
+				LastAttackTime = Time.time;
+			}
+
 			Health -= damage;
 			LimitHealth();
 			Invoke(nameof(CheckHealthState), 0.016f);

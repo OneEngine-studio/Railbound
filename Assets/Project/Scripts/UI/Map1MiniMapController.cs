@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace Railbound.UI
 {
     /// <summary>
-    /// Clean grid-based automap for MAP-BR.
+    /// Clean grid-based automap for MAP-2.
     ///  - A small widescreen minimap (top-left) that follows the camera and rotates with the view.
     ///  - Press <see cref="mapKey"/> (M) for a large north-up map with the 200 m grid, grid references and a details panel.
     /// The map base is a RenderTexture baked from the terrain heightmap (see <see cref="MapTerrainBaker"/>) and shown
@@ -139,7 +139,7 @@ namespace Railbound.UI
             _terrain = Terrain.activeTerrain != null ? Terrain.activeTerrain : FindObjectOfType<Terrain>();
             _multiTile = false;
 
-            // Maps built from several terrain tiles (MAP-BR): the playable region comes from the MiniMapBounds corners.
+            // Maps built from several terrain tiles (MAP-2): the playable region comes from the MiniMapBounds corners.
             if (Terrain.activeTerrains.Length > 1)
             {
                 var bounds = FindObjectOfType<Arikan.MiniMapBounds>();

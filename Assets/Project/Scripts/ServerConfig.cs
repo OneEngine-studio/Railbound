@@ -4,9 +4,11 @@
 /// </summary>
 public static class ServerConfig
 {
-    public const string NakamaScheme = "http";
-    public const string NakamaHost = "161.118.255.172";
-    public const int NakamaPort = 7350;
+    // Nakama API through the Cloudflare tunnel (restapinakama.kushanherath.me -> nakama:7350 in the k3s cluster).
+    // The realtime socket (matchmaker) uses WebSocket over the same address.
+    public const string NakamaScheme = "https";
+    public const string NakamaHost = "restapinakama.kushanherath.me";
+    public const int NakamaPort = 443;
     public const string NakamaServerKey = "defaultkey";
 
     public const string GameServerAddress = "134.185.84.226";

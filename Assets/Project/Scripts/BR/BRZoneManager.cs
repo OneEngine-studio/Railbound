@@ -157,6 +157,9 @@ namespace Railbound.BR
             interpolatedCenter = initialCenter;
 
             SetupVisualBarrier();
+
+            // the match state machine (alive count, killfeed, winner) lives next to the storm
+            BRMatchCoordinator.EnsureExists(gameObject);
         }
 
         private void Start()
@@ -342,6 +345,9 @@ namespace Railbound.BR
 
                 // hold phase 1 until somebody is actually on the server
                 while (IsDedicatedAuthority && ConnectedPlayerCount() == 0) yield return null;
+
+                // and until the match coordinator has finished the warmup countdown
+                while (BRMatchCoordinator.Instance != null && !BRMatchCoordinator.Instance.ZoneMayRun) yield return null;
 
                 yield return StartCoroutine(RunRound());
 

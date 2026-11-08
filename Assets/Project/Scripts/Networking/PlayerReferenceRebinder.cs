@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 namespace Railbound.Networking
 {
     /// <summary>
-    /// HUD and gameplay scripts in MAP-BR (health bar, medkit counter, crosshair, minimap, indicators, camera ...)
+    /// HUD and gameplay scripts in MAP-2 (health bar, medkit counter, crosshair, minimap, indicators, camera ...)
     /// cache the offline scene "TPS Character" when the scene loads. In multiplayer that character is replaced by
     /// the spawned network player, so those scripts keep watching a hidden object (health bar never moves, etc).
     /// This moves every such reference onto the matching component of the new player.

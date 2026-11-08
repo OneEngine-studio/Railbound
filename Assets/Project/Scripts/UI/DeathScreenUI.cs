@@ -22,18 +22,27 @@ namespace Railbound.UI
         public static bool IsShowing => active != null;
 
         /// <summary>Show the screen. <paramref name="remaining"/> returns the seconds left before the restart.</summary>
-        public static DeathScreenUI Show(float total, Func<float> remaining, string destination)
+        public static DeathScreenUI Show(float total, Func<float> remaining, string destination, string countdownLabel = "REDEPLOYING IN", string headline = null)
         {
             if (active != null) Destroy(active.gameObject);
             var go = new GameObject("[UI] Death Screen");
             active = go.AddComponent<DeathScreenUI>();
+            active.countdownLabel = countdownLabel;
+            active.headline = headline;
             active.Begin(total, remaining, destination);
             return active;
+        }
+
+        /// <summary>Close the screen early (the Battle Royale hands over to the spectator view).</summary>
+        public static void Hide()
+        {
+            if (active != null) Destroy(active.gameObject);
         }
 
         private const float BarHeight = 88f;
         private static readonly Color Dim = new Color(1f, 1f, 1f, 0.55f);
 
+        private string countdownLabel = "REDEPLOYING IN", headline;
         private Func<float> remaining;
         private float total = 3f, startTime, surviveSeconds;
         private string destination = "";
@@ -96,9 +105,9 @@ namespace Railbound.UI
             if (sec != lastSecond) { lastSecond = sec; tickStart = Time.unscaledTime; }
             float k = Time.unscaledTime - tickStart;
             string num = "<size=" + (k < 0.18f ? Mathf.Lerp(30f, 24f, k / 0.18f).ToString("0") : "24") + ">" + Mathf.Max(1, sec) + "</size>";
-            countdown.text = "REDEPLOYING IN  <color=#FFFFFF>" + num + "</color>";
+            countdown.text = countdownLabel + "  <color=#FFFFFF>" + num + "</color>";
             fill.anchorMax = new Vector2(Mathf.Clamp01(left / total), 1f);
-            stats.text = "SURVIVED  <color=#FFFFFF>" + FormatTime(surviveSeconds) + "</color>";
+            stats.text = (string.IsNullOrEmpty(headline) ? "" : "<color=#FFFFFF>" + headline + "</color>   |   ") + "SURVIVED  <color=#FFFFFF>" + FormatTime(surviveSeconds) + "</color>";
             rule2.text = destination.Length > 0 ? "NEXT  " + destination : "";
         }
 
