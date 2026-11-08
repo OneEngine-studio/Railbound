@@ -13,7 +13,8 @@ name: Build & push dedicated server
 #   2. Unity 2023.1.22f1 with "Linux Build Support (Mono)" + "Linux Dedicated Server Build Support".
 #      Open Unity Hub once and stay signed in so the Personal license is active.
 #   3. Docker Desktop installed on the same PC.
-#   4. Repo secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (Docker Hub access token, write access).
+#   4. Repo secret: DOCKERHUB_TOKEN (Docker Hub access token, write access).
+#      Optional repo secret: DOCKERHUB_USERNAME (defaults to the namespace from IMAGE, e.g. "kushanrandika").
 #   Optional repo variables: UNITY_PATH (default below), DEPLOY_GITOPS=true + secret GITOPS_TOKEN
 #   to also bump the image tag in the railbound-gitops repo.
 #
@@ -170,7 +171,11 @@ jobs:
           # program writes to stderr into a terminating error (docker prints its connection error and the whole BuildKit progress
           # there), so the step died at the first docker call. The exit codes are checked explicitly below.
           $ErrorActionPreference = "Continue"
-          $env:DH_TOKEN | docker login -u $env:DH_USER --password-stdin
+          $user = if ($env:DH_USER) { $env:DH_USER.Trim() } else { ($env:IMAGE -split '/')[0] }
+          $token = if ($env:DH_TOKEN) { $env:DH_TOKEN.Trim() } else { "" }
+          if (-not $user) { throw "Docker Hub username is empty. Set secret DOCKERHUB_USERNAME or use IMAGE in the form <user>/<repo>." }
+          if (-not $token) { throw "Docker Hub token is empty. Set secret DOCKERHUB_TOKEN." }
+          $token | docker login -u $user --password-stdin
           if ($LASTEXITCODE -ne 0) { throw "docker login failed" }
 
       - name: Build and push image
