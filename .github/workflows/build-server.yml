@@ -78,16 +78,41 @@ jobs:
           if (-not (Test-Path $unity)) { throw "Unity not found at $unity (set repo variable UNITY_PATH)" }
           if (Test-Path Builds/Server/Linux) { Remove-Item -Recurse -Force Builds/Server/Linux }
           $log = Join-Path $PWD "unity-build.log"
-          # Unity.exe is a GUI program: calling it with & returns at once without waiting and without an exit code, which made
-          # this step fail after 6 seconds ("Cannot find path unity-build.log"). Start-Process -Wait waits for the build.
-          $unityArgs = @(
-            '-batchmode', '-nographics',
-            '-projectPath', "`"$PWD`"",
-            '-executeMethod', 'Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI',
-            '-logFile', "`"$log`""
-          )
-          $proc = Start-Process -FilePath $unity -ArgumentList $unityArgs -Wait -PassThru
-          $code = $proc.ExitCode
+          $importLog = Join-Path $PWD "unity-import.log"
+
+          # Runs Unity and returns its exit code. Unity.exe is a GUI program, so it is started with Start-Process; the job waits for
+          # the Unity process itself only. (Start-Process -Wait also waits for every child Unity left behind, and a crashed Unity
+          # leaves children behind: the job hung for hours.) Whatever a crashed editor orphaned is stopped afterwards.
+          function Invoke-Unity([string[]]$UnityArgs, [int]$TimeoutMinutes) {
+            $p = Start-Process -FilePath $unity -ArgumentList $UnityArgs -PassThru
+            $finished = $p.WaitForExit($TimeoutMinutes * 60 * 1000)
+            if (-not $finished) { Write-Host "Unity did not finish within $TimeoutMinutes minutes, stopping it."; $p.Kill() }
+            for ($pass = 0; $pass -lt 2; $pass++) {
+              Get-CimInstance Win32_Process -Filter "ParentProcessId=$($p.Id)" -ErrorAction SilentlyContinue |
+                ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+            }
+            if (-not $finished) { return -1 }
+            return $p.ExitCode
+          }
+
+          # 1) Import the project once on its own. A fresh workspace has an empty Library; importing and building in one run
+          #    crashed Unity inside BuildPlayer (Mono assertion while collecting import dependencies). A failure here is not fatal:
+          #    the build run below imports whatever is left.
+          $importCode = Invoke-Unity @('-batchmode', '-nographics', '-quit', '-projectPath', "`"$PWD`"", '-logFile', "`"$importLog`"") 90
+          Write-Host "Unity import run finished with exit code $importCode"
+
+          # 2) Build the server. One retry, because the second attempt starts from an already imported Library.
+          $code = -1
+          for ($attempt = 1; $attempt -le 2 -and $code -ne 0; $attempt++) {
+            Write-Host "Unity server build, attempt $attempt"
+            $code = Invoke-Unity @(
+              '-batchmode', '-nographics',
+              '-projectPath', "`"$PWD`"",
+              '-executeMethod', 'Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI',
+              '-logFile', "`"$log`""
+            ) 90
+            Write-Host "Attempt $attempt finished with exit code $code"
+          }
           if ($code -ne 0) {
             if (Test-Path $log) { Get-Content $log -Tail 80 } else { Write-Host "Unity wrote no log file (it did not start; check the Unity license on this PC)." }
             throw "Unity build failed with exit code $code"
@@ -100,7 +125,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unity-build-log
-          path: unity-build.log
+          path: |
+            unity-build.log
+            unity-import.log
 
       - name: Compute image tag
         id: meta
