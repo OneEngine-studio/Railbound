@@ -180,6 +180,8 @@ namespace Railbound.Editor
                     options = BuildOptions.None
                 };
 
+                // the headless server never draws: skip compiling the HDRP shader library for it (see ServerShaderStripping)
+                ServerShaderStripping.BeginServerBuild();
                 BuildReport report = BuildPipeline.BuildPlayer(options);
                 BuildSummary summary = report.summary;
 
@@ -265,6 +267,8 @@ namespace Railbound.Editor
             }
             finally
             {
+                ServerShaderStripping.EndServerBuild();
+
                 // Restore subtarget and addressables option
                 EditorUserBuildSettings.standaloneBuildSubtarget = prevSubtarget;
                 if (addrSettings != null)
