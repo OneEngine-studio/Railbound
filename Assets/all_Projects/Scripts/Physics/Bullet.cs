@@ -138,6 +138,7 @@ namespace JUTPS.WeaponSystem
 			if (col.gameObject.tag != "Bullet")
 			{
 				float RealDamage = BulletDamage;
+				JUHealth.PendingAttacker = GetOwner();   // kill credit: whoever fired this bullet
 				//Check Character and Bones Layers
 				if (col.gameObject.layer == 15 || col.gameObject.layer == 9)
 				{
@@ -169,6 +170,8 @@ namespace JUTPS.WeaponSystem
 						health.DoDamage(BulletDamage);
 					}
 				}
+
+				JUHealth.PendingAttacker = null;
 
 				// >>> Impact Add Force
 				if (ImpactAddForce)

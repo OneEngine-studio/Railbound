@@ -217,6 +217,19 @@ namespace Railbound.BR
             }
         }
 
+        /// <summary>Puts a backfill bot (a clone made by the match coordinator) on a free terrain spot with a starter weapon near it.</summary>
+        public bool TryPlaceBot(JUCharacterRLAgent agent)
+        {
+            if (agent == null || rng == null) return false;
+            if (!TryFindPoint(usedSpawnPoints, MinSpawnSpacing * 0.7f, out Vector3 p)) return false;
+
+            usedSpawnPoints.Add(p);
+            agent.TeleportTo(p, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
+            BotsPlaced++;
+            if (PlaceStarterLoot) PlaceStarterWeaponNear(p);
+            return true;
+        }
+
         private JUCharacterController FindOfflinePlayer()
         {
             if (JUGameManager.PlayerController != null && JUGameManager.PlayerController.GetComponent<JUCharacterRLAgent>() == null)
