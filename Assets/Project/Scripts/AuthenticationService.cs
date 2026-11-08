@@ -16,12 +16,13 @@ public class AuthenticationService : MonoBehaviour
 {
     public static AuthenticationService Instance { get; private set; }
 
-    [Header("Nakama Configuration")]
-    [Tooltip("http for local/remote without TLS, https for TLS")]
-    [SerializeField] private string scheme = ServerConfig.NakamaScheme;
-    [SerializeField] private string host = ServerConfig.NakamaHost;
-    [SerializeField] private int port = ServerConfig.NakamaPort;
-    [SerializeField] private string serverKey = ServerConfig.NakamaServerKey;
+    // The Nakama endpoint comes from ServerConfig only. These fields used to be serialized, and the LoginMenu scene still held
+    // the old direct address (http://161.118.255.172:7350), which silently overrode ServerConfig and made the login screen
+    // report "UNABLE TO CONNECT". Not serialized, so a stale scene value can never win again.
+    private string scheme = ServerConfig.NakamaScheme;
+    private string host = ServerConfig.NakamaHost;
+    private int port = ServerConfig.NakamaPort;
+    private string serverKey = ServerConfig.NakamaServerKey;
     [Tooltip("Auto-restore saved session on Awake")]
     [SerializeField] private bool autoRestoreSession = true;
 

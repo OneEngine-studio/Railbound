@@ -99,6 +99,8 @@ public partial class LoginUI : MonoBehaviour
     [SerializeField] private string defaultErrorText = "Please enter a username and password.";
     [SerializeField] private string lobbySceneName = "GameLobby";
     [SerializeField] private bool autoGoToLobby = true;
+    [Tooltip("Sign in as a guest (Nakama device auth) right after the server check, without any button. Until the store login exists.")]
+    [SerializeField] private bool autoGuestLogin = true;
 
     private void Start()
     {
@@ -140,8 +142,8 @@ public partial class LoginUI : MonoBehaviour
         {
             AuthenticationService.Instance.OnLoginSuccess -= OnAuthSuccessGoLobby;
             AuthenticationService.Instance.OnLoginSuccess += OnAuthSuccessGoLobby;
-            // Check server connectivity
-            _ = CheckServerConnection();
+            // Check server connectivity, then sign in as a guest on its own
+            _ = ConnectAndAutoGuestAsync();
         }
     }
 
@@ -315,9 +317,31 @@ public partial class LoginUI : MonoBehaviour
     public void OnCloseAccountLogin() { PlayTickSound(); SetAccountLoginPopup(false); }
 
     // ------------------------------------------------------------------ Server connectivity check
-    private async System.Threading.Tasks.Task CheckServerConnection()
+    /// <summary>Checks the server and, when it answers and nobody is signed in yet, logs in as a guest (device auth) without a click.</summary>
+    private async System.Threading.Tasks.Task ConnectAndAutoGuestAsync()
     {
-        if (AuthenticationService.Instance == null) return;
+        bool reachable = await CheckServerConnection();
+        if (!reachable || !autoGuestLogin) return;
+
+        var auth = AuthenticationService.Instance;
+        // let a saved session be restored first; a restored session already leads to the lobby
+        float waited = 0f;
+        while (auth != null && !auth.IsAuthenticationReady && waited < 5f)
+        {
+            await System.Threading.Tasks.Task.Yield();
+            waited += Time.unscaledDeltaTime;
+        }
+        if (this == null || auth == null || auth.IsAuthenticated) return;
+
+        Debug.Log("[LoginUI] Signing in as guest (device auth)...");
+        SetError(null);
+        SetLoading(true);
+        HandleResult(await auth.LoginAsGuestAsync());
+    }
+
+    private async System.Threading.Tasks.Task<bool> CheckServerConnection()
+    {
+        if (AuthenticationService.Instance == null) return false;
         try
         {
             // Show connecting state
@@ -336,15 +360,17 @@ public partial class LoginUI : MonoBehaviour
                 {
                     ShowErrorPopup("UNABLE TO CONNECT",
                         "We couldn't reach the Railbound servers. Check your internet connection and try again.",
-                        "error", "retry_only", () => _ = CheckServerConnection());
+                        "error", "retry_only", () => _ = ConnectAndAutoGuestAsync());
                     if (ServerStatusText) ServerStatusText.text = "Offline";
                     if (OnlineDot) OnlineDot.color = Color.red;
+                    return false;
                 }
                 else
                 {
                     Debug.Log("[LoginUI] Server connection OK");
                     if (ServerStatusText) ServerStatusText.text = "Online";
                     if (OnlineDot) OnlineDot.color = new Color(0.22f, 0.85f, 0.4f);
+                    return true;
                 }
             }
         }
@@ -354,7 +380,8 @@ public partial class LoginUI : MonoBehaviour
             Debug.LogWarning($"[LoginUI] Server check failed: {ex.Message}");
             ShowErrorPopup("CONNECTION ERROR",
                 "We couldn't reach the Railbound servers. Check your internet connection and try again.",
-                "error", "retry_only", () => _ = CheckServerConnection());
+                "error", "retry_only", () => _ = ConnectAndAutoGuestAsync());
+            return false;
         }
     }
 
