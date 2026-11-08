@@ -321,10 +321,13 @@ jobs:
       - name: Update Helm image tags
         run: |
           for f in $GITOPS_VALUES; do
-            sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$f"
+            if [ -f "$f" ]; then
+              sed -i -E "s|^(\s*repository:\s*).*$|\1$IMAGE|" "$f"
+              sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$f"
+            fi
           done
 
-          git --no-pager diff -- $GITOPS_VALUES
+          git --no-pager diff -- $GITOPS_VALUES || true
 
       # Commit and push changes
       - name: Commit and push GitOps changes
@@ -332,7 +335,9 @@ jobs:
           git config user.name "railbound-ci"
           git config user.email "ci@railbound.invalid"
 
-          git add $GITOPS_VALUES
+          for f in $GITOPS_VALUES; do
+            [ -f "$f" ] && git add "$f"
+          done
 
           git diff --cached --quiet && {
             echo "No changes detected"
