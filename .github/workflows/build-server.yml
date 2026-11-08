@@ -129,10 +129,15 @@ jobs:
             unity-build.log
             unity-import.log
 
+      # PowerShell on purpose: "shell: bash" resolves to the WSL launcher (WindowsApps/bash.exe) on this PC, which cannot write
+      # to the Windows path in $GITHUB_OUTPUT and left this step hanging.
       - name: Compute image tag
         id: meta
-        shell: bash
-        run: echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+        shell: powershell
+        run: |
+          $tag = "sha-" + $env:GITHUB_SHA.Substring(0, 8)
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag" -Encoding ascii
+          Write-Host "Image tag: $tag"
 
       - name: Make sure Docker is running
         shell: powershell
