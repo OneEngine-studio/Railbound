@@ -385,8 +385,10 @@ namespace Railbound.Networking
             }
             else
             {
-                Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' via Unity SceneManager.");
-                SceneManager.LoadSceneAsync(targetGameplayScene);   // async: the loading overlay keeps animating
+                Debug.Log($"[LobbyMatchmaker] Loading scene '{targetGameplayScene}' through the loading screen.");
+                // The loading screen loads the map and then stays up until the Netcode client is connected to the allocated server.
+                // Without the LoadingScreen scene in the build it falls back to a plain async load.
+                Railbound.UI.LoadingScreenController.Load(targetGameplayScene);
             }
         }
 
