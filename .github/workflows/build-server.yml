@@ -281,19 +281,21 @@ jobs:
             throw "Docker build failed"
           }
 
-          # Push unique commit tag
-          docker push "$env:IMAGE`:$tag"
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Docker push failed for commit tag"
+          # The layers go to the registry over the home uplink. A slow upload can make the Docker daemon give up on one request
+          # ("timeout awaiting response headers") and abort the whole push. Layers that are already stored are skipped on the next
+          # attempt, so retrying converges instead of starting over.
+          function Push-WithRetry([string]$Ref) {
+            for ($i = 1; $i -le 4; $i++) {
+              docker push $Ref
+              if ($LASTEXITCODE -eq 0) { return }
+              Write-Host "docker push $Ref failed (attempt $i of 4)"
+              Start-Sleep -Seconds (10 * $i)
+            }
+            throw "Docker push failed for $Ref"
           }
 
-          # Push latest tag
-          docker push "$env:IMAGE`:latest"
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Docker push failed for latest"
-          }
+          Push-WithRetry "$env:IMAGE`:$tag"
+          Push-WithRetry "$env:IMAGE`:latest"
 
           Write-Host "Successfully pushed images:"
           Write-Host "$env:IMAGE`:$tag"
