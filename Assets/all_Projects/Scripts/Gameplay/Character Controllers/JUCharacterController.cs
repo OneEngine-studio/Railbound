@@ -313,14 +313,26 @@ namespace JUTPS
             if (HoldableItemInUseRightHand != null)
             {
                 bool EnabledCondition = (!IsDriving && !IsRolling && !IsReloading);
+                bool isPistolPose = HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolTwoHands
+                                 || HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolOneHand;
 
                 if (HoldableItemInUseRightHand.HoldPose != JUHoldableItem.ItemHoldingPose.Free)
                 {
-                    RightArmLayerWeight = Mathf.MoveTowards(RightArmLayerWeight, EnabledCondition ? 0.8f : 0, 2 * Time.deltaTime);
+                    float targetRightWeight = 0f;
+                    if (EnabledCondition)
+                    {
+                        if (FiringMode || IsAiming)
+                            targetRightWeight = 0.8f;
+                        else if (IsMoving)
+                            targetRightWeight = isPistolPose ? 0.0f : 0.5f;
+                        else
+                            targetRightWeight = isPistolPose ? 0.65f : 0.8f;
+                    }
+                    RightArmLayerWeight = Mathf.MoveTowards(RightArmLayerWeight, targetRightWeight, 3f * Time.deltaTime);
                 }
                 else
                 {
-                    RightArmLayerWeight = Mathf.MoveTowards(RightArmLayerWeight, 0.0f, 2 * Time.deltaTime);
+                    RightArmLayerWeight = Mathf.MoveTowards(RightArmLayerWeight, 0.0f, 3f * Time.deltaTime);
                 }
             }
             else
@@ -350,9 +362,21 @@ namespace JUTPS
                 //Right Hand (!= | ==)
                 if (HoldableItemInUseRightHand != null && HoldableItemInUseLeftHand == null)
                 {
-                    if (HoldableItemInUseRightHand.OppositeHandPosition != null || isReloading)
+                    bool isPistolPose = HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolTwoHands
+                                     || HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolOneHand;
+
+                    if (isReloading)
                     {
-                        BothArmsLayerWeight = Mathf.MoveTowards(BothArmsLayerWeight, 1, 2f * Time.deltaTime);
+                        BothArmsLayerWeight = Mathf.MoveTowards(BothArmsLayerWeight, 1f, 3f * Time.deltaTime);
+                    }
+                    else if (HoldableItemInUseRightHand.OppositeHandPosition != null)
+                    {
+                        // For pistols, only lock both arms in front of the chest when actively in FiringMode/Aiming;
+                        // when running or standing relaxed out of FiringMode, let the left arm release and swing naturally.
+                        float targetBothArmsWeight = isPistolPose
+                            ? ((FiringMode || IsAiming) ? 1f : 0f)
+                            : ((FiringMode || IsAiming) ? 1f : (IsMoving ? 0.65f : 1f));
+                        BothArmsLayerWeight = Mathf.MoveTowards(BothArmsLayerWeight, targetBothArmsWeight, 3.5f * Time.deltaTime);
                     }
                     else
                     {
@@ -470,7 +494,19 @@ namespace JUTPS
             if (AnimatorParameters.ItemsWieldingIdentifier != "") anim.SetInteger(AnimatorParameters.ItemsWieldingIdentifier, GetWieldingID());
 
             //Set Item Wielding
-            if (AnimatorParameters.ItemWieldingRightHandPoseID != "") anim.SetFloat(AnimatorParameters.ItemWieldingRightHandPoseID, (HoldableItemInUseRightHand != null) ? HoldableItemInUseRightHand.GetWieldingPoseIndex() : 0);
+            if (AnimatorParameters.ItemWieldingRightHandPoseID != "")
+            {
+                float rightPoseId = 0f;
+                if (HoldableItemInUseRightHand != null)
+                {
+                    rightPoseId = HoldableItemInUseRightHand.GetWieldingPoseIndex();
+                    if (!FiringMode && !IsAiming && HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolTwoHands)
+                    {
+                        rightPoseId = (float)JUHoldableItem.ItemHoldingPose.PistolOneHand;
+                    }
+                }
+                anim.SetFloat(AnimatorParameters.ItemWieldingRightHandPoseID, rightPoseId);
+            }
             if (AnimatorParameters.ItemWieldingLeftHandPoseID != "") anim.SetFloat(AnimatorParameters.ItemWieldingLeftHandPoseID, (HoldableItemInUseLeftHand != null) ? HoldableItemInUseLeftHand.GetWieldingPoseIndex() : 0);
         }
         #endregion
@@ -741,7 +777,12 @@ namespace JUTPS
                         {
                             if (HoldableItemInUseRightHand.OppositeHandPosition != null)
                             {
-                                LeftHandWeightIK = Mathf.Lerp(LeftHandWeightIK, (!FiringModeIK && FiringMode) ? 0 : 1, IKTransitionSpeed * Time.deltaTime);
+                                bool isPistolPose = HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolTwoHands
+                                                 || HoldableItemInUseRightHand.HoldPose == JUHoldableItem.ItemHoldingPose.PistolOneHand;
+                                float targetLeftIK = isPistolPose
+                                    ? ((FiringMode && FiringModeIK) ? 1f : 0f)
+                                    : ((!FiringModeIK && FiringMode) ? 0f : 1f);
+                                LeftHandWeightIK = Mathf.Lerp(LeftHandWeightIK, targetLeftIK, IKTransitionSpeed * Time.deltaTime);
                             }
                             else
                             {
