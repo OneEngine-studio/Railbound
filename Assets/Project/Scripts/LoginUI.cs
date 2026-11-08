@@ -348,11 +348,21 @@ public partial class LoginUI : MonoBehaviour
             SetLoading(true);
             if (loadingText) loadingText.text = "Connecting to server...";
 
-            using (var www = UnityEngine.Networking.UnityWebRequest.Get(AuthenticationService.Instance.ApiBaseUrl))
+            using (var www = UnityEngine.Networking.UnityWebRequest.Get(AuthenticationService.Instance.ApiBaseUrl + "/healthcheck"))
             {
                 www.timeout = 5;
                 var op = www.SendWebRequest();
-                while (!op.isDone) await System.Threading.Tasks.Task.Yield();
+                while (!op.isDone)
+                {
+                    if (this == null) return false;
+                    await System.Threading.Tasks.Task.Yield();
+                }
+
+                if (this == null) return false;
+                if (AuthenticationService.Instance != null && AuthenticationService.Instance.IsAuthenticated)
+                {
+                    return true;
+                }
 
                 SetLoading(false);
 
@@ -376,6 +386,7 @@ public partial class LoginUI : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            if (this == null) return false;
             SetLoading(false);
             Debug.LogWarning($"[LoginUI] Server check failed: {ex.Message}");
             ShowErrorPopup("CONNECTION ERROR",
