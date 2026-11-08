@@ -42,6 +42,12 @@ namespace Railbound.Networking
         [Tooltip("A lobby of this many real players starts the match immediately.")]
         [SerializeField] private int queueMaxPlayers = 10;
 
+        [Header("Game server (Agones, allocated through Nakama)")]
+        [Tooltip("How long to wait for Nakama to hand out a game server for the match.")]
+        [SerializeField] private float allocationTimeoutSeconds = 45f;
+        [Tooltip("If no server can be allocated (Nakama module missing, fleet empty), connect to the default server address instead of failing.")]
+        [SerializeField] private bool legacyServerFallback = true;
+
         [Header("UI Feedback")]
         [Tooltip("Optional text field to display matchmaking / deployment status.")]
         [SerializeField] private TextMeshProUGUI statusText;
@@ -55,6 +61,8 @@ namespace Railbound.Networking
         /// <summary>True while a deployment can still be cancelled (before the gameplay scene starts loading).</summary>
         public bool CanCancel => IsDeploying && !_sceneLoadStarted;
 
+        private string _queueMatchId = "";
+        private int _queuePlayers = 1;
         private bool _cancelRequested;
         private bool _sceneLoadStarted;
         private bool _startedHostHere;
@@ -96,6 +104,9 @@ namespace Railbound.Networking
             }
 
             IsDeploying = true;
+            _queueMatchId = Guid.NewGuid().ToString("N");   // a solo match; a matchmaker lobby replaces it with a shared id
+            _queuePlayers = 1;
+            MatchConnection.Clear();
             _cancelRequested = false;
             _sceneLoadStarted = false;
             _startedHostHere = false;
@@ -105,6 +116,13 @@ namespace Railbound.Networking
                 // 0. Queue: look for other players for up to queueSeconds (skipped when Nakama is not reachable)
                 await QueueForPlayersAsync();
                 if (_cancelRequested) { AbortDeploy(); return; }
+
+                // 0b. Game server: Nakama allocates one Agones server per match and everybody of the match gets the same one
+                if (!await AllocateServerAsync())
+                {
+                    if (_cancelRequested) { AbortDeploy(); return; }
+                    throw new InvalidOperationException("No game server available.");
+                }
 
                 UpdateStatus("CREATING NAKAMA MATCH...");
 
@@ -189,6 +207,14 @@ namespace Railbound.Networking
 
                 if (matched.Task.IsCompleted)
                 {
+                    // every member of a matchmaker lobby derives the same match id from the member list
+                    var ids = matched.Task.Result.Users.Select(u => u.Presence.UserId).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+                    using (var sha = System.Security.Cryptography.SHA1.Create())
+                    {
+                        byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("|", ids)));
+                        _queueMatchId = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant().Substring(0, 24);
+                    }
+                    _queuePlayers = ids.Length;
                     UpdateStatus("LOBBY FOUND");
                     Debug.Log($"[LobbyMatchmaker] Matchmaker formed a lobby of {matched.Task.Result.Users.Count()} players.");
                     await Task.Delay(600);
@@ -213,6 +239,39 @@ namespace Railbound.Networking
                     catch (Exception) { /* the ticket expires on its own */ }
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the dedicated server of this match from Nakama and stores it in <see cref="MatchConnection"/>.
+        /// Returns false when that failed and the legacy default server is not allowed (or the player cancelled).
+        /// </summary>
+        private async Task<bool> AllocateServerAsync()
+        {
+            var auth = AuthenticationService.Instance;
+            if (auth == null || !auth.IsAuthenticated)
+            {
+                Debug.Log("[LobbyMatchmaker] Not signed in: using the default server address.");
+                return true;
+            }
+
+            UpdateStatus("REQUESTING GAME SERVER...");
+            var allocation = await ServerAllocationClient.AllocateAsync(_queueMatchId, _queuePlayers, allocationTimeoutSeconds, () => _cancelRequested, UpdateStatus);
+            if (_cancelRequested) return false;
+
+            if (allocation.HasValue)
+            {
+                MatchConnection.Set(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName);
+                UpdateStatus("GAME SERVER READY");
+                await Task.Delay(500);
+                return true;
+            }
+
+            if (legacyServerFallback)
+            {
+                Debug.LogWarning("[LobbyMatchmaker] No allocated server; falling back to the default server address.");
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Cancels a deployment that has not started loading the gameplay scene yet.</summary>

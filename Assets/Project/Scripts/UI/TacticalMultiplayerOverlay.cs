@@ -259,11 +259,25 @@ namespace Railbound.UI
         private void UpdateTransportConfig()
         {
             if (NetworkManager.Singleton == null) return;
+
+            // the lobby asked Nakama for this match's game server (Agones); a command-line -ip / -port still wins
+            if (MatchConnection.HasAllocation && !HasCommandLineEndpoint())
+            {
+                serverAddress = MatchConnection.Host;
+                serverPort = MatchConnection.Port;
+            }
+
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             if (transport != null)
             {
                 transport.SetConnectionData(serverAddress, serverPort, "0.0.0.0");
             }
+        }
+
+        private static bool HasCommandLineEndpoint()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            return Array.Exists(args, a => string.Equals(a, "-ip", StringComparison.OrdinalIgnoreCase) || string.Equals(a, "-port", StringComparison.OrdinalIgnoreCase));
         }
 
         private void InitStyles()

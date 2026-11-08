@@ -39,7 +39,8 @@ env:
   IMAGE: kushanrandika/railbound-server
   UNITY_DEFAULT_PATH: C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Unity.exe
   GITOPS_REPO: OneEngine-studio/railbound-gitops
-  GITOPS_VALUES: charts/game-server/values.yaml
+  # every chart that runs the server image gets the new tag (the old static server and the Agones fleet)
+  GITOPS_VALUES: charts/game-server/values.yaml charts/agones-fleet/values.yaml
 
 jobs:
   build-and-push:
@@ -142,14 +143,16 @@ jobs:
       # ArgoCD (automated sync) then rolls the pod.
       - name: Bump image tag in values.yaml
         run: |
-          sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$GITOPS_VALUES"
-          git --no-pager diff -- "$GITOPS_VALUES"
+          for f in $GITOPS_VALUES; do
+            sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$f"
+          done
+          git --no-pager diff -- $GITOPS_VALUES
 
       - name: Commit and push
         run: |
           git config user.name "railbound-ci"
           git config user.email "ci@railbound.invalid"
-          git add "$GITOPS_VALUES"
+          git add $GITOPS_VALUES
           git diff --cached --quiet && { echo "No change"; exit 0; }
           git commit -m "ci(game-server): deploy ${{ needs.build-and-push.outputs.tag }}"
           git push origin HEAD:main

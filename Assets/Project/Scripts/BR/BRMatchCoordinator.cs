@@ -44,6 +44,9 @@ namespace Railbound.BR
     {
         public static BRMatchCoordinator Instance { get; private set; }
 
+        /// <summary>Set by the Agones lifecycle when Nakama allocated this server for a lobby of N players (0 = unknown).</summary>
+        public static int ExpectedHumans;
+
         [Header("Match")]
         [Tooltip("Total combatants: real players plus bots that fill the empty slots.")]
         public int Capacity = 20;
@@ -156,7 +159,8 @@ namespace Railbound.BR
                     // a dedicated server collects a lobby first; a host or offline game has nobody else to wait for
                     bool dedicated = NetworkActive && NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient;
                     float needed = dedicated ? LobbyWindowSeconds : 1.5f;
-                    if (dedicated && humans >= EarlyStartHumans) needed = 1.5f;
+                    int fullLobby = ExpectedHumans > 0 ? ExpectedHumans : EarlyStartHumans;
+                    if (dedicated && humans >= fullLobby) needed = 1.5f;
                     if (stableHumanTime >= needed) BeginWarmup();
                     break;
                 }
