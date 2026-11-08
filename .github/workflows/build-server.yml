@@ -38,6 +38,9 @@ concurrency:
 env:
   IMAGE: kushanrandika/railbound-server
   UNITY_DEFAULT_PATH: C:\Program Files\Unity\Hub\Editor\2023.1.22f1\Editor\Unity.exe
+  # The map (Assets/TerrainDemoScene_HDRP, ~4 GB) is git-ignored, so a fresh checkout does not have it. The runner is the dev PC,
+  # so it is copied from the working project. Override with the repo variable MAP_ASSETS_DIR.
+  MAP_ASSETS_DEFAULT: C:\Users\kushan\Railbound\Assets\TerrainDemoScene_HDRP
   GITOPS_REPO: OneEngine-studio/railbound-gitops
   # every chart that runs the server image gets the new tag (the old static server and the Agones fleet)
   GITOPS_VALUES: charts/game-server/values.yaml charts/agones-fleet/values.yaml
@@ -53,6 +56,20 @@ jobs:
         with:
           lfs: true
           clean: false   # keep the imported Library folder between runs
+
+      - name: Copy the git-ignored map assets into the workspace
+        shell: powershell
+        run: |
+          $src = if ("${{ vars.MAP_ASSETS_DIR }}") { "${{ vars.MAP_ASSETS_DIR }}" } else { $env:MAP_ASSETS_DEFAULT }
+          if (-not (Test-Path "$src\Scenes\MAP-2.unity")) {
+            throw "Map assets not found at '$src' (expected Scenes\MAP-2.unity). Set the repo variable MAP_ASSETS_DIR to the folder on this PC."
+          }
+          # only new or changed files are copied, so later runs are fast
+          robocopy "$src" "Assets\TerrainDemoScene_HDRP" /E /XO /NFL /NDL /NJH /NJS /NP | Out-Null
+          if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
+          if (Test-Path "$src.meta") { Copy-Item "$src.meta" "Assets\TerrainDemoScene_HDRP.meta" -Force }
+          Write-Host "Map assets ready in Assets\TerrainDemoScene_HDRP"
+          exit 0
 
       - name: Build Linux dedicated server (Unity batch mode)
         shell: powershell
