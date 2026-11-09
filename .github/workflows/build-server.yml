@@ -1,4 +1,24 @@
 
+# On every push to main: build the Linux dedicated server (MAP-2) with Unity,
+# pack it into the Docker image and push it to Docker Hub.
+#
+# Runs on a SELF-HOSTED Windows runner (your PC) so no Unity license secret is needed:
+# the Unity Editor installed and activated on that machine is used directly.
+#
+# One-time setup:
+#   1. GitHub repo -> Settings -> Actions -> Runners -> New self-hosted runner (Windows),
+#      install it and add the label "unity" when configuring (./config.cmd ... --labels unity).
+#      Tip: use a SHORT folder such as C:\r so Windows paths stay under the length limit.
+#   2. Unity 2023.1.22f1 with "Linux Build Support (Mono)" + "Linux Dedicated Server Build Support".
+#      Open Unity Hub once and stay signed in so the Personal license is active.
+#   3. Docker Desktop installed on the same PC.
+#   4. Repo secret: DOCKERHUB_TOKEN (Docker Hub access token, write access).
+#      Optional repo secret: DOCKERHUB_USERNAME (defaults to the namespace from IMAGE, e.g. "kushanrandika").
+#   Optional repo variables: UNITY_PATH (default below), DEPLOY_GITOPS=true + secret GITOPS_TOKEN
+#   to also bump the image tag in the railbound-gitops repo.
+#
+# Note: the first run imports the whole project into a fresh Library folder and is slow;
+# later runs reuse it (the runner workspace is kept between runs).
 name: Build & push dedicated server
 
 on:
