@@ -173,9 +173,34 @@ namespace Railbound.UI
             SetProgress(1f);
             if (percentText != null) percentText.text = "";
 
+            var offlineChar = GameObject.Find("TPS Character");
+            if (offlineChar != null && offlineChar.GetComponent<NetworkObject>() == null)
+            {
+                offlineChar.SetActive(false);
+            }
+
             float elapsed = 0f;
             bool clientStarted = false;
             string failure = null;
+
+            if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening && MatchConnection.HasAllocation)
+            {
+                var transport = NetworkManager.Singleton.GetComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
+                if (transport != null)
+                {
+                    transport.SetConnectionData(MatchConnection.Host, MatchConnection.Port, "0.0.0.0");
+                }
+                NetworkManager.Singleton.NetworkConfig.EnableSceneManagement = true;
+                if (NetworkManager.Singleton.StartClient())
+                {
+                    clientStarted = true;
+                    Debug.Log($"[LoadingScreen] Started Netcode client -> {server}");
+                }
+                else
+                {
+                    failure = "FAILED TO START NETWORK CLIENT";
+                }
+            }
 
             while (failure == null)
             {

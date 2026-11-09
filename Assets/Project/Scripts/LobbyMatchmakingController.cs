@@ -388,8 +388,7 @@ namespace Railbound.Networking
                 }
                 if (clientMgr.IsListening)
                 {
-                    Debug.Log("[LobbyMatchmaker] Netcode is already running; not starting a second client.");
-                    return true;
+                    clientMgr.Shutdown();
                 }
 
                 var clientTransport = clientMgr.GetComponent<UnityTransport>();
@@ -403,6 +402,12 @@ namespace Railbound.Networking
                 if (playerPrefab != null) clientMgr.NetworkConfig.PlayerPrefab = playerPrefab;
                 clientMgr.NetworkConfig.EnableSceneManagement = true;
                 clientTransport.SetConnectionData(MatchConnection.Host, MatchConnection.Port);
+
+                if (Application.CanStreamedLevelBeLoaded(Railbound.UI.LoadingScreenController.LoadingSceneName))
+                {
+                    Debug.Log($"[LobbyMatchmaker] Configured Netcode client for {MatchConnection.Host}:{MatchConnection.Port}; handing off to LoadingScreen.");
+                    return true;
+                }
 
                 if (!clientMgr.StartClient())
                 {
