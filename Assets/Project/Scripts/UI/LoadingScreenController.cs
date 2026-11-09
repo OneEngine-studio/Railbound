@@ -1,5 +1,7 @@
 using System.Collections;
+using Railbound.BR;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -49,6 +51,13 @@ namespace Railbound.UI
         [SerializeField] private float minLoadTime = 4f;
         [SerializeField] private float fadeTime = 0.6f;
         [SerializeField] private float tipInterval = 6f;
+
+        [Header("Game server")]
+        [Tooltip("When the lobby got a game server from Nakama, keep this screen up after the map is loaded until the Netcode client is connected and the match is synchronised.")]
+        [SerializeField] private bool waitForServer = true;
+        [Tooltip("Seconds the client may take to reach the allocated game server before it is sent back to the lobby.")]
+        [SerializeField] private float connectTimeoutSeconds = 25f;
+        [SerializeField] private string lobbySceneName = "GameLobby";
 
         [TextArea(1, 3)]
         [SerializeField]
@@ -113,8 +122,150 @@ namespace Railbound.UI
 
             if (statusText != null) statusText.text = Stages[Stages.Length - 1];
             yield return new WaitForSecondsRealtime(0.35f);
-            yield return Fade(1f, 0f);
+
+            if (!waitForServer || !MatchConnection.HasAllocation)
+            {
+                // offline / direct play: nothing to wait for, show the map as soon as it is loaded
+                yield return Fade(1f, 0f);
+                op.allowSceneActivation = true;
+                yield break;
+            }
+
+            // The Netcode client only exists inside the map scene, so this screen has to survive the scene change and keep
+            // reporting what the connection is doing until the player is really in the match.
+            KeepAliveAcrossSceneLoad();
             op.allowSceneActivation = true;
+            while (!op.isDone) yield return null;
+            yield return ConnectionPhase();
+        }
+
+        private readonly System.Collections.Generic.List<GameObject> keptRoots = new System.Collections.Generic.List<GameObject>();
+
+        private void KeepAliveAcrossSceneLoad()
+        {
+            AddKeptRoot(transform.root.gameObject);
+            if (root != null) AddKeptRoot(root.transform.root.gameObject);
+            if (video != null) AddKeptRoot(video.transform.root.gameObject);
+            foreach (var go in keptRoots)
+            {
+                DontDestroyOnLoad(go);
+                foreach (var canvas in go.GetComponentsInChildren<Canvas>(true))
+                    if (canvas.isRootCanvas) canvas.sortingOrder = 30000;   // above the map's own UI
+            }
+        }
+
+        private void AddKeptRoot(GameObject go)
+        {
+            if (go != null && !keptRoots.Contains(go)) keptRoots.Add(go);
+        }
+
+        private void DismissOverlay()
+        {
+            foreach (var go in keptRoots)
+                if (go != null) Destroy(go);
+            keptRoots.Clear();
+        }
+
+        /// <summary>Shows the real connection stages of the Netcode client until the match is synchronised, or sends the player back.</summary>
+        private IEnumerator ConnectionPhase()
+        {
+            string server = MatchConnection.Host + ":" + MatchConnection.Port;
+            SetProgress(1f);
+            if (percentText != null) percentText.text = "";
+
+            var offlineChar = GameObject.Find("TPS Character");
+            if (offlineChar != null && offlineChar.GetComponent<NetworkObject>() == null)
+            {
+                offlineChar.SetActive(false);
+            }
+
+            float elapsed = 0f;
+            bool clientStarted = false;
+            string failure = null;
+
+            if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening && MatchConnection.HasAllocation)
+            {
+                var transport = NetworkManager.Singleton.GetComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
+                if (transport != null)
+                {
+                    transport.SetConnectionData(MatchConnection.Host, MatchConnection.Port, "0.0.0.0");
+                }
+                NetworkManager.Singleton.NetworkConfig.EnableSceneManagement = true;
+                if (NetworkManager.Singleton.StartClient())
+                {
+                    clientStarted = true;
+                    Debug.Log($"[LoadingScreen] Started Netcode client -> {server}");
+                }
+                else
+                {
+                    failure = "FAILED TO START NETWORK CLIENT";
+                }
+            }
+
+            while (failure == null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var nm = NetworkManager.Singleton;
+                string stage;
+                bool done = false;
+
+                if (nm == null)
+                {
+                    stage = "PREPARING NETWORK";
+                    if (elapsed > connectTimeoutSeconds) failure = "NETWORK UNAVAILABLE";
+                }
+                else
+                {
+                    if (nm.IsClient) clientStarted = true;
+                    if (clientStarted && !nm.IsListening) failure = "CONNECTION TO THE GAME SERVER FAILED";
+
+                    if (!nm.IsConnectedClient)
+                    {
+                        stage = "CONNECTING TO GAME SERVER  " + server;
+                        if (elapsed > connectTimeoutSeconds) failure = "COULD NOT REACH THE GAME SERVER";
+                    }
+                    else if (nm.LocalClient == null || nm.LocalClient.PlayerObject == null)
+                    {
+                        stage = "JOINING MATCH";
+                        if (elapsed > connectTimeoutSeconds + 15f) failure = "THE SERVER DID NOT SPAWN YOUR PLAYER";
+                    }
+                    else
+                    {
+                        var match = BRMatchCoordinator.Instance;
+                        if (match == null || !match.IsSpawned)
+                        {
+                            stage = "SYNCHRONIZING MATCH";
+                            if (elapsed > connectTimeoutSeconds + 15f) done = true;   // no coordinator in this scene: nothing more to wait for
+                        }
+                        else
+                        {
+                            stage = "MATCH READY  " + match.TotalCount + " COMBATANTS";
+                            done = true;
+                        }
+                    }
+                }
+
+                if (statusText != null) statusText.text = stage;
+                if (done) break;
+                yield return null;
+            }
+
+            if (failure != null)
+            {
+                Debug.LogWarning("[LoadingScreen] " + failure + " (" + server + ")");
+                if (statusText != null) statusText.text = failure;
+                yield return new WaitForSecondsRealtime(3f);
+                var nm = NetworkManager.Singleton;
+                if (nm != null && nm.IsListening) nm.Shutdown();
+                MatchConnection.Clear();
+                if (Application.CanStreamedLevelBeLoaded(lobbySceneName)) SceneManager.LoadScene(lobbySceneName);
+                DismissOverlay();
+                yield break;
+            }
+
+            yield return new WaitForSecondsRealtime(0.4f);
+            yield return Fade(1f, 0f);
+            DismissOverlay();
         }
 
         private void Update()

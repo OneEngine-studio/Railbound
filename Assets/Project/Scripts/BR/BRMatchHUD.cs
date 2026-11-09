@@ -104,6 +104,7 @@ namespace Railbound.BR
             while (Time.unscaledTime - start < DeathScreenSeconds) yield return null;
             DeathScreenUI.Hide();
             deathSequenceRunning = false;
+            if (BRMatchCoordinator.Instance != null) PickTarget(BRMatchCoordinator.Instance, 0);
         }
 
         private IEnumerator VictorySlowMotion()
@@ -242,8 +243,13 @@ namespace Railbound.BR
             if (p == null || p.Controller == null) return;
             var cam = FindFirstObjectByType<TPSCameraController>();
             if (cam == null) return;
-            cam.characterTarget = p.Controller;
-            cam.TargetToFollow = p.Controller.HumanoidSpine != null ? p.Controller.HumanoidSpine : p.Controller.transform;
+            cam.enabled = true;
+            // Clear characterTarget so bot IsAiming or dead-player state never freezes FixedUpdate/LateUpdate pivot tracking
+            cam.characterTarget = null;
+            Transform follow = p.Controller.HumanoidSpine != null ? p.Controller.HumanoidSpine : p.Controller.transform;
+            cam.TargetToFollow = follow;
+            cam.SetCameraStateTransition(cam.GetCurrentCameraState, cam.NormalCameraState);
+            cam.SetPivotCameraPosition(cam.NormalCameraState.GetCameraPivotPosition(follow), false);
         }
 
         // ================================================================= results

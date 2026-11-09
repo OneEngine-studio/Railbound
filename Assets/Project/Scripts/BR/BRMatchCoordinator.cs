@@ -74,11 +74,11 @@ namespace Railbound.BR
         private float localWarmup;
         private string localWinner = "";
 
-        public BRMatchState State => NetworkActive && IsSpawned ? (BRMatchState)netState.Value : localState;
-        public int AliveCount => NetworkActive && IsSpawned ? netAlive.Value : localAlive;
-        public int TotalCount => NetworkActive && IsSpawned ? netTotal.Value : localTotal;
+        public BRMatchState State => (NetworkActive && IsSpawned && (IsServer || localState != BRMatchState.MatchEnded)) ? (BRMatchState)netState.Value : localState;
+        public int AliveCount => (!Headless && (rosterBuilt || localTotal > 0)) ? localAlive : (NetworkActive && IsSpawned ? netAlive.Value : localAlive);
+        public int TotalCount => (!Headless && (rosterBuilt || localTotal > 0)) ? localTotal : (NetworkActive && IsSpawned ? netTotal.Value : localTotal);
         public float WarmupRemaining => NetworkActive && IsSpawned ? netWarmup.Value : localWarmup;
-        public string WinnerName => NetworkActive && IsSpawned ? netWinner.Value.ToString() : localWinner;
+        public string WinnerName => (!Headless && !string.IsNullOrEmpty(localWinner)) ? localWinner : (NetworkActive && IsSpawned ? netWinner.Value.ToString() : localWinner);
         public bool IsMatchLive => State == BRMatchState.ActiveBattle || State == BRMatchState.FinalShowdown;
         public bool ZoneMayRun => State >= BRMatchState.ActiveBattle;
         public float MatchSeconds { get; private set; }
@@ -123,7 +123,8 @@ namespace Railbound.BR
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
-            rng = new System.Random(Environment.TickCount);
+            int seed = BRMatchSetup.Instance != null && BRMatchSetup.Instance.ActiveSeed != 0 ? BRMatchSetup.Instance.ActiveSeed : 20260104;
+            rng = new System.Random(seed);
             if (!Headless && GetComponent<BRMatchHUD>() == null) gameObject.AddComponent<BRMatchHUD>();
         }
 
@@ -137,7 +138,39 @@ namespace Railbound.BR
         private void Update()
         {
             if (IsAuthority) AuthorityTick();
+            else ClientTick();
             ReportStateChange();
+        }
+
+        private void ClientTick()
+        {
+            if (Time.unscaledTime >= nextScan)
+            {
+                nextScan = Time.unscaledTime + (State == BRMatchState.WaitingForPlayers || State == BRMatchState.Warmup ? 0.4f : 1.0f);
+                ScanForCombatants();
+            }
+
+            if (State >= BRMatchState.Warmup && !rosterBuilt && participants.Count > 0)
+            {
+                BuildBotRoster();
+            }
+
+            if (State < BRMatchState.ActiveBattle && !botsHeld && participants.Count > 0)
+            {
+                HoldBots(true);
+            }
+            else if (State >= BRMatchState.ActiveBattle && botsHeld)
+            {
+                HoldBots(false);
+            }
+
+            PollEliminations();
+
+            if (State == BRMatchState.ActiveBattle || State == BRMatchState.FinalShowdown)
+            {
+                MatchSeconds += Time.deltaTime;
+                if (rosterBuilt && localAlive <= 1 && !endHandled) EndMatch();
+            }
         }
 
         private void AuthorityTick()
@@ -233,7 +266,7 @@ namespace Railbound.BR
             SetState(BRMatchState.MatchEnded);
 
             ulong winnerClient = winner != null ? winner.ClientId : ulong.MaxValue;
-            if (NetworkActive && IsSpawned) MatchEndedClientRpc(name, winnerClient);
+            if (NetworkActive && IsSpawned && IsServer) MatchEndedClientRpc(name, winnerClient);
             else RaiseMatchEnded(name, winnerClient);
         }
 
@@ -253,16 +286,21 @@ namespace Railbound.BR
                 var p = c.GetComponent<BRParticipant>();
                 if (p == null)
                 {
-                    // late joiners are fine until the battle starts; afterwards nobody new may enter
-                    if (State >= BRMatchState.ActiveBattle) continue;
+                    bool isBot = c.GetComponent<JUCharacterRLAgent>() != null || isEnemyTag;
+                    // Once the bot roster is built, ignore any stray extra bots, but always register human players and initial scene bots
+                    if (isBot && rosterBuilt && State >= BRMatchState.ActiveBattle) continue;
                     p = c.gameObject.AddComponent<BRParticipant>();
                     p.Controller = c; p.Health = health;
-                    p.IsBot = c.GetComponent<JUCharacterRLAgent>() != null || isEnemyTag;
+                    p.IsBot = isBot;
                     var no = c.GetComponent<NetworkObject>();
                     if (!p.IsBot && no != null && no.IsSpawned) p.ClientId = no.OwnerClientId;
                     p.DisplayName = p.IsBot ? BRIdentityPool.Take(usedNames, rng) : HumanName(c, p.ClientId);
                     participants.Add(p);
                     if (State < BRMatchState.ActiveBattle && p.IsBot) HoldBot(c);
+                }
+                else if (!p.IsBot && p.ClientId == ulong.MaxValue && c.TryGetComponent(out NetworkObject no) && no.IsSpawned)
+                {
+                    p.ClientId = no.OwnerClientId;
                 }
             }
 
@@ -395,7 +433,7 @@ namespace Railbound.BR
         // ================================================================= eliminations
         private void PollEliminations()
         {
-            if (State < BRMatchState.Warmup) return;
+            if (participants.Count == 0) return;
             for (int i = 0; i < participants.Count; i++)
             {
                 var p = participants[i];
@@ -448,7 +486,7 @@ namespace Railbound.BR
                 AliveAfter = localAlive
             };
 
-            if (NetworkActive && IsSpawned) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
+            if (NetworkActive && IsSpawned && IsServer) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
             else RaiseKill(info);
         }
 
@@ -456,12 +494,16 @@ namespace Railbound.BR
         [ClientRpc]
         private void KillClientRpc(string killer, string victim, ulong victimClient, ulong killerClient, int placement, int aliveAfter)
         {
+            // When running as a client, local PollEliminations() tracks the scene's bots and local player directly;
+            // ignore server-only bot-vs-bot kills so the client's killfeed and placement match its own scene.
+            if (!IsServer && !Headless && victimClient == ulong.MaxValue && killerClient == ulong.MaxValue) return;
             RaiseKill(new BRKillInfo { Killer = killer, Victim = victim, VictimClientId = victimClient, KillerClientId = killerClient, Placement = placement, AliveAfter = aliveAfter });
         }
 
         [ClientRpc]
         private void MatchEndedClientRpc(string winner, ulong winnerClient)
         {
+            if (!IsServer && !Headless && winnerClient == ulong.MaxValue && rosterBuilt && localAlive > 1) return;
             RaiseMatchEnded(winner, winnerClient);
         }
 
@@ -469,8 +511,10 @@ namespace Railbound.BR
         {
             ulong me = NetworkActive ? NetworkManager.Singleton.LocalClientId : ulong.MaxValue;
             var lp = LocalParticipant;
-            info.VictimIsLocal = NetworkActive ? (info.VictimClientId != ulong.MaxValue && info.VictimClientId == me) : (lp != null && lp.DisplayName == info.Victim);
-            info.KillerIsLocal = NetworkActive ? (info.KillerClientId != ulong.MaxValue && info.KillerClientId == me) : (lp != null && lp.DisplayName == info.Killer);
+            info.VictimIsLocal = (NetworkActive && info.VictimClientId != ulong.MaxValue && info.VictimClientId == me)
+                              || (lp != null && lp.DisplayName == info.Victim);
+            info.KillerIsLocal = (NetworkActive && info.KillerClientId != ulong.MaxValue && info.KillerClientId == me)
+                              || (lp != null && lp.DisplayName == info.Killer);
             KillOccurred?.Invoke(info);
             if (info.VictimIsLocal) LocalEliminated?.Invoke(info);
         }
@@ -479,7 +523,8 @@ namespace Railbound.BR
         {
             ulong me = NetworkActive ? NetworkManager.Singleton.LocalClientId : ulong.MaxValue;
             var lp = LocalParticipant;
-            bool local = NetworkActive ? (winnerClient != ulong.MaxValue && winnerClient == me) : (lp != null && lp.DisplayName == winner);
+            bool local = (NetworkActive && winnerClient != ulong.MaxValue && winnerClient == me)
+                      || (lp != null && lp.DisplayName == winner);
             MatchEnded?.Invoke(winner, local);
         }
 

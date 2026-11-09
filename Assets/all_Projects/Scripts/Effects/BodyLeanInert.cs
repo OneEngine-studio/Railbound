@@ -38,11 +38,13 @@ namespace JUTPS.FX
             base.Awake();
             if (JUFootPlacer == null) JUFootPlacer = GetComponent<JUFootPlacement>();
             if (RootBone == null) RootBone = anim.GetBoneTransform(HumanBodyBones.Hips);
-            anim.updateMode = AnimatorUpdateMode.Fixed;
+            // Keep Animator in Normal update mode so character locomotion evaluates every rendered frame without 50Hz stepping.
+            anim.updateMode = AnimatorUpdateMode.Normal;
         }
         void OnAnimatorIK()
         {
-            NotAffectedEulerAngles = RootBone.localEulerAngles;
+            if (RootBone != null)
+                NotAffectedEulerAngles = RootBone.localEulerAngles;
         }
         void LateUpdate()
         {
@@ -55,47 +57,36 @@ namespace JUTPS.FX
         }
         void DoInert()
         {
-            Vector3 euler = NotAffectedEulerAngles;
+            if (RootBone == null) return;
             NotAffectedUpward = RootBone.up;
 
-            if (TPSCharacter.IsMeleeAttacking || TPSCharacter.IsRagdolled || TPSCharacter.IsAiming || TPSCharacter.FiringMode || TPSCharacter.IsDriving || TPSCharacter.IsDead || !TPSCharacter.IsGrounded)
+            if (TPSCharacter.IsMeleeAttacking || TPSCharacter.IsRagdolled || TPSCharacter.IsAiming || TPSCharacter.FiringMode || TPSCharacter.IsDriving || TPSCharacter.IsDead || !TPSCharacter.IsGrounded || TPSCharacter.IsProne)
             {
                 Speed = 0;
-                Lean = 0;
+                Lean = Mathf.Lerp(Lean, 0f, RootBoneLeanSpeed * Time.deltaTime);
                 return;
             }
 
-
             Speed = Mathf.Lerp(Speed, TPSCharacter.VelocityMultiplier, 10 * Time.deltaTime);
-
 
             if (TPSCharacter.IsMoving)
             {
-                Lean = Mathf.Lerp(Lean, (Speed * RootBoneLeanIntensity / BlockForwardLeanWeight), RootBoneLeanSpeed * Time.deltaTime);
+                float targetLean = Mathf.Clamp(Speed * RootBoneLeanIntensity / Mathf.Max(BlockForwardLeanWeight, 4f), -8f, 8f);
+                Lean = Mathf.Lerp(Lean, targetLean, RootBoneLeanSpeed * Time.deltaTime);
             }
             else
             {
-                Lean = Mathf.Lerp(Lean, -(Speed * RootBoneLeanIntensity / 2), RootBoneLeanSpeed * Time.deltaTime);
+                Lean = Mathf.Lerp(Lean, 0f, RootBoneLeanSpeed * Time.deltaTime);
                 if (JUFootPlacer != null && RootBoneSpineMovement)
                 {
                     JUFootPlacer.LastBodyPositionY -= RootBoneDownMovementIntensity * Mathf.Abs(Lean) / 10 * Time.deltaTime;
                 }
             }
 
-            switch (AxisToLean)
+            if (Mathf.Abs(Lean) > 0.01f)
             {
-                case Axis.X:
-                    euler.x += Lean;
-                    break;
-                case Axis.Y:
-                    euler.y += Lean;
-                    break;
-                case Axis.Z:
-                    euler.z += Lean;
-                    break;
+                RootBone.rotation = Quaternion.AngleAxis(Lean, TPSCharacter.transform.right) * RootBone.rotation;
             }
-
-            RootBone.localRotation = Quaternion.Euler(euler);
         }
 #if UNITY_EDITOR
         private void OnDrawGizmos()
