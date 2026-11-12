@@ -156,6 +156,12 @@ namespace Railbound.UI
             UpdateOperatorDisplay();
             SetupDeployStates();
 
+            // squad shown on the stage: nameplates over the models, daily challenges in the left column
+            var plateFont = deployButtonLabel != null ? deployButtonLabel.font : null;
+            LobbyChallengesPanel.Create(transform, plateFont);
+            LobbySquadNameplates.Create(transform, plateFont);
+            LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
+
             // Hook operator change
             if (LobbyCharacterPreviewManager.Instance != null)
             {
@@ -202,7 +208,7 @@ namespace Railbound.UI
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
             var party = LobbyParty.InstanceIfExists;
-            if (party != null) party.Changed -= RefreshSquad;
+            if (party != null) { party.Changed -= RefreshSquad; party.SelectionChanged -= UpdateOperatorDisplay; }
         }
 
         // ----------------------------------------------------
@@ -282,15 +288,21 @@ namespace Railbound.UI
 
         private void UpdateOperatorDisplay()
         {
-            var op = LobbyCharacterPreviewManager.Instance?.CurrentOperator;
+            // the plate shows whoever is in the spotlight; only the local player's operator can be cycled
+            var preview = LobbyCharacterPreviewManager.Instance;
+            var selected = LobbyParty.Instance.Selected;
+            bool localSelected = selected == null || selected.isLocal;
+            var op = (!localSelected && preview != null) ? preview.GetOperator(selected.operatorIndex) : preview?.CurrentOperator;
             string opName = op != null ? op.displayName : "MIL-R5 GHOST";
             string opRole = op != null ? $"// {op.roleCategory.ToUpper()}" : "// ASSAULT / SPEC-OPS";
 
             if (headerOperatorName != null) headerOperatorName.text = opName;
             if (headerOperatorRole != null) headerOperatorRole.text = opRole;
             if (floatingOperatorName != null) floatingOperatorName.text = opName;
-            if (LobbyCharacterPreviewManager.Instance != null)
-                LobbyParty.Instance.SetLocal(null, null, LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex);
+            if (headerPrevOperatorBtn != null) headerPrevOperatorBtn.gameObject.SetActive(localSelected);
+            if (headerNextOperatorBtn != null) headerNextOperatorBtn.gameObject.SetActive(localSelected);
+            if (preview != null)
+                LobbyParty.Instance.SetLocal(null, null, preview.CurrentOperatorIndex);
         }
 
         // ----------------------------------------------------
