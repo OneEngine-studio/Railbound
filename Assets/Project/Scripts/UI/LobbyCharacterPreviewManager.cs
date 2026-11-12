@@ -216,28 +216,14 @@ namespace Railbound.UI
 
         private void ApplyOperatorVisualVariant(int index)
         {
-            TintOperator(currentCharacterInstance, index);
+            TintOperator(currentCharacterInstance, index, 1f, true);
         }
 
-        /// <summary>How one operator dresses the shared MIL-R5 model: a tint per gear group, and which accessories are worn.</summary>
-        private struct OperatorLook
+        /// <summary>Re-dresses the local player's model after a customization choice changed.</summary>
+        public void RefreshLook()
         {
-            public Color suit, plate, pouches, pads, cap, headset;
-            public bool wearCap, wearHeadset;
+            if (currentCharacterInstance != null) TintOperator(currentCharacterInstance, currentOperatorIndex, 1f, true);
         }
-
-        // The tints multiply the model's own olive textures, so values are chosen to move the hue, not replace it.
-        private static readonly OperatorLook[] Looks =
-        {
-            // 0: MIL-R5 GHOST - the model as authored
-            new OperatorLook { suit = Color.white, plate = Color.white, pouches = Color.white, pads = Color.white, cap = Color.white, headset = Color.white, wearCap = true, wearHeadset = true },
-            // 1: KRUGER-9 VANGUARD - steel grey-blue, heavy dark plate, bare head
-            new OperatorLook { suit = new Color(0.70f, 0.80f, 1.05f), plate = new Color(0.42f, 0.46f, 0.54f), pouches = new Color(0.60f, 0.66f, 0.78f), pads = new Color(0.38f, 0.40f, 0.46f), cap = Color.white, headset = new Color(0.55f, 0.60f, 0.70f), wearCap = false, wearHeadset = true },
-            // 2: SPECTRE-X RECON - near-black teal night kit, cap and headset
-            new OperatorLook { suit = new Color(0.55f, 0.82f, 0.78f), plate = new Color(0.30f, 0.40f, 0.40f), pouches = new Color(0.40f, 0.55f, 0.55f), pads = new Color(0.28f, 0.34f, 0.34f), cap = new Color(0.30f, 0.46f, 0.46f), headset = new Color(0.35f, 0.45f, 0.45f), wearCap = true, wearHeadset = true },
-            // 3: VALKYRIE-7 MEDIC - desert sand with a rust vest, no headset
-            new OperatorLook { suit = new Color(1.55f, 1.25f, 0.80f), plate = new Color(1.50f, 0.85f, 0.65f), pouches = new Color(1.35f, 1.10f, 0.75f), pads = new Color(1.10f, 0.90f, 0.70f), cap = new Color(1.50f, 1.20f, 0.80f), headset = Color.white, wearCap = true, wearHeadset = false }
-        };
 
         private enum GearGroup { Skin, Suit, Plate, Pouches, Pads, Cap, Headset }
 
@@ -254,13 +240,14 @@ namespace Railbound.UI
 
         /// <summary>
         /// Dresses a model in its operator's look (per-group tints, cap / headset on or off); also used for party members'
-        /// models. brightness &lt; 1 dims models that are out of the spotlight.
+        /// models. brightness &lt; 1 dims models that are out of the spotlight. <paramref name="local"/> applies the local
+        /// player's saved customization on top of the operator's authored look.
         /// </summary>
-        public static void TintOperator(GameObject model, int index, float brightness = 1f)
+        public static void TintOperator(GameObject model, int index, float brightness = 1f, bool local = false)
         {
             if (model == null) return;
 
-            var look = Looks[Mathf.Abs(index) % Looks.Length];
+            var look = LobbyOperatorLooks.Resolve(index, local);
             var renderers = model.GetComponentsInChildren<Renderer>(true);
             var propBlock = new MaterialPropertyBlock();
             foreach (var r in renderers)
