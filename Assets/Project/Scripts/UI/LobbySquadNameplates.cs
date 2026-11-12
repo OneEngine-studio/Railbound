@@ -5,17 +5,17 @@ using UnityEngine.UI;
 namespace Railbound.UI
 {
     /// <summary>
-    /// A small nameplate floating above each squad member's head on the 3D stage (name, level, ready state).
-    /// The plate of the spotlighted member is full size and bright, the others are smaller and dimmer;
+    /// A plain nameplate floating above each squad member's head on the 3D stage: level and name, with the ready state in
+    /// small type beneath. The plate of the spotlighted member is full size and white, the others smaller and grey;
     /// clicking a plate puts that member in the spotlight. Built at runtime under the lobby HUD root, behind the other panels.
     /// </summary>
     [DisallowMultipleComponent]
     public class LobbySquadNameplates : MonoBehaviour
     {
-        private static readonly Color PlateBg = new Color(0.03f, 0.04f, 0.05f, 0.66f);
-        private static readonly Color Ready = new Color(0.55f, 0.93f, 0.55f, 1f);
-        private static readonly Color NotReady = new Color(1f, 0.42f, 0.38f, 1f);
-        private static readonly Color Dim = new Color(0.72f, 0.75f, 0.78f, 1f);
+        private static readonly Color Ready = new Color(0.62f, 0.90f, 0.58f, 1f);
+        private static readonly Color NotReady = new Color(1f, 0.46f, 0.42f, 1f);
+        private static readonly Color Dim = new Color(0.70f, 0.73f, 0.76f, 1f);
+        private static readonly Color Shadow = new Color(0f, 0f, 0f, 0.85f);
 
         public static LobbySquadNameplates Create(Transform parent, TMP_FontAsset font)
         {
@@ -33,8 +33,8 @@ namespace Railbound.UI
 
         private class Plate
         {
-            public RectTransform rt; public CanvasGroup group; public Image bg, accent;
-            public TextMeshProUGUI name, level, state, pointer;
+            public RectTransform rt; public CanvasGroup group;
+            public TextMeshProUGUI name, state;
             public float focus;               // 0 = in the background, 1 = in the spotlight
             public Vector2 pos; public bool placed;
         }
@@ -51,30 +51,19 @@ namespace Railbound.UI
             {
                 int index = i;
                 var p = new Plate();
-                p.rt = NewRect("Plate_" + i, area, new Vector2(270f, 86f));
+                p.rt = NewRect("Plate_" + i, area, new Vector2(300f, 62f));
                 p.rt.pivot = new Vector2(0.5f, 0f);
                 p.group = p.rt.gameObject.AddComponent<CanvasGroup>();
 
-                p.pointer = NewText("Pointer", p.rt, "▼", 16f, Color.white, TextAlignmentOptions.Center);
-                Place(p.pointer.rectTransform, 0f, 0f, 1f, 0f, new Vector2(0f, 0f), new Vector2(0f, 18f));
-
-                var bgRt = NewRect("Bg", p.rt, new Vector2(270f, 46f));
-                Place(bgRt, 0f, 0f, 1f, 0f, new Vector2(0f, 18f), new Vector2(0f, 64f));
-                p.bg = bgRt.gameObject.AddComponent<Image>(); p.bg.color = PlateBg;
-                var btn = bgRt.gameObject.AddComponent<Button>(); btn.targetGraphic = p.bg; btn.transition = Selectable.Transition.None;
+                // invisible hit area so a click anywhere on the plate selects the member
+                var hit = p.rt.gameObject.AddComponent<Image>(); hit.color = new Color(0f, 0f, 0f, 0f);
+                var btn = p.rt.gameObject.AddComponent<Button>(); btn.targetGraphic = hit; btn.transition = Selectable.Transition.None;
                 btn.onClick.AddListener(() => LobbyParty.Instance.Select(index));
 
-                var accentRt = NewRect("Accent", bgRt, new Vector2(0f, 3f));
-                Place(accentRt, 0f, 0f, 1f, 0f, Vector2.zero, new Vector2(0f, 3f));
-                p.accent = accentRt.gameObject.AddComponent<Image>(); p.accent.raycastTarget = false;
-
-                p.name = NewText("Name", bgRt, "", 22f, Color.white, TextAlignmentOptions.MidlineLeft);
-                Place(p.name.rectTransform, 0f, 0f, 0.68f, 1f, new Vector2(12f, 3f), new Vector2(0f, 0f));
-                p.level = NewText("Level", bgRt, "", 16f, Dim, TextAlignmentOptions.MidlineRight);
-                Place(p.level.rectTransform, 0.62f, 0f, 1f, 1f, new Vector2(0f, 3f), new Vector2(-12f, 0f));
-
-                p.state = NewText("State", p.rt, "", 15f, Ready, TextAlignmentOptions.Center);
-                Place(p.state.rectTransform, 0f, 0f, 1f, 0f, new Vector2(0f, 66f), new Vector2(0f, 86f));
+                p.name = NewText("Name", p.rt, "", 24f, Color.white, TextAlignmentOptions.Bottom);
+                Place(p.name.rectTransform, 0f, 0f, 1f, 1f, new Vector2(0f, 20f), Vector2.zero);
+                p.state = NewText("State", p.rt, "", 14f, Ready, TextAlignmentOptions.Top);
+                Place(p.state.rectTransform, 0f, 0f, 1f, 0f, Vector2.zero, new Vector2(0f, 20f));
 
                 plates[i] = p;
             }
@@ -100,8 +89,8 @@ namespace Railbound.UI
                 p.rt.gameObject.SetActive(has);
                 if (!has) { p.placed = false; continue; }
                 var m = party.Members[i];
-                p.name.text = m.displayName;
-                p.level.text = m.levelText;
+                string level = (m.levelText ?? "").Replace("LVL. ", "").Replace("LVL.", "").Trim();
+                p.name.text = string.IsNullOrEmpty(level) ? m.displayName : $"<size=72%><color=#B4BCC4>{level}</color></size>   {m.displayName}";
                 p.state.text = m.ready ? "READY" : "NOT READY";
                 p.state.color = m.ready ? Ready : NotReady;
             }
@@ -125,7 +114,7 @@ namespace Railbound.UI
                 bool onStage = director.TryGetHeadPoint(i, out var head);
                 Vector3 sp = onStage ? cam.WorldToScreenPoint(head) : Vector3.zero;
                 bool visible = onStage && sp.z > 0.1f;
-                p.group.alpha = Mathf.MoveTowards(p.group.alpha, visible ? Mathf.Lerp(0.62f, 1f, p.focus) : 0f, dt * 6f);
+                p.group.alpha = Mathf.MoveTowards(p.group.alpha, visible ? Mathf.Lerp(0.7f, 1f, p.focus) : 0f, dt * 6f);
                 p.group.blocksRaycasts = visible;
                 if (!visible) continue;
 
@@ -134,13 +123,10 @@ namespace Railbound.UI
                 p.placed = true;
                 p.rt.anchoredPosition = p.pos;   // the local point is relative to the area's centre pivot, same as the plate's anchors
 
-                bool selected = i == party.SelectedIndex;
-                p.focus = Mathf.Lerp(p.focus, selected ? 1f : 0f, focusStep);
+                p.focus = Mathf.Lerp(p.focus, i == party.SelectedIndex ? 1f : 0f, focusStep);
                 float scale = Mathf.Lerp(0.8f, 1f, p.focus);
                 p.rt.localScale = new Vector3(scale, scale, 1f);
-                p.accent.color = Color.Lerp(new Color(1f, 1f, 1f, 0.18f), Color.white, p.focus);
                 p.name.color = Color.Lerp(Dim, Color.white, p.focus);
-                p.pointer.color = new Color(1f, 1f, 1f, p.focus);
             }
         }
 
@@ -168,7 +154,17 @@ namespace Railbound.UI
             var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
             if (font != null) t.font = font;
             t.text = text; t.fontSize = size; t.fontStyle = FontStyles.Bold; t.color = color; t.alignment = align;
-            t.characterSpacing = 2f; t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Ellipsis; t.raycastTarget = false;
+            t.characterSpacing = 2f; t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Overflow; t.raycastTarget = false;
+            t.richText = true;
+            // soft drop shadow so the text reads on any part of the hangar
+            var mat = t.fontMaterial;
+            if (mat != null && mat.HasProperty("_UnderlayColor"))
+            {
+                mat.EnableKeyword("UNDERLAY_ON");
+                mat.SetColor("_UnderlayColor", Shadow);
+                mat.SetFloat("_UnderlayOffsetX", 0.55f); mat.SetFloat("_UnderlayOffsetY", -0.55f);
+                mat.SetFloat("_UnderlaySoftness", 0.35f); mat.SetFloat("_UnderlayDilate", 0.15f);
+            }
             return t;
         }
     }

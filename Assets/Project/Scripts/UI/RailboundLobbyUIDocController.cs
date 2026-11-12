@@ -15,7 +15,7 @@ namespace Railbound.UI
     /// - 6-tab navigation menu with indicator states
     /// - Tactical deploy button & Fill Squad toggle
     /// - Squad roster & readiness states
-    /// - Emote action bar & audio sound feedback
+    /// - Audio sound feedback
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     [DisallowMultipleComponent]
@@ -63,12 +63,6 @@ namespace Railbound.UI
         private Label squadNick0;
         private Label squadLevel0;
         private Button btnInvitePlayer;
-
-        // Emotes
-        private Button btnEmoteSalute;
-        private Button btnEmoteGreet;
-        private Button btnEmoteFlex;
-        private Button btnEmoteVictory;
 
         // Season Promo
         private VisualElement seasonPromo;
@@ -171,12 +165,6 @@ namespace Railbound.UI
             squadLevel0 = root.Q<Label>("SquadLevel0");
             btnInvitePlayer = root.Q<Button>("BtnInvitePlayer");
 
-            // Emotes
-            btnEmoteSalute = root.Q<Button>("BtnEmoteSalute");
-            btnEmoteGreet = root.Q<Button>("BtnEmoteGreet");
-            btnEmoteFlex = root.Q<Button>("BtnEmoteFlex");
-            btnEmoteVictory = root.Q<Button>("BtnEmoteVictory");
-
             // Promo
             seasonPromo = root.Q<VisualElement>("SeasonPromo");
         }
@@ -245,12 +233,6 @@ namespace Railbound.UI
                 btnInvitePlayer.clicked += OnInviteClicked;
                 AddHoverAudio(btnInvitePlayer);
             }
-
-            // Emotes
-            if (btnEmoteSalute != null) { btnEmoteSalute.clicked += () => TriggerEmote(1); AddHoverAudio(btnEmoteSalute); }
-            if (btnEmoteGreet != null) { btnEmoteGreet.clicked += () => TriggerEmote(2); AddHoverAudio(btnEmoteGreet); }
-            if (btnEmoteFlex != null) { btnEmoteFlex.clicked += () => TriggerEmote(3); AddHoverAudio(btnEmoteFlex); }
-            if (btnEmoteVictory != null) { btnEmoteVictory.clicked += () => TriggerEmote(4); AddHoverAudio(btnEmoteVictory); }
 
             // Promo click
             if (seasonPromo != null)
@@ -421,13 +403,6 @@ namespace Railbound.UI
         {
             PlayClickSound();
             Debug.Log("[UI Toolkit HUD] Invite Player Clicked!");
-        }
-
-        private void TriggerEmote(int id)
-        {
-            PlayClickSound();
-            Debug.Log($"[UI Toolkit HUD] Triggering Emote #{id}");
-            LobbyCharacterPreviewManager.Instance?.PlayEmote(id);
         }
 
         private void OnSettingsOrBackClicked()

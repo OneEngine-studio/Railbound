@@ -17,16 +17,16 @@ namespace Railbound.UI
     }
 
     /// <summary>
-    /// The lobby party: the local player plus up to <see cref="MaxMembers"/> - 1 friends (3 players in total).
+    /// The lobby party: the local player plus up to <see cref="MaxMembers"/> - 1 friends (4 players in total).
     /// UI (squad panel) and the 3D stage (one model per member) both read from here, so wiring the real friend / party
     /// backend only means calling <see cref="TryAddMember"/> / <see cref="RemoveMember"/> / <see cref="SetReady"/>.
-    /// Until that backend exists, <see cref="seedDemoSquad"/> fills the two friend slots with sample players so the
+    /// Until that backend exists, <see cref="seedDemoSquad"/> fills the three friend slots with sample players so the
     /// layout can be seen; switch it off for a real build.
     /// </summary>
     [DisallowMultipleComponent]
     public class LobbyParty : MonoBehaviour
     {
-        public const int MaxMembers = 3;
+        public const int MaxMembers = 4;
 
         private static LobbyParty _instance;
         public static LobbyParty Instance
@@ -87,6 +87,7 @@ namespace Railbound.UI
             {
                 TryAddMember(new PartyMember { id = "demo_vex", displayName = "VEX_TACTICAL", levelText = "LVL. 48", operatorIndex = 2, ready = true });
                 TryAddMember(new PartyMember { id = "demo_noob", displayName = "NOOB_SHENKY", levelText = "LVL. 3", operatorIndex = 3, ready = false });
+                TryAddMember(new PartyMember { id = "demo_rider", displayName = "GHOST_RIDER", levelText = "LVL. 27", operatorIndex = 1, ready = true });
             }
         }
 

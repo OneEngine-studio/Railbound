@@ -9,7 +9,7 @@ using Michsky.UI.Reach;
 namespace Railbound.UI
 {
     /// <summary>
-    /// Customization UI for Operator selection, Skills preview, and Emotes triggering in GameLobby.
+    /// Customization UI for Operator selection and Skills preview in GameLobby.
     /// Uses Reach UI visual styling, interactive border glow, and tactile button animations.
     /// </summary>
     public class LobbyCustomizationUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
@@ -31,12 +31,6 @@ namespace Railbound.UI
         [SerializeField] private TextMeshProUGUI ultimateSkillNameText;
         [SerializeField] private TextMeshProUGUI ultimateSkillDescText;
         [SerializeField] private Button toggleSkillsButton;
-
-        [Header("Emotes")]
-        [SerializeField] private Button emoteSaluteButton;
-        [SerializeField] private Button emoteWaveButton;
-        [SerializeField] private Button emoteFlexButton;
-        [SerializeField] private Button emoteVictoryButton;
 
         [Header("Character Drag Area")]
         [Tooltip("RawImage or Viewport RectTransform where the 3D character is rendered.")]
@@ -84,35 +78,6 @@ namespace Railbound.UI
                     PulseOperatorHeader();
                 });
                 AttachTacticalButtonAnim(nextOperatorButton);
-            }
-
-            // Bind emote buttons
-            if (emoteSaluteButton != null)
-            {
-                emoteSaluteButton.onClick.RemoveAllListeners();
-                emoteSaluteButton.onClick.AddListener(() => TriggerEmote(1, emoteSaluteButton));
-                AttachTacticalButtonAnim(emoteSaluteButton);
-            }
-
-            if (emoteWaveButton != null)
-            {
-                emoteWaveButton.onClick.RemoveAllListeners();
-                emoteWaveButton.onClick.AddListener(() => TriggerEmote(2, emoteWaveButton));
-                AttachTacticalButtonAnim(emoteWaveButton);
-            }
-
-            if (emoteFlexButton != null)
-            {
-                emoteFlexButton.onClick.RemoveAllListeners();
-                emoteFlexButton.onClick.AddListener(() => TriggerEmote(3, emoteFlexButton));
-                AttachTacticalButtonAnim(emoteFlexButton);
-            }
-
-            if (emoteVictoryButton != null)
-            {
-                emoteVictoryButton.onClick.RemoveAllListeners();
-                emoteVictoryButton.onClick.AddListener(() => TriggerEmote(4, emoteVictoryButton));
-                AttachTacticalButtonAnim(emoteVictoryButton);
             }
 
             // Bind skills card toggle
@@ -282,19 +247,6 @@ namespace Railbound.UI
 
             if (ultimateSkillDescText != null)
                 ultimateSkillDescText.text = op.ultimateSkillDesc;
-        }
-
-        private void TriggerEmote(int emoteId, Button sourceBtn = null)
-        {
-            if (LobbyCharacterPreviewManager.Instance != null)
-            {
-                LobbyCharacterPreviewManager.Instance.PlayEmote(emoteId);
-            }
-            if (sourceBtn != null)
-            {
-                var anim = sourceBtn.GetComponent<TacticalReachButtonAnimator>();
-                if (anim != null) anim.FlashActivePulse();
-            }
         }
 
         // Drag to rotate character
