@@ -152,6 +152,7 @@ namespace Railbound.UI
             var plateFont = deployButtonLabel != null ? deployButtonLabel.font : null;
             LobbyChallengesPanel.Create(transform, plateFont);
             LobbySquadNameplates.Create(transform, plateFont);
+            customizer = LobbyCharacterCustomizer.Create(plateFont, gameObject, OnCustomizerClosed);
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
             // Hook operator change
@@ -161,8 +162,23 @@ namespace Railbound.UI
             }
         }
 
+        private LobbyCharacterCustomizer customizer;
+
+        private void OnCustomizerClosed()
+        {
+            currentNavIndex = 0;
+            RefreshNavTabsVisual();
+        }
+
         private void Update()
         {
+            // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
+            if (customizer != null && customizer.BusyThisFrame)
+            {
+                TickDeployState();
+                return;
+            }
+
             // Keyboard shortcuts
             if (Input.GetKeyDown(KeyCode.Space))
             {
@@ -318,15 +334,16 @@ namespace Railbound.UI
             currentNavIndex = index;
             RefreshNavTabsVisual();
 
-            SetCustomizationPanelVisible(index == 1 || index == 2);
+            SetCustomizationPanelVisible(index == 2);
 
             switch (index)
             {
                 case 0: // PLAY
                     Debug.Log("[YellowHUD] Nav: PLAY (Main Lobby)");
                     break;
-                case 1: // OPERATORS
+                case 1: // OPERATORS: the customization screen
                     Debug.Log("[YellowHUD] Nav: OPERATORS");
+                    if (customizer != null) customizer.Open();
                     break;
                 case 2: // LOADOUT
                     Debug.Log("[YellowHUD] Nav: LOADOUT - Toggling loadout skills");

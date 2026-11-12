@@ -216,30 +216,58 @@ namespace Railbound.UI
 
         private void ApplyOperatorVisualVariant(int index)
         {
-            TintOperator(currentCharacterInstance, index);
+            TintOperator(currentCharacterInstance, index, 1f, true);
         }
 
-        /// <summary>Per-operator uniform tint; also used for party members' models.</summary>
-        public static void TintOperator(GameObject model, int index, float brightness = 1f)
+        /// <summary>Re-dresses the local player's model after a customization choice changed.</summary>
+        public void RefreshLook()
+        {
+            if (currentCharacterInstance != null) TintOperator(currentCharacterInstance, currentOperatorIndex, 1f, true);
+        }
+
+        private enum GearGroup { Skin, Suit, Plate, Pouches, Pads, Cap, Headset }
+
+        private static GearGroup GroupOf(string rendererName)
+        {
+            if (rendererName.Contains("Eye") || rendererName.Contains("Head") && !rendererName.Contains("Headphones")) return GearGroup.Skin;
+            if (rendererName.Contains("Headphones")) return GearGroup.Headset;
+            if (rendererName.Contains("Cap")) return GearGroup.Cap;
+            if (rendererName.Contains("Plate")) return GearGroup.Plate;
+            if (rendererName.Contains("Puches")) return GearGroup.Pouches;
+            if (rendererName.Contains("Pads")) return GearGroup.Pads;
+            return GearGroup.Suit;
+        }
+
+        /// <summary>
+        /// Dresses a model in its operator's look (per-group tints, cap / headset on or off); also used for party members'
+        /// models. brightness &lt; 1 dims models that are out of the spotlight. <paramref name="local"/> applies the local
+        /// player's saved customization on top of the operator's authored look.
+        /// </summary>
+        public static void TintOperator(GameObject model, int index, float brightness = 1f, bool local = false)
         {
             if (model == null) return;
 
-            // Subtle tactical uniform tint variation per operator class so switching operators is visually distinct
-            Color[] classTints = new Color[]
-            {
-                new Color(1.00f, 1.00f, 1.00f, 1f), // 0: MIL-R5 GHOST (Standard Spec-Ops Olive/Black)
-                new Color(0.82f, 0.88f, 0.96f, 1f), // 1: KRUGER-9 VANGUARD (Urban Steel Blue-Grey)
-                new Color(0.76f, 0.92f, 0.84f, 1f), // 2: SPECTRE-X RECON (Night-Ops Cyber Teal)
-                new Color(0.96f, 0.88f, 0.80f, 1f)  // 3: VALKYRIE-7 MEDIC (Desert Sand / Amber)
-            };
-
-            Color tint = classTints[Mathf.Abs(index) % classTints.Length];
-            tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);   // brightness < 1 dims models that are out of the spotlight
+            var look = LobbyOperatorLooks.Resolve(index, local);
             var renderers = model.GetComponentsInChildren<Renderer>(true);
             var propBlock = new MaterialPropertyBlock();
             foreach (var r in renderers)
             {
                 if (r == null) continue;
+                var group = GroupOf(r.name);
+
+                Color tint;
+                switch (group)
+                {
+                    case GearGroup.Suit: tint = look.suit; break;
+                    case GearGroup.Plate: tint = look.plate; break;
+                    case GearGroup.Pouches: tint = look.pouches; break;
+                    case GearGroup.Pads: tint = look.pads; break;
+                    case GearGroup.Cap: tint = look.cap; r.enabled = look.wearCap; break;
+                    case GearGroup.Headset: tint = look.headset; r.enabled = look.wearHeadset; break;
+                    default: tint = Color.white; break;      // face and eyes keep their own colour
+                }
+                tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);
+
                 r.GetPropertyBlock(propBlock);
                 propBlock.SetColor("_BaseColor", tint);
                 propBlock.SetColor("_Color", tint);

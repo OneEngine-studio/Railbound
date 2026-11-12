@@ -26,6 +26,11 @@ namespace Railbound.UI
         [Tooltip("Slides the whole stage sideways on screen (negative = to the right) to leave room for the left-hand HUD column.")]
         [SerializeField] private float stageShiftX = -0.4f;
 
+        [Header("Customization close-up (one operator, centred)")]
+        [SerializeField] private Vector3 customPosition = new Vector3(0f, 1.42f, -2.75f);
+        [SerializeField] private Vector3 customLook = new Vector3(0f, 1.36f, -0.2f);
+        [SerializeField] private float customFov = 30f;
+
         [Header("Squad layout")]
         [SerializeField] private Vector3 spotlightSlot = new Vector3(0f, 0f, -0.2f);
         [SerializeField] private float sideSpread = 1.3f;
@@ -45,7 +50,7 @@ namespace Railbound.UI
         [Tooltip("Kept low on purpose: the hangar rig already lights the stage; this only lifts whoever is selected.")]
         [SerializeField] private float spotlightIntensity = 9000f;     // candela
         [SerializeField] private float spotlightAngle = 32f;
-        [SerializeField] private float fillIntensity = 30000f;          // candela
+        [SerializeField] private float fillIntensity = 55000f;          // candela
         [SerializeField] private Vector3 spotlightOffset = new Vector3(0.3f, 3.6f, -2.8f);
         [SerializeField] private float spotlightFollowTime = 0.38f;
 
@@ -61,6 +66,18 @@ namespace Railbound.UI
         private Camera cam;
         private Vector3 camPos, camPosVel;
         private float camFov, camFovVel;
+        private Vector3 lookPos, lookVel;
+        private bool lookPlaced;
+
+        private bool customizing;
+        /// <summary>True while the customization screen is open: only the local operator is shown, in a close-up.</summary>
+        public bool Customizing => customizing;
+
+        public void SetCustomizing(bool on)
+        {
+            customizing = on;
+            if (modelsRoot != null) modelsRoot.gameObject.SetActive(!on);   // the rest of the squad steps out of frame
+        }
 
         private class Spawned
         {
@@ -337,7 +354,7 @@ namespace Railbound.UI
 
         private void HandleInput()
         {
-            if (TypingInField()) return;
+            if (customizing || TypingInField()) return;
             var party = LobbyParty.Instance;
             if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) party.SelectOffset(1);
             else if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) party.SelectOffset(-1);
@@ -403,7 +420,7 @@ namespace Railbound.UI
                 {
                     localTintedModel = model;
                     localTintedBrightness = localBrightness;
-                    LobbyCharacterPreviewManager.TintOperator(model, preview.CurrentOperatorIndex, localBrightness);
+                    LobbyCharacterPreviewManager.TintOperator(model, preview.CurrentOperatorIndex, localBrightness, true);
                 }
             }
         }
@@ -413,11 +430,14 @@ namespace Railbound.UI
             if (cam == null) { cam = Camera.main; if (cam == null) return; camPos = cam.transform.position; camFov = cam.fieldOfView; }
 
             bool party = LobbyParty.Instance.Count > 1;
-            Vector3 shift = Vector3.right * stageShiftX;
-            Vector3 targetPos = (party ? partyPosition : soloPosition) + shift;
-            float targetFov = party ? partyFov : soloFov;
+            Vector3 shift = customizing ? Vector3.zero : Vector3.right * stageShiftX;
+            Vector3 targetPos = customizing ? customPosition : (party ? partyPosition : soloPosition) + shift;
+            float targetFov = customizing ? customFov : (party ? partyFov : soloFov);
+            Vector3 targetLook = customizing ? customLook : lookTarget + shift;
+            if (!lookPlaced) { lookPos = targetLook; lookPlaced = true; }
             camPos = Vector3.SmoothDamp(camPos, targetPos, ref camPosVel, framingSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
             camFov = Mathf.SmoothDamp(camFov, targetFov, ref camFovVel, framingSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
+            lookPos = Vector3.SmoothDamp(lookPos, targetLook, ref lookVel, framingSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
 
             Vector3 sway = Vector3.zero; Vector3 swayRot = Vector3.zero;
             if (ambientMotion)
@@ -428,7 +448,7 @@ namespace Railbound.UI
             }
 
             cam.transform.position = camPos + sway;
-            cam.transform.rotation = Quaternion.LookRotation(lookTarget + shift - camPos) * Quaternion.Euler(swayRot);
+            cam.transform.rotation = Quaternion.LookRotation(lookPos - camPos) * Quaternion.Euler(swayRot);
             cam.fieldOfView = camFov;
         }
 

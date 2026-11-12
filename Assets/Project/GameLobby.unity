@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.05297268, g: 0.057140954, b: 0.06806291, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -364272,7 +364272,7 @@ MonoBehaviour:
   spotlight: 1
   spotlightIntensity: 9000
   spotlightAngle: 32
-  fillIntensity: 30000
+  fillIntensity: 55000
   spotlightOffset: {x: 0.3, y: 3.6, z: -2.8}
   spotlightFollowTime: 0.38
   ambientMotion: 1
