@@ -22,7 +22,7 @@ namespace Railbound.UI
     /// <summary>
     /// Manages the 3D character preview in the middle of GameLobby:
     /// - Instantiates and switches operator models.
-    /// - Plays idle animations and emotes.
+    /// - Plays idle animations.
     /// - Handles smooth 360-degree drag rotation.
     /// </summary>
     [DisallowMultipleComponent]
@@ -48,7 +48,6 @@ namespace Railbound.UI
         private Vector2 lastPointerPos;
 
         public event Action<OperatorDefinition> OnOperatorChanged;
-        public event Action<int> OnEmoteTriggered;
 
         public OperatorDefinition CurrentOperator => (operators != null && operators.Count > currentOperatorIndex && currentOperatorIndex >= 0) 
             ? operators[currentOperatorIndex] : null;
@@ -208,7 +207,7 @@ namespace Railbound.UI
             currentCharacterInstance.transform.localScale = Vector3.one;
 
             currentAnimator = currentCharacterInstance.GetComponent<Animator>();
-            currentRig = LobbyActorRig.Attach(currentCharacterInstance, mirror: false);   // idle, grounding, look-at, emotes
+            currentRig = LobbyActorRig.Attach(currentCharacterInstance, mirror: false);   // idle, grounding, look-at
 
             ApplyOperatorVisualVariant(index);
 
@@ -246,13 +245,6 @@ namespace Railbound.UI
                 propBlock.SetColor("_Color", tint);
                 r.SetPropertyBlock(propBlock);
             }
-        }
-
-        public void PlayEmote(int emoteId)
-        {
-            if (currentRig == null && currentCharacterInstance != null) currentRig = currentCharacterInstance.GetComponent<LobbyActorRig>();
-            if (currentRig != null) currentRig.PlayEmote(emoteId);
-            OnEmoteTriggered?.Invoke(emoteId);
         }
 
         // Pointer Drag rotation handlers

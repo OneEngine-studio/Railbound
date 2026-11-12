@@ -24,23 +24,28 @@ namespace Railbound.UI
         [SerializeField] private Vector3 lookTarget = new Vector3(0f, 0.98f, 0f);
         [SerializeField] private float framingSmoothTime = 0.9f;
         [Tooltip("Slides the whole stage sideways on screen (negative = to the right) to leave room for the left-hand HUD column.")]
-        [SerializeField] private float stageShiftX = -0.55f;
+        [SerializeField] private float stageShiftX = -0.4f;
 
         [Header("Squad layout")]
         [SerializeField] private Vector3 spotlightSlot = new Vector3(0f, 0f, -0.2f);
-        [SerializeField] private float sideSpread = 1.35f;
+        [SerializeField] private float sideSpread = 1.3f;
         [SerializeField] private float sideDepth = 0.6f;
+        [Tooltip("The fourth squad member stands behind and to the right of the third.")]
+        [SerializeField] private float backSpread = 2.1f;
+        [SerializeField] private float backDepth = 0.35f;
         [SerializeField] private float inwardYaw = 14f;
         [SerializeField] private float spotlightScale = 1.1f;
         [SerializeField] private float sideScale = 0.92f;
-        [SerializeField, Range(0.2f, 1f)] private float sideBrightness = 0.7f;
+        [SerializeField, Range(0.2f, 1f)] private float sideBrightness = 0.92f;
         [Tooltip("Higher = snappier move between slots.")]
         [SerializeField] private float slotSharpness = 6.5f;
 
         [Header("Spotlight")]
         [SerializeField] private bool spotlight = true;
-        [SerializeField] private float spotlightIntensity = 50000f;    // candela
-        [SerializeField] private float spotlightAngle = 26f;
+        [Tooltip("Kept low on purpose: the hangar rig already lights the stage; this only lifts whoever is selected.")]
+        [SerializeField] private float spotlightIntensity = 9000f;     // candela
+        [SerializeField] private float spotlightAngle = 32f;
+        [SerializeField] private float fillIntensity = 30000f;          // candela
         [SerializeField] private Vector3 spotlightOffset = new Vector3(0.3f, 3.6f, -2.8f);
         [SerializeField] private float spotlightFollowTime = 0.38f;
 
@@ -119,16 +124,18 @@ namespace Railbound.UI
         }
 
         // ------------------------------------------------------------------ slots
-        /// <summary>Where a member stands: the selected one in the spotlight, the rest to its right (+1) and left (+2).</summary>
+        /// <summary>
+        /// Where a member stands. The selected one takes the spotlight in the middle; the next one in the party stands to its
+        /// right, the previous one to its left, and with four players the one after the next steps further back on the right.
+        /// </summary>
         private void SlotFor(int memberIndex, int count, out Vector3 pos, out float yaw, out float mul)
         {
             int sel = LobbyParty.Instance.SelectedIndex;
             int rel = count <= 0 ? 0 : ((memberIndex - sel) % count + count) % count;
             if (rel == 0) { pos = spotlightSlot; yaw = 0f; mul = spotlightScale; return; }
-            bool right = rel == 1;
-            pos = new Vector3((right ? 1f : -1f) * sideSpread, 0f, sideDepth);
-            yaw = right ? inwardYaw : -inwardYaw;
-            mul = sideScale;
+            if (rel == 1) { pos = new Vector3(sideSpread, 0f, sideDepth); yaw = inwardYaw; mul = sideScale; return; }
+            if (count >= 4 && rel == 2) { pos = new Vector3(backSpread, 0f, backDepth); yaw = inwardYaw * 1.3f; mul = sideScale * 0.97f; return; }
+            pos = new Vector3(-sideSpread, 0f, sideDepth); yaw = -inwardYaw; mul = sideScale;
         }
 
         // ------------------------------------------------------------------ party models
@@ -160,7 +167,7 @@ namespace Railbound.UI
                 go.transform.localScale = Vector3.one * 0.001f;   // pops in (see Update)
                 LobbyCharacterPreviewManager.TintOperator(go, m.operatorIndex);
 
-                LobbyActorRig.Attach(go, mirror: !left);     // own idle, grounding, look-at and emotes; neighbours mirror each other
+                LobbyActorRig.Attach(go, mirror: !left);     // own idle, grounding and look-at; neighbours mirror each other
                 spawned[m.id] = new Spawned { go = go, operatorIndex = m.operatorIndex, memberIndex = i, born = Time.unscaledTime, scale = BaseModelScale() };
             }
 
@@ -205,6 +212,21 @@ namespace Railbound.UI
             spotHd.EnableShadows(true);
             spotHd.volumetricDimmer = 1f;
             spotLight.transform.position = FocusPoint() + spotlightOffset;
+
+            // wide, shadowless fill from the camera side: the hangar rig leaves the right edge dark, which is where the
+            // fourth operator stands
+            var fillGo = new GameObject("Lobby_StageFill");
+            fillGo.transform.SetParent(transform, false);
+            var fillHd = fillGo.AddHDLight(HDLightTypeAndShape.ConeSpot);
+            var fill = fillGo.GetComponent<Light>();
+            fill.color = new Color(0.86f, 0.92f, 1f);
+            fill.spotAngle = 105f;
+            fillHd.innerSpotPercent = 30f;
+            fillHd.SetIntensity(fillIntensity, LightUnit.Candela);
+            fillHd.EnableShadows(false);
+            fillHd.volumetricDimmer = 0f;
+            fill.transform.position = new Vector3(0.9f, 3.2f, -3.4f);
+            fill.transform.rotation = Quaternion.LookRotation(new Vector3(2.0f, 1.0f, 0.4f) - fill.transform.position);
         }
 
         private Vector3 FocusPoint()
@@ -235,7 +257,7 @@ namespace Railbound.UI
 
             spotPulse = Mathf.MoveTowards(spotPulse, 0f, dt * 1.6f);
             float pulse = spotPulse * spotPulse * (3f - 2f * spotPulse);     // eases the flash out
-            spotHd.SetIntensity(spotlightIntensity * (1f + 0.55f * pulse), LightUnit.Candela);
+            spotHd.SetIntensity(spotlightIntensity * (1f + 0.35f * pulse), LightUnit.Candela);
         }
 
         // ------------------------------------------------------------------ ambience setup
@@ -278,8 +300,8 @@ namespace Railbound.UI
 
             var main = ps.main; main.loop = true; main.playOnAwake = true; main.prewarm = true;
             main.startLifetime = new ParticleSystem.MinMaxCurve(9f, 16f); main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.03f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.75f, 0.5f), new Color(0.8f, 0.88f, 1f, 0.35f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.005f, 0.012f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.75f, 0.28f), new Color(0.8f, 0.88f, 1f, 0.18f));
             main.maxParticles = 260; main.simulationSpace = ParticleSystemSimulationSpace.World;
             var em = ps.emission; em.rateOverTime = 22f;
             var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(7f, 3.2f, 6f);
@@ -315,7 +337,7 @@ namespace Railbound.UI
 
         private void HandleInput()
         {
-            if (LobbyEmoteWheel.IsOpen || TypingInField()) return;
+            if (TypingInField()) return;
             var party = LobbyParty.Instance;
             if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) party.SelectOffset(1);
             else if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) party.SelectOffset(-1);

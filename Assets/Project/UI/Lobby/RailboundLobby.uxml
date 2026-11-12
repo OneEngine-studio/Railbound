@@ -261,24 +261,6 @@
         </ui:VisualElement>
 
         <!-- ============================================================ -->
-        <!-- REGION G: BOTTOM EMOTES BAR                                  -->
-        <!-- ============================================================ -->
-        <ui:VisualElement name="BottomEmotes" class="bottom-emotes-bar">
-            <ui:Button name="BtnEmoteSalute" class="btn-emote">
-                <ui:Label text="[1] SALUTE" class="btn-emote-label" />
-            </ui:Button>
-            <ui:Button name="BtnEmoteGreet" class="btn-emote">
-                <ui:Label text="[2] GREET" class="btn-emote-label" />
-            </ui:Button>
-            <ui:Button name="BtnEmoteFlex" class="btn-emote">
-                <ui:Label text="[3] FLEX" class="btn-emote-label" />
-            </ui:Button>
-            <ui:Button name="BtnEmoteVictory" class="btn-emote">
-                <ui:Label text="[4] VICTORY" class="btn-emote-label" />
-            </ui:Button>
-        </ui:VisualElement>
-
-        <!-- ============================================================ -->
         <!-- REGION H: BOTTOM FOOTER                                      -->
         <!-- ============================================================ -->
         <ui:VisualElement name="BottomFooter" class="bottom-footer">
