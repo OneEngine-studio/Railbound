@@ -54,6 +54,30 @@ namespace Railbound.UI
         /// <summary>Raised whenever the roster or a member's state changes.</summary>
         public event Action Changed;
 
+        /// <summary>Raised when a different member is put in the spotlight.</summary>
+        public event Action SelectionChanged;
+
+        private int selectedIndex;
+        /// <summary>Index (into <see cref="Members"/>) of the member in the spotlight. 0 is the local player.</summary>
+        public int SelectedIndex => Mathf.Clamp(selectedIndex, 0, Mathf.Max(0, members.Count - 1));
+        public PartyMember Selected => members.Count > 0 ? members[SelectedIndex] : null;
+
+        public void Select(int index)
+        {
+            if (members.Count == 0) return;
+            index = Mathf.Clamp(index, 0, members.Count - 1);
+            if (index == selectedIndex) return;
+            selectedIndex = index;
+            SelectionChanged?.Invoke();
+        }
+
+        /// <summary>Moves the spotlight to the next (+1) or previous (-1) member, wrapping around.</summary>
+        public void SelectOffset(int delta)
+        {
+            if (members.Count < 2) return;
+            Select(((SelectedIndex + delta) % members.Count + members.Count) % members.Count);
+        }
+
         private void Awake()
         {
             if (_instance != null && _instance != this) { Destroy(this); return; }
@@ -104,7 +128,10 @@ namespace Railbound.UI
             int i = members.FindIndex(x => x.id == id && !x.isLocal);
             if (i < 0) return false;
             members.RemoveAt(i);
+            bool selectionMoved = selectedIndex >= members.Count || selectedIndex == i;
+            if (selectionMoved) selectedIndex = 0;
             Changed?.Invoke();
+            if (selectionMoved) SelectionChanged?.Invoke();
             return true;
         }
 

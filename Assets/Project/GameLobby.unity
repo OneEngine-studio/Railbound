@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.05297268, g: 0.057140954, b: 0.06806291, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -29582,6 +29582,8 @@ MonoBehaviour:
   m_Script: {fileID: 492635725}
   m_Name: 
   m_EditorClassIdentifier: 
+  amount: 1.1
+  cycle: 1.2
 --- !u!114 &136291543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -78873,7 +78875,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &341689617
 RectTransform:
   m_ObjectHideFlags: 0
@@ -101446,9 +101448,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetGameplayScene: MAP-2
   netcodePort: 7777
+  serverConnectTimeoutSeconds: 20
   playerPrefab: {fileID: 4372868026506870464, guid: 4047b1611e0254ae3b02b69d1395979b,
     type: 3}
   nakamaTimeoutSeconds: 8
+  queueSeconds: 30
+  queueMinPlayers: 2
+  queueMaxPlayers: 10
+  allocationTimeoutSeconds: 45
+  legacyServerFallback: 1
   statusText: {fileID: 1908680003}
 --- !u!1 &446369630
 GameObject:
@@ -161127,11 +161135,11 @@ RectTransform:
   - {fileID: 816350023}
   m_Father: {fileID: 1400636025}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -48, y: 60}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 48, y: 64}
   m_SizeDelta: {x: 470, y: 392}
-  m_Pivot: {x: 1, y: 0}
+  m_Pivot: {x: 0, y: 0}
 --- !u!114 &713483405
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -172896,7 +172904,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &767510879
 RectTransform:
   m_ObjectHideFlags: 0
@@ -258728,9 +258736,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetGameplayScene: MAP-2
   netcodePort: 7777
+  serverConnectTimeoutSeconds: 20
   playerPrefab: {fileID: 4372868026506870464, guid: 4047b1611e0254ae3b02b69d1395979b,
     type: 3}
   nakamaTimeoutSeconds: 8
+  queueSeconds: 30
+  queueMinPlayers: 2
+  queueMaxPlayers: 10
+  allocationTimeoutSeconds: 45
+  legacyServerFallback: 1
   statusText: {fileID: 0}
 --- !u!4 &1173535374
 Transform:
@@ -366287,13 +366301,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   soloPosition: {x: 0, y: 1, z: -3.45}
   soloFov: 34
-  partyPosition: {x: 0, y: 1.18, z: -3.9}
+  partyPosition: {x: 0, y: 1.2, z: -4.4}
   partyFov: 37
-  lookTarget: {x: 0, y: 0.92, z: 0}
+  lookTarget: {x: 0, y: 0.98, z: 0}
   framingSmoothTime: 0.9
-  sideOffset: 1.3
-  depthOffset: 0.55
+  stageShiftX: -0.55
+  spotlightSlot: {x: 0, y: 0, z: -0.2}
+  sideSpread: 1.35
+  sideDepth: 0.6
   inwardYaw: 14
+  spotlightScale: 1.1
+  sideScale: 0.92
+  sideBrightness: 0.7
+  slotSharpness: 6.5
+  spotlight: 1
+  spotlightIntensity: 50000
+  spotlightAngle: 26
+  spotlightOffset: {x: 0.3, y: 3.6, z: -2.8}
+  spotlightFollowTime: 0.38
   ambientMotion: 1
   swayPosition: 0.018
   swayRotation: 0.35

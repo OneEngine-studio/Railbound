@@ -54,6 +54,8 @@ namespace Railbound.UI
             ? operators[currentOperatorIndex] : null;
 
         public int CurrentOperatorIndex => currentOperatorIndex;
+        /// <summary>The local player's spawned model (null until the first operator is spawned).</summary>
+        public GameObject CurrentModel => currentCharacterInstance;
         public Transform SpawnAnchor => characterSpawnAnchor != null ? characterSpawnAnchor : transform;
         public OperatorDefinition GetOperator(int index) => (operators != null && index >= 0 && index < operators.Count) ? operators[index] : null;
         public int TotalOperators => operators != null ? operators.Count : 0;
@@ -219,7 +221,7 @@ namespace Railbound.UI
         }
 
         /// <summary>Per-operator uniform tint; also used for party members' models.</summary>
-        public static void TintOperator(GameObject model, int index)
+        public static void TintOperator(GameObject model, int index, float brightness = 1f)
         {
             if (model == null) return;
 
@@ -233,6 +235,7 @@ namespace Railbound.UI
             };
 
             Color tint = classTints[Mathf.Abs(index) % classTints.Length];
+            tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);   // brightness < 1 dims models that are out of the spotlight
             var renderers = model.GetComponentsInChildren<Renderer>(true);
             var propBlock = new MaterialPropertyBlock();
             foreach (var r in renderers)
