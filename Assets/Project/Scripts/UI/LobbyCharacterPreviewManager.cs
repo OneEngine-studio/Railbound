@@ -219,27 +219,68 @@ namespace Railbound.UI
             TintOperator(currentCharacterInstance, index);
         }
 
-        /// <summary>Per-operator uniform tint; also used for party members' models.</summary>
+        /// <summary>How one operator dresses the shared MIL-R5 model: a tint per gear group, and which accessories are worn.</summary>
+        private struct OperatorLook
+        {
+            public Color suit, plate, pouches, pads, cap, headset;
+            public bool wearCap, wearHeadset;
+        }
+
+        // The tints multiply the model's own olive textures, so values are chosen to move the hue, not replace it.
+        private static readonly OperatorLook[] Looks =
+        {
+            // 0: MIL-R5 GHOST - the model as authored
+            new OperatorLook { suit = Color.white, plate = Color.white, pouches = Color.white, pads = Color.white, cap = Color.white, headset = Color.white, wearCap = true, wearHeadset = true },
+            // 1: KRUGER-9 VANGUARD - steel grey-blue, heavy dark plate, bare head
+            new OperatorLook { suit = new Color(0.70f, 0.80f, 1.05f), plate = new Color(0.42f, 0.46f, 0.54f), pouches = new Color(0.60f, 0.66f, 0.78f), pads = new Color(0.38f, 0.40f, 0.46f), cap = Color.white, headset = new Color(0.55f, 0.60f, 0.70f), wearCap = false, wearHeadset = true },
+            // 2: SPECTRE-X RECON - near-black teal night kit, cap and headset
+            new OperatorLook { suit = new Color(0.55f, 0.82f, 0.78f), plate = new Color(0.30f, 0.40f, 0.40f), pouches = new Color(0.40f, 0.55f, 0.55f), pads = new Color(0.28f, 0.34f, 0.34f), cap = new Color(0.30f, 0.46f, 0.46f), headset = new Color(0.35f, 0.45f, 0.45f), wearCap = true, wearHeadset = true },
+            // 3: VALKYRIE-7 MEDIC - desert sand with a rust vest, no headset
+            new OperatorLook { suit = new Color(1.55f, 1.25f, 0.80f), plate = new Color(1.50f, 0.85f, 0.65f), pouches = new Color(1.35f, 1.10f, 0.75f), pads = new Color(1.10f, 0.90f, 0.70f), cap = new Color(1.50f, 1.20f, 0.80f), headset = Color.white, wearCap = true, wearHeadset = false }
+        };
+
+        private enum GearGroup { Skin, Suit, Plate, Pouches, Pads, Cap, Headset }
+
+        private static GearGroup GroupOf(string rendererName)
+        {
+            if (rendererName.Contains("Eye") || rendererName.Contains("Head") && !rendererName.Contains("Headphones")) return GearGroup.Skin;
+            if (rendererName.Contains("Headphones")) return GearGroup.Headset;
+            if (rendererName.Contains("Cap")) return GearGroup.Cap;
+            if (rendererName.Contains("Plate")) return GearGroup.Plate;
+            if (rendererName.Contains("Puches")) return GearGroup.Pouches;
+            if (rendererName.Contains("Pads")) return GearGroup.Pads;
+            return GearGroup.Suit;
+        }
+
+        /// <summary>
+        /// Dresses a model in its operator's look (per-group tints, cap / headset on or off); also used for party members'
+        /// models. brightness &lt; 1 dims models that are out of the spotlight.
+        /// </summary>
         public static void TintOperator(GameObject model, int index, float brightness = 1f)
         {
             if (model == null) return;
 
-            // Subtle tactical uniform tint variation per operator class so switching operators is visually distinct
-            Color[] classTints = new Color[]
-            {
-                new Color(1.00f, 1.00f, 1.00f, 1f), // 0: MIL-R5 GHOST (Standard Spec-Ops Olive/Black)
-                new Color(0.82f, 0.88f, 0.96f, 1f), // 1: KRUGER-9 VANGUARD (Urban Steel Blue-Grey)
-                new Color(0.76f, 0.92f, 0.84f, 1f), // 2: SPECTRE-X RECON (Night-Ops Cyber Teal)
-                new Color(0.96f, 0.88f, 0.80f, 1f)  // 3: VALKYRIE-7 MEDIC (Desert Sand / Amber)
-            };
-
-            Color tint = classTints[Mathf.Abs(index) % classTints.Length];
-            tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);   // brightness < 1 dims models that are out of the spotlight
+            var look = Looks[Mathf.Abs(index) % Looks.Length];
             var renderers = model.GetComponentsInChildren<Renderer>(true);
             var propBlock = new MaterialPropertyBlock();
             foreach (var r in renderers)
             {
                 if (r == null) continue;
+                var group = GroupOf(r.name);
+
+                Color tint;
+                switch (group)
+                {
+                    case GearGroup.Suit: tint = look.suit; break;
+                    case GearGroup.Plate: tint = look.plate; break;
+                    case GearGroup.Pouches: tint = look.pouches; break;
+                    case GearGroup.Pads: tint = look.pads; break;
+                    case GearGroup.Cap: tint = look.cap; r.enabled = look.wearCap; break;
+                    case GearGroup.Headset: tint = look.headset; r.enabled = look.wearHeadset; break;
+                    default: tint = Color.white; break;      // face and eyes keep their own colour
+                }
+                tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);
+
                 r.GetPropertyBlock(propBlock);
                 propBlock.SetColor("_BaseColor", tint);
                 propBlock.SetColor("_Color", tint);

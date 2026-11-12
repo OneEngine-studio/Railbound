@@ -45,7 +45,7 @@ namespace Railbound.UI
         [Tooltip("Kept low on purpose: the hangar rig already lights the stage; this only lifts whoever is selected.")]
         [SerializeField] private float spotlightIntensity = 9000f;     // candela
         [SerializeField] private float spotlightAngle = 32f;
-        [SerializeField] private float fillIntensity = 30000f;          // candela
+        [SerializeField] private float fillIntensity = 55000f;          // candela
         [SerializeField] private Vector3 spotlightOffset = new Vector3(0.3f, 3.6f, -2.8f);
         [SerializeField] private float spotlightFollowTime = 0.38f;
 
