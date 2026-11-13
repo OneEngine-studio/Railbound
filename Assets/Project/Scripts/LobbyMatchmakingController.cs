@@ -261,8 +261,8 @@ namespace Railbound.Networking
             var auth = AuthenticationService.Instance;
             if (auth == null || !auth.IsAuthenticated)
             {
-                Debug.Log("[LobbyMatchmaker] Not signed in: using the default server address.");
-                GameServerConnection.Instance.UseDefaultEndpoint(_queueMatchId);
+                // nobody can hand out a server without Nakama: no endpoint is set, so the match runs locally (solo / offline testing)
+                Debug.Log("[LobbyMatchmaker] Not signed in: no game server can be allocated; the match runs locally.");
                 return true;
             }
 
@@ -278,12 +278,15 @@ namespace Railbound.Networking
                 return true;
             }
 
-            if (legacyServerFallback)
+            // Only fall back to the default address when a standing server really runs there. Otherwise the player would wait
+            // through every connection attempt for a server that does not exist; failing here lets the HUD say "try again".
+            if (legacyServerFallback && ServerConfig.DefaultGameServerRunning)
             {
                 Debug.LogWarning("[LobbyMatchmaker] No allocated server; falling back to the default server address.");
                 GameServerConnection.Instance.UseDefaultEndpoint(_queueMatchId);
                 return true;
             }
+            Debug.LogWarning("[LobbyMatchmaker] No game server could be allocated (all busy or unreachable); the deployment is cancelled.");
             return false;
         }
 

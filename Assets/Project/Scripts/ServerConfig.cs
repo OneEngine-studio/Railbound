@@ -17,6 +17,10 @@ public static class ServerConfig
     public const string GameServerAddress = "13.204.24.15";
     public const ushort GameServerPort = 7777;
 
+    // Is a standing game server running on GameServerAddress:GameServerPort (a fixed server for direct join)? In production the
+    // fleet allocates a server per match and nothing listens there, so a failed allocation must not fall back to it.
+    public static readonly bool DefaultGameServerRunning = false;
+
     // The allocation RPC returns the host and UDP port of the node the game server runs on (the fleet spreads servers over
     // all nodes, each with its own public address), so the client uses that host. GameServerAddress only replaces it when
     // Nakama sends nothing or a private address (10.x / 172.16-31.x / 192.168.x) that a player cannot reach.
