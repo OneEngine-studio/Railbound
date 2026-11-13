@@ -191,7 +191,7 @@ namespace Railbound.UI
 
             while (failure == null)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.25f);   // long frames (scene activation) must not eat the timeout
                 var nm = NetworkManager.Singleton;
                 string stage;
                 bool done = false;
