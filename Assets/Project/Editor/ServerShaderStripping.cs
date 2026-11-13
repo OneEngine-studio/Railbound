@@ -41,16 +41,21 @@ namespace Railbound.Editor
             Active = false;
         }
 
+        // Both conditions: the flag (set around the server BuildPlayer call) AND the Dedicated Server subtarget. Even if the flag
+        // were ever left on by mistake, a client / player build (subtarget Player) keeps all of its shaders.
+        private static bool ShouldStrip =>
+            Active && UnityEditor.EditorUserBuildSettings.standaloneBuildSubtarget == UnityEditor.StandaloneBuildSubtarget.Server;
+
         public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
         {
-            if (!Active) return;
+            if (!ShouldStrip) return;
             StrippedVariants += data.Count;
             data.Clear();
         }
 
         public void OnProcessComputeShader(ComputeShader shader, string kernelName, IList<ShaderCompilerData> data)
         {
-            if (!Active) return;
+            if (!ShouldStrip) return;
             StrippedVariants += data.Count;
             data.Clear();
         }

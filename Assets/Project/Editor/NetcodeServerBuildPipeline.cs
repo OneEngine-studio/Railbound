@@ -180,8 +180,8 @@ namespace Railbound.Editor
                     options = BuildOptions.None
                 };
 
-                // the headless server never draws: skip compiling the HDRP shader library for it (see ServerShaderStripping)
-                ServerShaderStripping.BeginServerBuild();
+                // a client draws: it must keep every shader (the server-only stripping is off for it, see ServerShaderStripping)
+                ServerShaderStripping.Active = false;
                 BuildReport report = BuildPipeline.BuildPlayer(options);
                 BuildSummary summary = report.summary;
 
@@ -246,6 +246,8 @@ namespace Railbound.Editor
                     options = BuildOptions.None
                 };
 
+                // the headless server never draws: skip compiling the HDRP shader library for it (see ServerShaderStripping)
+                ServerShaderStripping.BeginServerBuild();
                 BuildReport report = BuildPipeline.BuildPlayer(options);
                 BuildSummary summary = report.summary;
 
