@@ -43,5 +43,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD pgrep -f RailboundServer.x86_64 > /dev/null || exit 1
 
 # Launch headless Netcode Dedicated Server on port 7777
-ENTRYPOINT ["/server/RailboundServer.x86_64", "-batchmode", "-nographics", "-server", "-port", "7777", "-logFile", "/server/logs/server.log"]
+# "-logFile -" writes the Unity log to stdout, so `kubectl logs` shows it (a log file inside the pod is lost when the pod goes away)
+ENTRYPOINT ["/server/RailboundServer.x86_64", "-batchmode", "-nographics", "-server", "-port", "7777", "-logFile", "-"]
 
