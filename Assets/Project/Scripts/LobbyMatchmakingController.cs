@@ -55,6 +55,9 @@ namespace Railbound.Networking
         public string CurrentMatchId { get; private set; }
         public bool IsDeploying { get; private set; }
 
+        /// <summary>How long a deployment searches for other players before the match starts with bots.</summary>
+        public float QueueSeconds => queueSeconds;
+
         /// <summary>Why the last deployment failed, so the lobby can tell the player something useful.</summary>
         public enum DeployFailure { None, ServersBusy, ConnectionFailed, Other }
         public DeployFailure LastFailure { get; private set; }

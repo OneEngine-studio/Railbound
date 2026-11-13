@@ -152,6 +152,7 @@ namespace Railbound.UI
             var plateFont = deployButtonLabel != null ? deployButtonLabel.font : null;
             LobbyChallengesPanel.Create(transform, plateFont);
             LobbySquadNameplates.Create(transform, plateFont);
+            partyPanel = LobbyPartyPanel.Create(transform, plateFont);
             customizer = LobbyCharacterCustomizer.Create(plateFont, gameObject, OnCustomizerClosed);
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
@@ -163,6 +164,7 @@ namespace Railbound.UI
         }
 
         private LobbyCharacterCustomizer customizer;
+        private LobbyPartyPanel partyPanel;
 
         private void OnCustomizerClosed()
         {
@@ -175,6 +177,15 @@ namespace Railbound.UI
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
             if (customizer != null && customizer.BusyThisFrame)
             {
+                TickDeployState();
+                return;
+            }
+
+            // the party window owns the keyboard while it is open: Space / Esc / F1 must not deploy, go back or reopen it
+            // (typing a party code has Space and letters in it)
+            if (partyPanel != null && partyPanel.IsOpen)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape)) partyPanel.Hide();
                 TickDeployState();
                 return;
             }
@@ -668,6 +679,12 @@ namespace Railbound.UI
             {
                 int secs = Mathf.FloorToInt(Time.unscaledTime - deployStateStart);
                 string line = $"{deployStage}   {secs / 60}:{secs % 60:00}";
+                // while searching, show how long the whole search window is (after it the match starts with bots)
+                if (deployStage == "SEARCHING FOR PLAYERS" && hookedMatchmaker != null)
+                {
+                    int window = Mathf.RoundToInt(hookedMatchmaker.QueueSeconds);
+                    line += $" / {window / 60}:{window % 60:00}";
+                }
                 if (modeSubtitleText != null) { modeSubtitleText.text = line; modeSubtitleText.color = YellowAccent; }
                 if (loadingSub != null) loadingSub.text = line;
             }
@@ -823,7 +840,11 @@ namespace Railbound.UI
                     if (cg == null) cg = row.root.AddComponent<CanvasGroup>();
                     cg.alpha = has ? 1f : 0.35f;
 
-                    if (row.nameText != null) row.nameText.text = has ? members[i].displayName : "OPEN SLOT";
+                    if (row.nameText != null)
+                    {
+                        row.nameText.richText = true;
+                        row.nameText.text = has ? members[i].displayName + (members[i].isLeader && members.Count > 1 ? "  <size=65%><color=#B0B0B0>LEADER</color></size>" : "") : "OPEN SLOT";
+                    }
                     if (row.levelText != null) row.levelText.text = has ? members[i].levelText : "";
 
                     if (row.readyBadgeBg != null)
@@ -859,8 +880,8 @@ namespace Railbound.UI
         private void OnInviteClicked()
         {
             PlayClickSound();
-            Debug.Log("[YellowHUD] Invite Player Clicked!");
-            ShowTacticalNotice("PARTY INVITATION LINK COPIED TO CLIPBOARD");
+            // the party window: your party code (copy it for a friend) and a field to join a friend's party
+            if (partyPanel != null) partyPanel.Show();
         }
 
         // ----------------------------------------------------

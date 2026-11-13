@@ -14,6 +14,7 @@ namespace Railbound.UI
         public int operatorIndex;     // which operator model this player shows
         public bool ready;
         public bool isLocal;
+        public bool isLeader;         // the party leader starts the match
     }
 
     /// <summary>
@@ -83,7 +84,10 @@ namespace Railbound.UI
             if (_instance != null && _instance != this) { Destroy(this); return; }
             _instance = this;
             EnsureLocal();
-            if (seedDemoSquad)
+
+            // a signed-in player must never see made-up squadmates: the real party (Nakama) fills the slots
+            bool signedIn = AuthenticationService.Instance != null && AuthenticationService.Instance.IsAuthenticated;
+            if (seedDemoSquad && !signedIn)
             {
                 TryAddMember(new PartyMember { id = "demo_vex", displayName = "VEX_TACTICAL", levelText = "LVL. 48", operatorIndex = 2, ready = true });
                 TryAddMember(new PartyMember { id = "demo_noob", displayName = "NOOB_SHENKY", levelText = "LVL. 3", operatorIndex = 3, ready = false });
@@ -91,9 +95,43 @@ namespace Railbound.UI
             }
         }
 
+        private void Start()
+        {
+            // the party outlives the lobby scene (it persists into a match and back): show it again
+            var service = Railbound.Networking.NakamaPartyService.InstanceIfExists;
+            if (service != null) service.SyncToLobby();
+        }
+
         private void OnDestroy()
         {
             if (_instance == this) _instance = null;
+        }
+
+        /// <summary>
+        /// Replaces everybody except the local player by <paramref name="remote"/> (the real party roster) and marks whether the
+        /// local player leads it. Used by the party service; an empty list means the player is alone.
+        /// </summary>
+        public void ReplaceRemoteMembers(List<PartyMember> remote, bool localIsLeader)
+        {
+            EnsureLocal();
+            bool changed = false;
+
+            for (int i = members.Count - 1; i >= 1; i--) { members.RemoveAt(i); changed = true; }
+
+            int room = MaxMembers - 1;
+            foreach (var m in remote)
+            {
+                if (room-- <= 0) break;
+                m.isLocal = false;
+                if (string.IsNullOrEmpty(m.id)) m.id = Guid.NewGuid().ToString("N");
+                members.Add(m);
+                changed = true;
+            }
+
+            if (members[0].isLeader != localIsLeader) { members[0].isLeader = localIsLeader; changed = true; }
+
+            if (selectedIndex >= members.Count) { selectedIndex = 0; SelectionChanged?.Invoke(); }
+            if (changed) Changed?.Invoke();
         }
 
         private void EnsureLocal()
