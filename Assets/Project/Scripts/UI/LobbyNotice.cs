@@ -34,13 +34,44 @@ namespace Railbound.UI
             setAt = Time.realtimeSinceStartup;
         }
 
-        /// <summary>Returns the pending notice once; false when there is none or it is too old.</summary>
+        /// <summary>Returns the pending notice once; false when there is none or it is too old.
         public static bool TryTake(out string message, out Kind noticeKind)
         {
             message = text;
             noticeKind = kind;
             bool fresh = !string.IsNullOrEmpty(text) && Time.realtimeSinceStartup - setAt <= MaxAgeSeconds;
             text = null;
+            return fresh;
+        }
+    }
+}
+
+namespace Railbound.UI
+{
+    /// <summary>
+    /// "PLAY AGAIN" on the results screen: the match sends the player back to the lobby and asks it to start the next deployment on
+    /// its own. The lobby takes the request once with <see cref="TryConsume"/>.
+    /// </summary>
+    public static class LobbyAutoDeploy
+    {
+        private const float MaxAgeSeconds = 30f;
+
+        private static bool requested;
+        private static float requestedAt;
+
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset() { requested = false; }
+
+        public static void Request()
+        {
+            requested = true;
+            requestedAt = UnityEngine.Time.realtimeSinceStartup;
+        }
+
+        public static bool TryConsume()
+        {
+            bool fresh = requested && UnityEngine.Time.realtimeSinceStartup - requestedAt <= MaxAgeSeconds;
+            requested = false;
             return fresh;
         }
     }
