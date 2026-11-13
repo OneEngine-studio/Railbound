@@ -55,6 +55,10 @@ namespace Railbound.Networking
         public string CurrentMatchId { get; private set; }
         public bool IsDeploying { get; private set; }
 
+        /// <summary>Why the last deployment failed, so the lobby can tell the player something useful.</summary>
+        public enum DeployFailure { None, ServersBusy, ConnectionFailed, Other }
+        public DeployFailure LastFailure { get; private set; }
+
         /// <summary>Raised with every deployment status line (e.g. "CREATING NAKAMA MATCH...", "LOADING MAP-2...", "DEPLOY FAILED", "CANCELLED").</summary>
         public event Action<string> StatusChanged;
 
@@ -104,6 +108,7 @@ namespace Railbound.Networking
             }
 
             IsDeploying = true;
+            LastFailure = DeployFailure.None;
             _queueMatchId = Guid.NewGuid().ToString("N");   // a solo match; a matchmaker lobby replaces it with a shared id
             _queuePlayers = 1;
             GameServerConnection.Instance.Clear();
@@ -121,6 +126,7 @@ namespace Railbound.Networking
                 if (!await AllocateServerAsync())
                 {
                     if (_cancelRequested) { AbortDeploy(); return; }
+                    LastFailure = DeployFailure.ServersBusy;
                     throw new InvalidOperationException("No game server available.");
                 }
 
@@ -159,6 +165,7 @@ namespace Railbound.Networking
                     if (!await WaitForServerConnectionAsync())
                     {
                         if (_cancelRequested) { AbortDeploy(); return; }
+                        LastFailure = DeployFailure.ConnectionFailed;
                         throw new InvalidOperationException($"Could not connect to the game server {server.Endpoint}: {server.LastError}");
                     }
                 }
@@ -171,7 +178,12 @@ namespace Railbound.Networking
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[LobbyMatchmaker] Deployment failed: {ex.Message}\n{ex.StackTrace}");
+                // busy servers / an unreachable server are expected situations (a warning); anything else is a bug (an error with the stack)
+                if (LastFailure == DeployFailure.ServersBusy || LastFailure == DeployFailure.ConnectionFailed)
+                    Debug.LogWarning($"[LobbyMatchmaker] Deployment failed ({LastFailure}): {ex.Message}");
+                else
+                    Debug.LogError($"[LobbyMatchmaker] Deployment failed: {ex.Message}\n{ex.StackTrace}");
+                if (LastFailure == DeployFailure.None) LastFailure = DeployFailure.Other;
                 UpdateStatus("DEPLOY FAILED");
                 IsDeploying = false;
             }
