@@ -1,5 +1,6 @@
 using System.Collections;
 using Railbound.BR;
+using Railbound.Networking;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -123,7 +124,7 @@ namespace Railbound.UI
             if (statusText != null) statusText.text = Stages[Stages.Length - 1];
             yield return new WaitForSecondsRealtime(0.35f);
 
-            if (!waitForServer || !MatchConnection.HasAllocation)
+            if (!waitForServer || !GameServerConnection.Instance.HasEndpoint)
             {
                 // offline / direct play: nothing to wait for, show the map as soon as it is loaded
                 yield return Fade(1f, 0f);
@@ -169,7 +170,10 @@ namespace Railbound.UI
         /// <summary>Shows the real connection stages of the Netcode client until the match is synchronised, or sends the player back.</summary>
         private IEnumerator ConnectionPhase()
         {
-            string server = MatchConnection.Host + ":" + MatchConnection.Port;
+            var conn = GameServerConnection.Instance;
+            string server = conn.Endpoint;   // for the log only: players never see addresses or raw errors
+            // the singleton retries on its own; never give up before it has
+            float connectLimit = Mathf.Max(connectTimeoutSeconds, conn.ConnectTimeoutSeconds + 10f);
             SetProgress(1f);
             if (percentText != null) percentText.text = "";
 
@@ -180,27 +184,10 @@ namespace Railbound.UI
             }
 
             float elapsed = 0f;
-            bool clientStarted = false;
             string failure = null;
 
-            if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening && MatchConnection.HasAllocation)
-            {
-                var transport = NetworkManager.Singleton.GetComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
-                if (transport != null)
-                {
-                    transport.SetConnectionData(MatchConnection.Host, MatchConnection.Port, "0.0.0.0");
-                }
-                NetworkManager.Singleton.NetworkConfig.EnableSceneManagement = true;
-                if (NetworkManager.Singleton.StartClient())
-                {
-                    clientStarted = true;
-                    Debug.Log($"[LoadingScreen] Started Netcode client -> {server}");
-                }
-                else
-                {
-                    failure = "FAILED TO START NETWORK CLIENT";
-                }
-            }
+            // the singleton owns the connection (it started in the lobby or starts now) and keeps going across the scene change
+            if (conn.State == GameServerState.Allocated && !conn.Connect()) failure = conn.LastError;
 
             while (failure == null)
             {
@@ -209,25 +196,28 @@ namespace Railbound.UI
                 string stage;
                 bool done = false;
 
-                if (nm == null)
+                if (conn.State == GameServerState.Failed)
+                {
+                    failure = string.IsNullOrEmpty(conn.LastError) ? "CONNECTION TO THE GAME SERVER FAILED" : conn.LastError;
+                    stage = "RETURNING TO LOBBY";
+                }
+                else if (nm == null)
                 {
                     stage = "PREPARING NETWORK";
-                    if (elapsed > connectTimeoutSeconds) failure = "NETWORK UNAVAILABLE";
+                    if (elapsed > connectLimit) failure = "NETWORK UNAVAILABLE";
                 }
                 else
                 {
-                    if (nm.IsClient) clientStarted = true;
-                    if (clientStarted && !nm.IsListening) failure = "CONNECTION TO THE GAME SERVER FAILED";
-
                     if (!nm.IsConnectedClient)
                     {
-                        stage = "CONNECTING TO GAME SERVER  " + server;
-                        if (elapsed > connectTimeoutSeconds) failure = "COULD NOT REACH THE GAME SERVER";
+                        // first try: plain connecting; later tries read as a calm "still working on it", not as an error
+                        stage = conn.Attempt <= 1 ? "CONNECTING TO MATCH" : "WARMING UP MATCH SERVER";
+                        if (elapsed > connectLimit) failure = "COULD NOT REACH THE GAME SERVER";
                     }
                     else if (nm.LocalClient == null || nm.LocalClient.PlayerObject == null)
                     {
                         stage = "JOINING MATCH";
-                        if (elapsed > connectTimeoutSeconds + 15f) failure = "THE SERVER DID NOT SPAWN YOUR PLAYER";
+                        if (elapsed > connectLimit + 15f) failure = "THE SERVER DID NOT SPAWN YOUR PLAYER";
                     }
                     else
                     {
@@ -235,7 +225,7 @@ namespace Railbound.UI
                         if (match == null || !match.IsSpawned)
                         {
                             stage = "SYNCHRONIZING MATCH";
-                            if (elapsed > connectTimeoutSeconds + 15f) done = true;   // no coordinator in this scene: nothing more to wait for
+                            if (elapsed > connectLimit + 15f) done = true;   // no coordinator in this scene: nothing more to wait for
                         }
                         else
                         {
@@ -253,11 +243,9 @@ namespace Railbound.UI
             if (failure != null)
             {
                 Debug.LogWarning("[LoadingScreen] " + failure + " (" + server + ")");
-                if (statusText != null) statusText.text = failure;
-                yield return new WaitForSecondsRealtime(3f);
-                var nm = NetworkManager.Singleton;
-                if (nm != null && nm.IsListening) nm.Shutdown();
-                MatchConnection.Clear();
+                if (statusText != null) statusText.text = "RETURNING TO LOBBY";   // the technical reason is in the log only
+                yield return new WaitForSecondsRealtime(1.5f);
+                conn.Clear();   // leaves the server and forgets the address
                 if (Application.CanStreamedLevelBeLoaded(lobbySceneName)) SceneManager.LoadScene(lobbySceneName);
                 DismissOverlay();
                 yield break;

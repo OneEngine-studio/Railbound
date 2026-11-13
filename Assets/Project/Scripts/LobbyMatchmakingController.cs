@@ -28,8 +28,6 @@ namespace Railbound.Networking
         [Header("Netcode Configuration")]
         [Tooltip("Default transport port for Netcode.")]
         [SerializeField] private ushort netcodePort = 7777;
-        [Tooltip("Seconds the client may take to connect to the allocated game server before the deployment fails.")]
-        [SerializeField] private float serverConnectTimeoutSeconds = 20f;
         [Tooltip("Prefab for player character (from Assets/SandBox/Networking/Prefabs/TPS Character.prefab).")]
         [SerializeField] private GameObject playerPrefab;
 
@@ -108,7 +106,7 @@ namespace Railbound.Networking
             IsDeploying = true;
             _queueMatchId = Guid.NewGuid().ToString("N");   // a solo match; a matchmaker lobby replaces it with a shared id
             _queuePlayers = 1;
-            MatchConnection.Clear();
+            GameServerConnection.Instance.Clear();
             _cancelRequested = false;
             _sceneLoadStarted = false;
             _startedHostHere = false;
@@ -145,7 +143,8 @@ namespace Railbound.Networking
                 }
 
                 // 2. Prepare Netcode NetworkManager & Start Host
-                UpdateStatus("STARTING NETCODE HOST...");
+                var server = GameServerConnection.Instance;
+                UpdateStatus(server.HasEndpoint ? "PREPARING NETWORK CLIENT..." : "STARTING NETCODE HOST...");
                 bool alreadyRunning = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
                 if (!EnsureNetcodeHost())
                 {
@@ -155,12 +154,12 @@ namespace Railbound.Networking
                 if (_cancelRequested) { AbortDeploy(); return; }
 
                 // 2b. A client of the allocated server: wait until the server accepted us (it then loads the map on this client)
-                if (MatchConnection.HasAllocation && NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient)
+                if (server.HasEndpoint && server.State == GameServerState.Connecting)
                 {
                     if (!await WaitForServerConnectionAsync())
                     {
                         if (_cancelRequested) { AbortDeploy(); return; }
-                        throw new InvalidOperationException($"Could not connect to the game server {MatchConnection.Host}:{MatchConnection.Port}.");
+                        throw new InvalidOperationException($"Could not connect to the game server {server.Endpoint}: {server.LastError}");
                     }
                 }
 
@@ -254,7 +253,7 @@ namespace Railbound.Networking
         }
 
         /// <summary>
-        /// Gets the dedicated server of this match from Nakama and stores it in <see cref="MatchConnection"/>.
+        /// Gets the dedicated server of this match from Nakama and stores it in the <see cref="GameServerConnection"/> singleton.
         /// Returns false when that failed and the legacy default server is not allowed (or the player cancelled).
         /// </summary>
         private async Task<bool> AllocateServerAsync()
@@ -263,16 +262,17 @@ namespace Railbound.Networking
             if (auth == null || !auth.IsAuthenticated)
             {
                 Debug.Log("[LobbyMatchmaker] Not signed in: using the default server address.");
+                GameServerConnection.Instance.UseDefaultEndpoint(_queueMatchId);
                 return true;
             }
 
             UpdateStatus("REQUESTING GAME SERVER...");
-            var allocation = await ServerAllocationClient.AllocateAsync(_queueMatchId, _queuePlayers, allocationTimeoutSeconds, () => _cancelRequested, UpdateStatus);
+            var allocation = await ServerAllocationClient.AllocateAsync(_queueMatchId, _queuePlayers, Mathf.Max(allocationTimeoutSeconds, 150f),() => _cancelRequested, UpdateStatus);
             if (_cancelRequested) return false;
 
             if (allocation.HasValue)
             {
-                MatchConnection.Set(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName);
+                GameServerConnection.Instance.SetAllocation(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName);
                 UpdateStatus("GAME SERVER READY");
                 await Task.Delay(500);
                 return true;
@@ -281,34 +281,33 @@ namespace Railbound.Networking
             if (legacyServerFallback)
             {
                 Debug.LogWarning("[LobbyMatchmaker] No allocated server; falling back to the default server address.");
+                GameServerConnection.Instance.UseDefaultEndpoint(_queueMatchId);
                 return true;
             }
             return false;
         }
 
-        /// <summary>Waits until the Netcode client is connected to the allocated game server. On failure it shuts the client down and forgets the allocation.</summary>
+        /// <summary>Waits until the singleton's Netcode client is connected to the game server. On failure it leaves the server and forgets the address.</summary>
         private async Task<bool> WaitForServerConnectionAsync()
         {
-            var nm = NetworkManager.Singleton;
-            string server = MatchConnection.Host + ":" + MatchConnection.Port;
+            var server = GameServerConnection.Instance;
             float waited = 0f;
-            while (nm != null && nm.IsListening && !nm.IsConnectedClient && !_cancelRequested && waited < serverConnectTimeoutSeconds)
+            while (server.State == GameServerState.Connecting && !_cancelRequested)
             {
-                UpdateStatus($"CONNECTING TO GAME SERVER  {server}  {Mathf.CeilToInt(serverConnectTimeoutSeconds - waited)}s");
+                UpdateStatus(server.Attempt <= 1 ? "CONNECTING TO MATCH..." : "WARMING UP MATCH SERVER...");
                 await Task.Delay(250);
                 waited += 0.25f;
             }
 
-            if (nm != null && nm.IsConnectedClient)
+            if (server.State == GameServerState.Connected)
             {
                 UpdateStatus("CONNECTED TO GAME SERVER");
-                Debug.Log($"[LobbyMatchmaker] Connected to the game server {server} as client {nm.LocalClientId}.");
+                Debug.Log($"[LobbyMatchmaker] Connected to the game server {server.Endpoint}.");
                 return true;
             }
 
-            Debug.LogWarning($"[LobbyMatchmaker] Connection to {server} failed or timed out after {waited:0}s.");
-            if (nm != null && nm.IsListening) nm.Shutdown();
-            MatchConnection.Clear();
+            Debug.LogWarning($"[LobbyMatchmaker] Connection to {server.Endpoint} failed after {waited:0}s: {server.LastError}");
+            server.Clear();
             return false;
         }
 
@@ -322,6 +321,7 @@ namespace Railbound.Networking
 
         private void AbortDeploy()
         {
+            GameServerConnection.Instance.Clear();
             if (_startedHostHere && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
                 NetworkManager.Singleton.Shutdown();
@@ -374,11 +374,12 @@ namespace Railbound.Networking
 
         private bool EnsureNetcodeHost()
         {
-            if (MatchConnection.HasAllocation)
+            var server = GameServerConnection.Instance;
+            if (server.HasEndpoint)
             {
-                // Nakama allocated a dedicated game server for this match. Never host a second, local copy of the match here:
-                // connect to the allocated server as a client. The NetworkManager that lives on since the login scene is the one
-                // that does it (the one in the gameplay scene is a duplicate and gets destroyed), and the server's Netcode scene
+                // A dedicated game server (allocated by Nakama, or the default one) runs this match. Never host a second, local copy
+                // of the match here: the GameServerConnection singleton connects the NetworkManager that lives on since the login scene
+                // (the one in the gameplay scene is a duplicate and gets destroyed) as a client, and the server's Netcode scene
                 // management then loads the map on this client.
                 var clientMgr = NetworkManager.Singleton;
                 if (clientMgr == null)
@@ -386,35 +387,24 @@ namespace Railbound.Networking
                     Debug.Log("[LobbyMatchmaker] No NetworkManager in the lobby; handing off to the gameplay scene to connect.");
                     return true;
                 }
-                if (clientMgr.IsListening)
-                {
-                    clientMgr.Shutdown();
-                }
-
-                var clientTransport = clientMgr.GetComponent<UnityTransport>();
-                if (clientTransport == null)
-                {
-                    Debug.LogError("[LobbyMatchmaker] The NetworkManager has no UnityTransport; cannot connect to the game server.");
-                    return false;
-                }
 
                 LoadPlayerPrefabIfNull();
                 if (playerPrefab != null) clientMgr.NetworkConfig.PlayerPrefab = playerPrefab;
-                clientMgr.NetworkConfig.EnableSceneManagement = true;
-                clientTransport.SetConnectionData(MatchConnection.Host, MatchConnection.Port);
 
                 if (Application.CanStreamedLevelBeLoaded(Railbound.UI.LoadingScreenController.LoadingSceneName))
                 {
-                    Debug.Log($"[LobbyMatchmaker] Configured Netcode client for {MatchConnection.Host}:{MatchConnection.Port}; handing off to LoadingScreen.");
+                    // the loading screen starts the connection once the map is loaded and shows its stages
+                    server.ApplyToTransport();
+                    Debug.Log($"[LobbyMatchmaker] Game server {server.Endpoint} is set; handing off to LoadingScreen.");
                     return true;
                 }
 
-                if (!clientMgr.StartClient())
+                if (!server.Connect())
                 {
-                    Debug.LogError($"[LobbyMatchmaker] Netcode client failed to start for {MatchConnection.Host}:{MatchConnection.Port}.");
+                    Debug.LogError($"[LobbyMatchmaker] Netcode client failed to start for {server.Endpoint}: {server.LastError}");
                     return false;
                 }
-                Debug.Log($"[LobbyMatchmaker] Netcode client started -> dedicated server {MatchConnection.Host}:{MatchConnection.Port} (not hosting).");
+                Debug.Log($"[LobbyMatchmaker] Connecting to the game server {server.Endpoint} (not hosting).");
                 return true;
             }
 

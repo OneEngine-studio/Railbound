@@ -63,7 +63,7 @@ public static class ServerAllocationClient
                         break;
 
                     case "unavailable":
-                        status?.Invoke("ALL SERVERS ARE BUSY, RETRYING...");
+                        status?.Invoke("PREPARING A MATCH SERVER...");
                         await Task.Delay(2500);
                         break;
 

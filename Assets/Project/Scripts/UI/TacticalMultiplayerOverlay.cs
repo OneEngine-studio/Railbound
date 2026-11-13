@@ -261,10 +261,11 @@ namespace Railbound.UI
             if (NetworkManager.Singleton == null) return;
 
             // the lobby asked Nakama for this match's game server (Agones); a command-line -ip / -port still wins
-            if (MatchConnection.HasAllocation && !HasCommandLineEndpoint())
+            var server = Railbound.Networking.GameServerConnection.Instance;
+            if (server != null && server.HasEndpoint && !HasCommandLineEndpoint())
             {
-                serverAddress = MatchConnection.Host;
-                serverPort = MatchConnection.Port;
+                serverAddress = server.Host;
+                serverPort = server.Port;
             }
 
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();

@@ -542,7 +542,7 @@ namespace Railbound.UI
         private void OnMatchmakingStatus(string message)
         {
             string m = (message ?? "").ToUpperInvariant();
-            if (m.Contains("FAILED")) SetDeployState(DeployState.Failed, "DEPLOY FAILED - CHECK YOUR CONNECTION");
+            if (m.Contains("FAILED")) SetDeployState(DeployState.Failed, "MATCH SERVER IS STARTING - PLEASE TRY AGAIN");
             else if (m.Contains("CANCEL") && !m.Contains("CANCELLING")) SetDeployState(DeployState.Idle, "");
             else if (m.Contains("LOADING")) SetDeployState(DeployState.Loading, "LOADING MAP");
             else if (m.Contains("STARTING")) { deployStage = "CONNECTING"; RefreshDeployVisuals(); }

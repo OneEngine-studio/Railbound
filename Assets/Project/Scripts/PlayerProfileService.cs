@@ -26,6 +26,8 @@ public static class PlayerProfileService
     private const string Collection = "player_profiles";
     private const string Key = "profile";
 
+    private static PlayerProfile _cached;   // last profile that was read successfully in this run
+
     public static async Task<PlayerProfile> LoadAsync()
     {
         var authentication = AuthenticationService.Instance;
@@ -39,7 +41,19 @@ public static class PlayerProfileService
             UserId = authentication.CurrentUserId
         };
 
-        var result = await authentication.Client.ReadStorageObjectsAsync(authentication.Session, new[] { objectId });
+        IApiStorageObjects result;
+        try
+        {
+            result = await authentication.Client.ReadStorageObjectsAsync(authentication.Session, new[] { objectId });
+        }
+        catch (ApiResponseException ex)
+        {
+            // keep the HTTP status: "Exceeded max retry attempts" alone does not say whether Nakama was down (5xx / 0) or refused us (401 / 404)
+            Debug.LogWarning($"[PlayerProfileService] Reading the profile failed (HTTP {ex.StatusCode}): {ex.Message}");
+            if (_cached != null && _cached.userId == authentication.CurrentUserId) return _cached;   // Nakama unreachable: keep the last known profile
+            throw;
+        }
+
         foreach (var storageObject in result.Objects)
         {
             if (string.IsNullOrWhiteSpace(storageObject.Value))
@@ -59,6 +73,7 @@ public static class PlayerProfileService
                     return null;
 
                 profile.userId = authentication.CurrentUserId;
+                _cached = profile;
                 return profile;
             }
             catch (Exception ex)
