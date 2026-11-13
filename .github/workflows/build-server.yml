@@ -210,12 +210,23 @@ jobs:
       # 6. Make sure Docker Desktop is running
       - name: Start Docker Desktop
         shell: powershell
+        timeout-minutes: 12
         run: |
           $ErrorActionPreference = "Continue"
 
-          docker info *> $null
+          # `docker info` against a hung engine never returns; give every probe a time limit so the job fails with a reason
+          # instead of sitting there for hours.
+          function Test-Docker {
+            $p = Start-Process -FilePath docker -ArgumentList 'info' -NoNewWindow -PassThru `
+              -RedirectStandardOutput "$env:RUNNER_TEMP\docker-info.out" -RedirectStandardError "$env:RUNNER_TEMP\docker-info.err"
+            if (-not $p.WaitForExit(20000)) {
+              try { Stop-Process -Id $p.Id -Force } catch { }
+              return $false
+            }
+            return ($p.ExitCode -eq 0)
+          }
 
-          if ($LASTEXITCODE -ne 0) {
+          if (-not (Test-Docker)) {
 
             $dd = "$env:LOCALAPPDATA\Programs\DockerDesktop\Docker Desktop.exe"
 
@@ -225,26 +236,22 @@ jobs:
 
             Start-Process $dd
 
-            for ($i = 0; $i -lt 60; $i++) {
+            for ($i = 0; $i -lt 30; $i++) {
               Start-Sleep 5
-
-              docker info *> $null
-
-              if ($LASTEXITCODE -eq 0) {
-                break
-              }
+              if (Test-Docker) { break }
             }
           }
 
-          docker info *> $null
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Docker daemon is not running"
+          if (-not (Test-Docker)) {
+            $os = Get-CimInstance Win32_OperatingSystem
+            $freeGb = [math]::Round($os.FreePhysicalMemory / 1MB, 1)
+            throw "The Docker engine does not answer (free memory on this PC: $freeGb GB). Close other programs (the Unity editor, browsers) or restart Docker Desktop, then re-run."
           }
 
       # 7. Login to your OCI private registry
       - name: Login to private registry
         shell: powershell
+        timeout-minutes: 4
         env:
           REGISTRY_USER: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -264,15 +271,30 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "DOCKER_CONFIG=$dockerCfgDir" -Encoding ascii
 
           Write-Host "Logging into registry.kushanherath.me (user len: $($user.Length), pass len: $($pass.Length))..."
-          docker login registry.kushanherath.me -u $user -p $pass
 
-          if ($LASTEXITCODE -ne 0) {
-            throw "Private registry login failed"
+          # The password goes in through stdin from a BOM-free temp file: `docker login -p` shows it in the process list and in
+          # the log, and PowerShell 5.1 pipes a BOM in front of it. A time limit stops a hung Docker engine from blocking the job.
+          $pwFile = Join-Path $env:RUNNER_TEMP "registry-pass.txt"
+          [System.IO.File]::WriteAllText($pwFile, $pass, (New-Object System.Text.UTF8Encoding($false)))
+          try {
+            $p = Start-Process -FilePath cmd.exe -NoNewWindow -PassThru `
+              -ArgumentList "/c", "docker login registry.kushanherath.me -u `"$user`" --password-stdin < `"$pwFile`""
+            if (-not $p.WaitForExit(120000)) {
+              try { Stop-Process -Id $p.Id -Force } catch { }
+              throw "docker login did not finish in 120 s: the Docker engine is not responding"
+            }
+            if ($p.ExitCode -ne 0) {
+              throw "Private registry login failed (exit code $($p.ExitCode))"
+            }
+          }
+          finally {
+            Remove-Item -Path $pwFile -Force -ErrorAction SilentlyContinue
           }
 
       # 8. Build and push Docker image
       - name: Build and push image
         shell: powershell
+        timeout-minutes: 60
         run: |
           $ErrorActionPreference = "Continue"
 
