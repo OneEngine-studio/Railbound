@@ -32,8 +32,8 @@ namespace Railbound.UI
 
         public static LobbyPartyPanel Create(Transform parent, TMP_FontAsset fontAsset)
         {
+            // a root of its own: as a nested canvas its dim only covered 100x100 units, so a click outside did not close the window
             var go = new GameObject("[Lobby] Party Panel");
-            go.transform.SetParent(parent, false);
             var panel = go.AddComponent<LobbyPartyPanel>();
             panel.font = fontAsset != null ? fontAsset : TMP_Settings.defaultFontAsset;
             panel.Build();

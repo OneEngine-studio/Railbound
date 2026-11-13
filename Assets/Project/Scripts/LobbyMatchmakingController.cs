@@ -228,13 +228,18 @@ namespace Railbound.Networking
             IMatchmakerTicket ticket = null;
             try
             {
+                // only players who chose the same mode and team size are matched together
+                string modeKey = Railbound.UI.GameModeCatalog.MatchKey;
+                string modeQuery = "+properties.mode:" + modeKey;
+                var modeProps = new System.Collections.Generic.Dictionary<string, string> { { "mode", modeKey } };
+
                 if (!partyMode)
                 {
-                    ticket = await socket.AddMatchmakerAsync("*", queueMinPlayers, queueMaxPlayers);
+                    ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
                 }
                 else if (party.IsLeader)
                 {
-                    var pt = await socket.AddMatchmakerPartyAsync(partyId, "*", queueMinPlayers, queueMaxPlayers);
+                    var pt = await socket.AddMatchmakerPartyAsync(partyId, modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
                     partyTicket = pt.Ticket;
                     Debug.Log($"[LobbyMatchmaker] Queued the party of {party.MemberCount} as one ticket.");
                 }
