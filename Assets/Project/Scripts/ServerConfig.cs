@@ -12,8 +12,9 @@ public static class ServerConfig
     public const string NakamaServerKey = "defaultkey";
 
     // Fallback address of a game server when no server was allocated (direct join). Normally Nakama's "railbound_allocate"
-    // returns the real host and UDP port (Agones range 7000-8000). This is the AWS k3s cluster.
-    public const string GameServerAddress = "13.234.34.33";
+    // returns the real host and UDP port (Agones range 7000-8000). This is the AWS k3s master's Elastic IP (infra-railbound, eip.tf),
+    // which no longer changes when the cluster is stopped and started.
+    public const string GameServerAddress = "13.204.24.15";
     public const ushort GameServerPort = 7777;
 
     // The allocation RPC returns the host and UDP port of the node the game server runs on (the fleet spreads servers over
