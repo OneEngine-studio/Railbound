@@ -209,7 +209,7 @@ namespace Railbound.Networking
                 float guard = 0f;
                 while (nm != null && (nm.IsListening || nm.ShutdownInProgress) && guard < 5f)
                 {
-                    guard += Time.unscaledDeltaTime;
+                    guard += Mathf.Min(Time.unscaledDeltaTime, 0.25f);
                     yield return null;
                 }
                 if (nm == null) { Fail("NETWORK UNAVAILABLE"); yield break; }
@@ -223,7 +223,8 @@ namespace Railbound.Networking
                 while (elapsed < attemptTimeoutSeconds)
                 {
                     if (nm.IsConnectedClient) { connected = true; break; }
-                    elapsed += Time.unscaledDeltaTime;
+                    // a frame can take seconds while the map loads; that must not use up the attempt, so one frame counts at most 0.25 s
+                    elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.25f);
                     if (!nm.IsListening && elapsed > 0.5f)
                     {
                         string reason = nm.DisconnectReason;
