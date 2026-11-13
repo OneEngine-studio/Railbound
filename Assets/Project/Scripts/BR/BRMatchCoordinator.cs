@@ -74,7 +74,13 @@ namespace Railbound.BR
         private float localWarmup;
         private string localWinner = "";
 
-        public BRMatchState State => (NetworkActive && IsSpawned && (IsServer || localState != BRMatchState.MatchEnded)) ? (BRMatchState)netState.Value : localState;
+        // set when this machine was a client of a game server and the connection is gone: the match is frozen at the state it had
+        private bool wasNetworkClient, lostServer;
+        private BRMatchState frozenState = BRMatchState.WaitingForPlayers;
+
+        public BRMatchState State => lostServer
+            ? frozenState
+            : ((NetworkActive && IsSpawned && (IsServer || localState != BRMatchState.MatchEnded)) ? (BRMatchState)netState.Value : localState);
         public int AliveCount => (!Headless && (rosterBuilt || localTotal > 0)) ? localAlive : (NetworkActive && IsSpawned ? netAlive.Value : localAlive);
         public int TotalCount => (!Headless && (rosterBuilt || localTotal > 0)) ? localTotal : (NetworkActive && IsSpawned ? netTotal.Value : localTotal);
         public float WarmupRemaining => NetworkActive && IsSpawned ? netWarmup.Value : localWarmup;
@@ -137,9 +143,45 @@ namespace Railbound.BR
         // ================================================================= update loop
         private void Update()
         {
+            WatchServerConnection();
+            if (lostServer) { ReportStateChange(); return; }   // never carry on as a local match without the server
+
             if (IsAuthority) AuthorityTick();
             else ClientTick();
             ReportStateChange();
+        }
+
+        /// <summary>
+        /// A client that was playing on a dedicated server must not turn into the authority of a new local match when the
+        /// connection ends. The server closes after the match, crashes or the network drops; <c>IsAuthority</c> is
+        /// "!NetworkActive || IsServer", so without this the client restarted warm-up, bots and zone locally and stayed in MAP-2
+        /// instead of going back to the lobby.
+        /// </summary>
+        private void WatchServerConnection()
+        {
+            if (lostServer) return;
+            var nm = NetworkManager.Singleton;
+            bool asClient = nm != null && nm.IsListening && nm.IsClient && !nm.IsServer;
+            if (asClient)
+            {
+                wasNetworkClient = true;
+                frozenState = State;   // remember where the match was
+                return;
+            }
+            if (!wasNetworkClient) return;   // offline / host / server: nothing to guard
+
+            lostServer = true;
+            bool matchWasOver = frozenState == BRMatchState.MatchEnded;
+            Debug.LogWarning($"[BRMatch] The game server connection ended (match state was {frozenState}); returning to the lobby.");
+            BRFeedNotificationManager.Instance?.ShowInfo(matchWasOver ? "THE MATCH SERVER HAS CLOSED" : "CONNECTION TO THE MATCH WAS LOST");
+            StartCoroutine(LeaveAfterConnectionLost());
+        }
+
+        private System.Collections.IEnumerator LeaveAfterConnectionLost()
+        {
+            // a moment to read the message (and to let a running results screen show), then back to the lobby
+            yield return new WaitForSecondsRealtime(3f);
+            LeaveMatch();
         }
 
         private void ClientTick()
@@ -503,7 +545,9 @@ namespace Railbound.BR
         [ClientRpc]
         private void MatchEndedClientRpc(string winner, ulong winnerClient)
         {
-            if (!IsServer && !Headless && winnerClient == ulong.MaxValue && rosterBuilt && localAlive > 1) return;
+            // The server decides when the match is over. (Bots are not replicated: this client simulates its own copy, so its
+            // own alive count can still be above one when the server's match has ended. Ignoring the result here meant the HUD
+            // never showed the results or the return countdown, and the server then shut down under the player.)
             RaiseMatchEnded(winner, winnerClient);
         }
 

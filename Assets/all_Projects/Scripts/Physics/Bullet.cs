@@ -198,7 +198,8 @@ namespace JUTPS.WeaponSystem
 				SurfaceFX.InstantiateParticleFX(ImpactFX, col.gameObject.tag, FinalPoint, Quaternion.FromToRotation(transform.forward, FinalPointNormal) * transform.rotation, col.gameObject.transform);
 
 				//Hit Marker
-				if (GetOwner() != null && Owner.CompareTag("Player"))
+				// GetOwner() falls back to the bullet itself once the owner is destroyed, so test Owner: its destroyed GameObject would throw in CompareTag
+				if (Owner != null && Owner.CompareTag("Player"))
 				{
 					if (col.gameObject.layer == 15 || col.gameObject.layer == 9)
 					{
