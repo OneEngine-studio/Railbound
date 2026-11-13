@@ -158,8 +158,9 @@ namespace Railbound.UI
 
             // the full-screen menus of the top navigation; they go back to PLAY when they close
             Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
-            settingsScreen = LobbyMenuScreen.Create<LobbySettingsScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
-            settingsScreen.SignOutRequested = () => { settingsScreen.CloseQuietly(); OnSettingsOrBackClicked(); };
+            settingsScreen = LobbyReachSettings.Find();
+            if (settingsScreen != null) settingsScreen.SignOutRequested = OnSettingsOrBackClicked;
+            else Debug.LogWarning("[YellowHUD] The settings menu is missing from the lobby scene: run Railbound > Import MAP-2 Settings Menu into Lobby.");
             levelUpPopup = LobbyLevelUpPopup.Create(plateFont);
             PlayerProgression.Changed -= OnProgressChanged; PlayerProgression.Changed += OnProgressChanged;
             ApplyProgress(true);
@@ -182,7 +183,7 @@ namespace Railbound.UI
         private LobbyGameModePanel modePanel;
         private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
 
-        private LobbySettingsScreen settingsScreen;
+        private LobbyReachSettings settingsScreen;   // the settings menu copied from MAP-2's pause menu (see LobbySettingsImporter)
         private LobbyLevelUpPopup levelUpPopup;
         private float shownFill = -1f;                  // the XP bar as drawn (it glides to the real value)
         private float shownCoins = -1f, targetCoins;    // the coin counter as drawn (it counts up)
@@ -272,7 +273,7 @@ namespace Railbound.UI
             }
             if (from >= 0)
             {
-                if (settingsScreen != null) settingsScreen.CloseQuietly();
+                if (settingsScreen != null) settingsScreen.Close();
                 foreach (var m in menuScreens) if (m != null) m.CloseQuietly();
                 bool closed = false;
                 levelUpPopup.Show(from, to, bonus, () => closed = true, PlayDeploySound);
@@ -486,7 +487,7 @@ namespace Railbound.UI
             currentNavIndex = index;
             RefreshNavTabsVisual();
 
-            if (settingsScreen != null) settingsScreen.CloseQuietly();
+            if (settingsScreen != null) settingsScreen.Close();
             // leaving a full-screen menu for another tab closes it first
             for (int i = 0; i < menuScreens.Length; i++)
                 if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
