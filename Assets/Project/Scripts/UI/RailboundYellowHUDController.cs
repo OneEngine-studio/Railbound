@@ -158,6 +158,7 @@ namespace Railbound.UI
 
             // the full-screen menus of the top navigation; they go back to PLAY when they close
             Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
+            menuScreens[2] = LobbyMenuScreen.Create<LobbyWeaponsScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[3] = LobbyMenuScreen.Create<LobbyBattlePassScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[4] = LobbyMenuScreen.Create<LobbyChallengesScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[5] = LobbyMenuScreen.Create<LobbyStoreScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
@@ -367,6 +368,8 @@ namespace Railbound.UI
         // ----------------------------------------------------
         private void BindNavigation()
         {
+            // the LOADOUT tab became WEAPONS
+            if (navLabels != null && navLabels.Length > 2 && navLabels[2] != null) navLabels[2].text = "WEAPONS";
             if (navButtons == null) return;
             for (int i = 0; i < navButtons.Length; i++)
             {
@@ -389,7 +392,7 @@ namespace Railbound.UI
             for (int i = 0; i < menuScreens.Length; i++)
                 if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
 
-            SetCustomizationPanelVisible(index == 2);
+            SetCustomizationPanelVisible(false);   // the old skills card is gone: skills show on the operator screens
 
             switch (index)
             {
@@ -400,9 +403,9 @@ namespace Railbound.UI
                     Debug.Log("[YellowHUD] Nav: OPERATORS");
                     if (customizer != null) customizer.Open();
                     break;
-                case 2: // LOADOUT
-                    Debug.Log("[YellowHUD] Nav: LOADOUT - Toggling loadout skills");
-                    LobbyCustomizationUI.Instance?.SendMessage("ToggleSkillsCard", SendMessageOptions.DontRequireReceiver);
+                case 2: // WEAPONS (was LOADOUT)
+                    Debug.Log("[YellowHUD] Nav: WEAPONS");
+                    if (menuScreens[2] != null) menuScreens[2].Open();
                     break;
                 case 3: // BATTLE PASS
                     Debug.Log("[YellowHUD] Nav: BATTLE PASS");

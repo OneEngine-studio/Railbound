@@ -24,7 +24,7 @@ namespace Railbound.UI
         // ---- layout (centre origin, 1920x1080) ----
         protected const float Left = -880f, Right = 880f, ContentTop = 330f, ContentBottom = -470f;
 
-        private static readonly string[] NavNames = { "PLAY", "OPERATORS", "LOADOUT", "BATTLE PASS", "CHALLENGES", "STORE" };
+        private static readonly string[] NavNames = { "PLAY", "OPERATORS", "WEAPONS", "BATTLE PASS", "CHALLENGES", "STORE" };
         private static readonly float[] NavX = { 501f, 641f, 796f, 959f, 1136f, 1286f };   // label centres on screen, as in the lobby
 
         public bool IsOpen { get; private set; }
@@ -37,6 +37,7 @@ namespace Railbound.UI
         protected virtual string Hints => "ESC  BACK";
         protected abstract void BuildContent(RectTransform content);
         protected virtual void OnOpened() { }
+        protected virtual void OnClosing() { }
         protected virtual void OnTick() { }
         protected virtual void OnKeys() { }
 
@@ -93,6 +94,7 @@ namespace Railbound.UI
             if (!IsOpen) return;
             IsOpen = false;
             closedFrame = Time.frameCount;
+            OnClosing();
         }
 
         private void GoBack()
