@@ -17,11 +17,11 @@ namespace Railbound.UI
     public class LobbyStageDirector : MonoBehaviour
     {
         [Header("Camera framing (solo / with friends)")]
-        [SerializeField] private Vector3 soloPosition = new Vector3(0f, 1.0f, -3.45f);
+        [SerializeField] private Vector3 soloPosition = new Vector3(0f, 1.15f, -4.6f);
         [SerializeField] private float soloFov = 34f;
-        [SerializeField] private Vector3 partyPosition = new Vector3(0f, 1.2f, -4.4f);
+        [SerializeField] private Vector3 partyPosition = new Vector3(0f, 1.25f, -5.2f);
         [SerializeField] private float partyFov = 37f;
-        [SerializeField] private Vector3 lookTarget = new Vector3(0f, 0.98f, 0f);
+        [SerializeField] private Vector3 lookTarget = new Vector3(0f, 1.1f, 0f);
         [SerializeField] private float framingSmoothTime = 0.9f;
         [Tooltip("Slides the whole stage sideways on screen (negative = to the right) to leave room for the left-hand HUD column.")]
         [SerializeField] private float stageShiftX = -0.4f;
@@ -48,9 +48,9 @@ namespace Railbound.UI
         [Header("Spotlight")]
         [SerializeField] private bool spotlight = true;
         [Tooltip("Kept low on purpose: the hangar rig already lights the stage; this only lifts whoever is selected.")]
-        [SerializeField] private float spotlightIntensity = 9000f;     // candela
+        [SerializeField] private float spotlightIntensity = 12000f;     // candela
         [SerializeField] private float spotlightAngle = 32f;
-        [SerializeField] private float fillIntensity = 55000f;          // candela
+        [SerializeField] private float fillIntensity = 26000f;          // candela
         [SerializeField] private Vector3 spotlightOffset = new Vector3(0.3f, 3.6f, -2.8f);
         [SerializeField] private float spotlightFollowTime = 0.38f;
 
