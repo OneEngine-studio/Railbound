@@ -224,6 +224,8 @@ namespace Railbound.UI
         private void OnDestroy()
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
+            var partyService = NakamaPartyService.InstanceIfExists;
+            if (partyService != null) { partyService.DeployRequested -= OnPartyDeployRequested; partyService.CancelRequested -= OnPartyCancelRequested; }
             var party = LobbyParty.InstanceIfExists;
             if (party != null) { party.Changed -= RefreshSquad; party.SelectionChanged -= UpdateOperatorDisplay; }
         }
@@ -511,6 +513,59 @@ namespace Railbound.UI
 
             // "PLAY AGAIN" on the results screen asked for the next deployment to start by itself
             if (LobbyAutoDeploy.TryConsume()) StartCoroutine(AutoDeployRoutine());
+
+            // the party leader starts / cancels the search for everybody
+            var partyService = NakamaPartyService.Instance;
+            if (partyService != null)
+            {
+                partyService.DeployRequested -= OnPartyDeployRequested; partyService.DeployRequested += OnPartyDeployRequested;
+                partyService.CancelRequested -= OnPartyCancelRequested; partyService.CancelRequested += OnPartyCancelRequested;
+            }
+
+            SetupPartyChip();
+        }
+
+        private void OnPartyDeployRequested()
+        {
+            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;
+            deployFromParty = true;
+            OnDeployClicked();
+        }
+
+        private void OnPartyCancelRequested()
+        {
+            if (deployState == DeployState.Deploying) CancelDeploy();
+        }
+
+        // The "F1 SOCIAL" chip in the footer opens the party window with the mouse too and shows the size of the party.
+        private TextMeshProUGUI partyChipLabel;
+
+        private void SetupPartyChip()
+        {
+            Transform chip = transform.Find("Bottom_Footer/Keybinds/KB_Social");
+            if (chip == null) return;
+
+            var action = chip.Find("Action");
+            if (action != null) partyChipLabel = action.GetComponent<TextMeshProUGUI>();
+
+            var hit = chip.GetComponent<Image>();
+            if (hit == null) { hit = chip.gameObject.AddComponent<Image>(); hit.color = new Color(0f, 0f, 0f, 0f); }
+            hit.raycastTarget = true;
+            var btn = chip.GetComponent<Button>();
+            if (btn == null) btn = chip.gameObject.AddComponent<Button>();
+            btn.targetGraphic = hit;
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(OnInviteClicked);
+            RefreshPartyChip();
+        }
+
+        private void RefreshPartyChip()
+        {
+            if (partyChipLabel == null) return;
+            var lobbyParty = LobbyParty.InstanceIfExists;
+            int n = lobbyParty != null ? lobbyParty.Count : 1;
+            partyChipLabel.text = n > 1 ? "PARTY " + n + "/" + LobbyParty.MaxMembers : "SOCIAL";
         }
 
         private IEnumerator AutoDeployRoutine()
@@ -530,10 +585,24 @@ namespace Railbound.UI
             return g;
         }
 
+        private bool deployFromParty;   // the deployment was started by the party leader's signal, not by this player
+
         private void OnDeployClicked()
         {
             if (deployState == DeployState.Deploying) { CancelDeploy(); return; }
             if (deployState == DeployState.Loading) return;
+
+            // In a party only the leader starts the match; the members follow on the leader's signal.
+            var party = NakamaPartyService.InstanceIfExists;
+            bool inGroup = party != null && party.InParty && party.MemberCount > 1;
+            if (inGroup && !party.IsLeader && !deployFromParty)
+            {
+                noticeText = "ONLY THE PARTY LEADER CAN START THE MATCH";
+                noticeUntil = Time.unscaledTime + 4f;
+                return;
+            }
+            deployFromParty = false;
+            if (inGroup && party.IsLeader) _ = party.BroadcastDeployAsync();
 
             PlayDeploySound();
             Debug.Log("[YellowHUD] DEPLOY CLICKED! Initiating matchmaking...");
@@ -562,6 +631,9 @@ namespace Railbound.UI
             {
                 deployStage = "CANCELLING";
                 mm.CancelDeploy();
+                // the leader's cancel stops the search of the whole party
+                var party = NakamaPartyService.InstanceIfExists;
+                if (party != null && party.InParty && party.IsLeader && party.MemberCount > 1) _ = party.BroadcastCancelAsync();
             }
             else if (mm == null)
             {
@@ -869,6 +941,7 @@ namespace Railbound.UI
                 }
             }
 
+            RefreshPartyChip();
             if (squadCountText != null) squadCountText.text = $"{members.Count} / {LobbyParty.MaxMembers} PLAYERS";
             if (invitePlayerBtn != null) invitePlayerBtn.gameObject.SetActive(!party.IsFull);
 

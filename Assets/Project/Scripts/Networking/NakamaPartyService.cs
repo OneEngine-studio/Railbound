@@ -24,6 +24,7 @@ namespace Railbound.Networking
     {
         private const long OpProfile = 1;   // a member's name, level, operator and ready state
         private const long OpDeploy = 2;    // the leader started the match
+        private const long OpCancel = 3;    // the leader cancelled the search
 
         [Serializable]
         private class ProfileMessage { public string n; public string l; public int o; public bool r; }
@@ -84,6 +85,8 @@ namespace Railbound.Networking
         public event Action<string> Notice;
         /// <summary>The party leader started the match: every member starts their deployment too.</summary>
         public event Action DeployRequested;
+        /// <summary>The party leader cancelled the search: every member cancels theirs.</summary>
+        public event Action CancelRequested;
 
         private ISocket _socket;
         private readonly Dictionary<string, Remote> _members = new Dictionary<string, Remote>();
@@ -207,6 +210,14 @@ namespace Railbound.Networking
             return ex is TaskCanceledException || ex is OperationCanceledException || (_socket != null && !_socket.IsConnected);
         }
 
+        /// <summary>The leader tells the other members that the search was cancelled.</summary>
+        public async Task BroadcastCancelAsync()
+        {
+            if (!InParty || !IsLeader || _socket == null) return;
+            try { await _socket.SendPartyDataAsync(PartyId, OpCancel, "cancel"); }
+            catch (Exception ex) { Debug.LogWarning("[Party] Could not tell the party about the cancel: " + ex.Message); }
+        }
+
         /// <summary>Copies the party code to the clipboard.</summary>
         public void CopyCode()
         {
@@ -325,6 +336,10 @@ namespace Railbound.Networking
             else if (d.OpCode == OpDeploy && d.Presence.UserId == _leaderId)
             {
                 DeployRequested?.Invoke();
+            }
+            else if (d.OpCode == OpCancel && d.Presence.UserId == _leaderId)
+            {
+                CancelRequested?.Invoke();
             }
         }
 
