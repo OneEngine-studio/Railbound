@@ -155,6 +155,12 @@ namespace Railbound.UI
             partyPanel = LobbyPartyPanel.Create(transform, plateFont);
             modePanel = LobbyGameModePanel.Create(transform, plateFont);
             SetupModeCard();
+
+            // the full-screen menus of the top navigation; they go back to PLAY when they close
+            Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
+            menuScreens[3] = LobbyMenuScreen.Create<LobbyBattlePassScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            menuScreens[4] = LobbyMenuScreen.Create<LobbyChallengesScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            menuScreens[5] = LobbyMenuScreen.Create<LobbyStoreScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             customizer = LobbyCharacterCustomizer.Create(plateFont, gameObject, OnCustomizerClosed);
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
@@ -168,6 +174,16 @@ namespace Railbound.UI
         private LobbyCharacterCustomizer customizer;
         private LobbyPartyPanel partyPanel;
         private LobbyGameModePanel modePanel;
+        private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
+
+        private bool AnyMenuBusy()
+        {
+            foreach (var s in menuScreens) if (s != null && s.BusyThisFrame) return true;
+            return false;
+        }
+
+        // the selected tab's label must stay readable (dark on the white block) whatever hover colours other scripts apply
+        private void LateUpdate() { RefreshNavTabsVisual(); }
 
         private void OnCustomizerClosed()
         {
@@ -179,6 +195,13 @@ namespace Railbound.UI
         {
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
             if (customizer != null && customizer.BusyThisFrame)
+            {
+                TickDeployState();
+                return;
+            }
+
+            // a full-screen menu (Battle Pass, Challenges, Store) owns the keyboard while it is open and on the frame its Esc closed it
+            if (AnyMenuBusy())
             {
                 TickDeployState();
                 return;
@@ -362,6 +385,10 @@ namespace Railbound.UI
             currentNavIndex = index;
             RefreshNavTabsVisual();
 
+            // leaving a full-screen menu for another tab closes it first
+            for (int i = 0; i < menuScreens.Length; i++)
+                if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
+
             SetCustomizationPanelVisible(index == 2);
 
             switch (index)
@@ -379,15 +406,15 @@ namespace Railbound.UI
                     break;
                 case 3: // BATTLE PASS
                     Debug.Log("[YellowHUD] Nav: BATTLE PASS");
-                    ShowTacticalNotice("BATTLE PASS // SEASON 01 - TIER 24 / 100");
+                    if (menuScreens[3] != null) menuScreens[3].Open();
                     break;
                 case 4: // CHALLENGES
                     Debug.Log("[YellowHUD] Nav: CHALLENGES");
-                    ShowTacticalNotice("TACTICAL OPS // DAILY ASSIGNMENTS SYNCHRONIZED");
+                    if (menuScreens[4] != null) menuScreens[4].Open();
                     break;
                 case 5: // STORE
-                    Debug.Log("[YellowHUD] Nav: ARSENAL STORE");
-                    ShowTacticalNotice("TACTICAL ARSENAL // SUPPLY SHIPMENT EN ROUTE");
+                    Debug.Log("[YellowHUD] Nav: STORE");
+                    if (menuScreens[5] != null) menuScreens[5].Open();
                     break;
             }
         }

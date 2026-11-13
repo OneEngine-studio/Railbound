@@ -27,6 +27,14 @@ namespace Railbound.UI
 
         private const float Width = 440f, HeaderH = 44f, RowH = 84f, BonusH = 44f, Gap = 4f;
 
+        /// <summary>The sample daily list, shared with the CHALLENGES menu so both show the same thing.</summary>
+        public static readonly Challenge[] Daily =
+        {
+            new Challenge("Get 1 Kill with a Throwable", 0, 1, 4500),
+            new Challenge("Get 2 Headshots with Pistols", 0, 2, 4500),
+            new Challenge("Get 3 Kills using Suppressed Weapons", 0, 3, 4500),
+        };
+
         public static LobbyChallengesPanel Create(Transform parent, TMP_FontAsset font)
         {
             var go = new GameObject("Daily_Challenges_Panel", typeof(RectTransform));
@@ -38,12 +46,7 @@ namespace Railbound.UI
             rt.anchoredPosition = new Vector2(48f, -112f);
             var comp = go.AddComponent<LobbyChallengesPanel>();
             comp.font = font;
-            comp.Rebuild(new[]
-            {
-                new Challenge("Get 1 Kill with a Throwable", 0, 1, 4500),
-                new Challenge("Get 2 Headshots with Pistols", 0, 2, 4500),
-                new Challenge("Get 3 Kills using Suppressed Weapons", 0, 3, 4500),
-            });
+            comp.Rebuild(Daily);
             return comp;
         }
 
