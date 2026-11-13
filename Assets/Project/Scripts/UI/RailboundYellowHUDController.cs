@@ -497,6 +497,15 @@ namespace Railbound.UI
                 if (noticeKind == LobbyNotice.Kind.Problem) SetDeployState(DeployState.Failed, notice);
                 else { noticeText = notice; noticeUntil = Time.unscaledTime + 8f; }
             }
+
+            // "PLAY AGAIN" on the results screen asked for the next deployment to start by itself
+            if (LobbyAutoDeploy.TryConsume()) StartCoroutine(AutoDeployRoutine());
+        }
+
+        private IEnumerator AutoDeployRoutine()
+        {
+            yield return new WaitForSecondsRealtime(1.0f);   // let the lobby appear first
+            if (deployState == DeployState.Idle || deployState == DeployState.Failed) OnDeployClicked();
         }
 
         private string noticeText;      // an information line for the idle subtitle, shown for a few seconds

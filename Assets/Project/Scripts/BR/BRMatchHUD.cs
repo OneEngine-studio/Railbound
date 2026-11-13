@@ -28,7 +28,10 @@ namespace Railbound.BR
         private Canvas canvas;
         private CanvasGroup rootGroup, hudGroup, centerGroup, spectateGroup, endGroup;
         private TextMeshProUGUI aliveNum, killsNum, centerSmall, centerBig, spectateName, spectateHint, spectatePlace;
-        private TextMeshProUGUI endTitle, endWinner, endStats, endFooter;
+        private TextMeshProUGUI endTitle, endWinner, endFooter;
+        private TextMeshProUGUI endPlaceVal, endKillsVal, endSurvivedVal, endMatchVal;
+        private Button endPlayAgain, endReturn;
+        private float localSurvived;          // match seconds at which the local player was eliminated
         private RectTransform feedRoot;
         private TMP_FontAsset fontBold, fontSemi;
         private Sprite px;
@@ -84,6 +87,7 @@ namespace Railbound.BR
             if (eliminatedLocally) return;
             eliminatedLocally = true;
             localPlacement = k.Placement;
+            localSurvived = BRMatchCoordinator.Instance != null ? BRMatchCoordinator.Instance.MatchSeconds : 0f;
             StartCoroutine(EliminationSequence(k));
         }
 
@@ -272,15 +276,53 @@ namespace Railbound.BR
                 endTitle.text = won ? "VICTORY ROYALE" : "MATCH OVER";
                 endWinner.text = won ? "LAST ONE STANDING" : "WINNER   <color=#FFFFFF>" + winnerName.ToUpperInvariant() + "</color>";
                 int place = won ? 1 : (localPlacement > 0 ? localPlacement : 0);
-                endStats.text = (place > 0 ? "PLACEMENT  <color=#FFFFFF>#" + place + "</color>     " : "") + "KILLS  <color=#FFFFFF>" + localKills + "</color>     SURVIVED  <color=#FFFFFF>" + Mmss(Time.timeSinceLevelLoad) + "</color>";
+                int total = Mathf.Max(c.TotalCount, place);
+                float matchLength = c.MatchSeconds;
+
+                endPlaceVal.text = place > 0 ? "#" + place + "<size=55%><color=#8C8C8C>  /  " + total + "</color></size>" : "--";
+                endKillsVal.text = localKills.ToString();
+                // a player who was eliminated survived until then; the winner (or someone who never died) the whole match
+                endSurvivedVal.text = Mmss(eliminatedLocally && !won ? localSurvived : matchLength);
+                endMatchVal.text = Mmss(matchLength);
+
+                // the results have buttons: free the mouse and make sure the UI can receive clicks
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                EnsureEventSystem();
             }
             endGroup.alpha = Mathf.MoveTowards(endGroup.alpha, show ? 1f : 0f, Time.unscaledDeltaTime * 2.5f);
+            bool clickable = show && endGroup.alpha > 0.5f;
+            endGroup.blocksRaycasts = clickable;
+            endGroup.interactable = clickable;
             if (!show) return;
 
             float left = Mathf.Max(0f, c.ReturnToLobbyDelay - (Time.unscaledTime - endShownAt));
-            endFooter.text = "RETURNING TO LOBBY IN  <color=#FFFFFF>" + Mathf.CeilToInt(left) + "</color>      |      ENTER   LEAVE NOW";
+            endFooter.text = "RETURNING TO LOBBY IN  <color=#FFFFFF>" + Mathf.CeilToInt(left) + "</color>      |      SPACE   PLAY AGAIN      |      ENTER   LEAVE NOW";
             var kb = Keyboard.current;
-            if (left <= 0f || (kb != null && kb.enterKey.wasPressedThisFrame)) { c.LeaveMatch(); endShown = true; matchEnded = false; }
+            if (kb != null && kb.spaceKey.wasPressedThisFrame) { PlayAgain(); return; }
+            if (left <= 0f || (kb != null && kb.enterKey.wasPressedThisFrame)) LeaveToLobby();
+        }
+
+        /// <summary>Back to the lobby, which starts the next deployment by itself.</summary>
+        private void PlayAgain()
+        {
+            Railbound.UI.LobbyAutoDeploy.Request();
+            LeaveToLobby();
+        }
+
+        private void LeaveToLobby()
+        {
+            var c = BRMatchCoordinator.Instance;
+            if (c == null) return;
+            endShown = true; matchEnded = false;
+            c.LeaveMatch();
+        }
+
+        // the HUD is built at runtime, so a map without an EventSystem still needs one for the results buttons
+        private static void EnsureEventSystem()
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            new GameObject("[HUD] EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
         }
 
         // ================================================================= build
@@ -341,10 +383,58 @@ namespace Railbound.BR
             rr.anchorMin = rr.anchorMax = new Vector2(0.5f, 0.5f); rr.pivot = new Vector2(0.5f, 0.5f); rr.anchoredPosition = new Vector2(0, 14); rr.sizeDelta = new Vector2(520, 2);
             endWinner = NewText("Winner", end, "", 30, fontSemi, Dim, 10f, TextAlignmentOptions.Center); endWinner.richText = true;
             var ew = endWinner.rectTransform; ew.anchorMin = ew.anchorMax = new Vector2(0.5f, 0.5f); ew.pivot = new Vector2(0.5f, 0.5f); ew.anchoredPosition = new Vector2(0, -26); ew.sizeDelta = new Vector2(1200, 44);
-            endStats = NewText("Stats", end, "", 24, fontSemi, Dim, 8f, TextAlignmentOptions.Center); endStats.richText = true;
-            var es = endStats.rectTransform; es.anchorMin = es.anchorMax = new Vector2(0.5f, 0.5f); es.pivot = new Vector2(0.5f, 0.5f); es.anchoredPosition = new Vector2(0, -82); es.sizeDelta = new Vector2(1300, 40);
+
+            // the stat tiles: placement, kills, how long the player survived, how long the match lasted
+            endPlaceVal = ResultTile(end, "PLACEMENT", -345f);
+            endPlaceVal.richText = true;
+            endKillsVal = ResultTile(end, "KILLS", -115f);
+            endSurvivedVal = ResultTile(end, "SURVIVED", 115f);
+            endMatchVal = ResultTile(end, "MATCH TIME", 345f);
+
+            // buttons (mouse); Space and Enter do the same
+            endPlayAgain = ResultButton(end, "PLAY AGAIN", new Vector2(-170, -214), true, PlayAgain);
+            endReturn = ResultButton(end, "RETURN TO LOBBY", new Vector2(170, -214), false, LeaveToLobby);
+
             endFooter = NewText("Footer", end, "", 18, fontSemi, Faint + new Color(0, 0, 0, 0.35f), 6f, TextAlignmentOptions.Center); endFooter.richText = true;
-            var ef = endFooter.rectTransform; ef.anchorMin = ef.anchorMax = new Vector2(0.5f, 0.5f); ef.pivot = new Vector2(0.5f, 0.5f); ef.anchoredPosition = new Vector2(0, -170); ef.sizeDelta = new Vector2(1300, 30);
+            var ef = endFooter.rectTransform; ef.anchorMin = ef.anchorMax = new Vector2(0.5f, 0.5f); ef.pivot = new Vector2(0.5f, 0.5f); ef.anchoredPosition = new Vector2(0, -284); ef.sizeDelta = new Vector2(1500, 30);
+
+            // the root group blocks all clicks (it is a pure display); the results are the one part that takes input
+            end.gameObject.AddComponent<GraphicRaycaster>();
+            endGroup.ignoreParentGroups = true;
+            endGroup.blocksRaycasts = false;
+            endGroup.interactable = false;
+        }
+
+        private TextMeshProUGUI ResultTile(RectTransform parent, string label, float x)
+        {
+            var tile = NewRect(label + " Tile", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, -118), new Vector2(210, 100));
+            var bg = NewImage("Bg", tile, px, new Color(0f, 0f, 0f, 0.5f)); Stretch(bg.rectTransform);
+            var edge = NewImage("Edge", tile, px, new Color(1f, 1f, 1f, 0.35f)); var er = edge.rectTransform;
+            er.anchorMin = new Vector2(0f, 1f); er.anchorMax = new Vector2(1f, 1f); er.pivot = new Vector2(0.5f, 1f); er.anchoredPosition = Vector2.zero; er.sizeDelta = new Vector2(0f, 2f);
+            var value = NewText("Value", tile, "", 48, fontBold, Color.white, 2f, TextAlignmentOptions.Center);
+            var vr = value.rectTransform; vr.anchorMin = vr.anchorMax = new Vector2(0.5f, 0.5f); vr.pivot = new Vector2(0.5f, 0.5f); vr.anchoredPosition = new Vector2(0, 12); vr.sizeDelta = new Vector2(200, 60);
+            var lab = NewText("Label", tile, label, 14, fontSemi, Dim, 10f, TextAlignmentOptions.Center);
+            var lr = lab.rectTransform; lr.anchorMin = lr.anchorMax = new Vector2(0.5f, 0.5f); lr.pivot = new Vector2(0.5f, 0.5f); lr.anchoredPosition = new Vector2(0, -32); lr.sizeDelta = new Vector2(200, 22);
+            return value;
+        }
+
+        private Button ResultButton(RectTransform parent, string label, Vector2 pos, bool primary, UnityEngine.Events.UnityAction onClick)
+        {
+            var r = NewRect(label + " Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(320, 58));
+            var bg = NewImage("Bg", r, px, primary ? Color.white : new Color(1f, 1f, 1f, 0.14f)); Stretch(bg.rectTransform);
+            bg.raycastTarget = true;
+            var btn = r.gameObject.AddComponent<Button>();
+            btn.targetGraphic = bg;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = primary ? new Color(0.82f, 0.82f, 0.82f, 1f) : new Color(1.6f, 1.6f, 1.6f, 1f);
+            colors.pressedColor = primary ? new Color(0.6f, 0.6f, 0.6f, 1f) : new Color(2.2f, 2.2f, 2.2f, 1f);
+            colors.fadeDuration = 0.08f;
+            btn.colors = colors;
+            btn.onClick.AddListener(onClick);
+            var txt = NewText("Label", r, label, 22, fontBold, primary ? Color.black : Color.white, 8f, TextAlignmentOptions.Center);
+            Stretch(txt.rectTransform);
+            return btn;
         }
 
         private TextMeshProUGUI StatBlock(RectTransform parent, string label, Vector2 pos, out RectTransform rect)
