@@ -246,6 +246,7 @@ namespace Railbound.UI
                 if (statusText != null) statusText.text = "RETURNING TO LOBBY";   // the technical reason is in the log only
                 yield return new WaitForSecondsRealtime(1.5f);
                 conn.Clear();   // leaves the server and forgets the address
+                LobbyNotice.Set("COULD NOT JOIN THE MATCH - PLEASE TRY AGAIN", LobbyNotice.Kind.Problem);   // the lobby tells the player why they are back
                 if (Application.CanStreamedLevelBeLoaded(lobbySceneName)) SceneManager.LoadScene(lobbySceneName);
                 DismissOverlay();
                 yield break;

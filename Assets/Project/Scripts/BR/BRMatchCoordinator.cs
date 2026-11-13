@@ -78,6 +78,11 @@ namespace Railbound.BR
         private bool wasNetworkClient, lostServer;
         private BRMatchState frozenState = BRMatchState.WaitingForPlayers;
 
+        /// <summary>True once the connection to the game server is gone (the HUD shows a banner and the player is sent to the lobby).</summary>
+        public bool ServerConnectionLost => lostServer;
+        /// <summary>True when the connection ended after the match was already over (the server closed), false for a real loss.</summary>
+        public bool ServerConnectionLostAfterMatch { get; private set; }
+
         public BRMatchState State => lostServer
             ? frozenState
             : ((NetworkActive && IsSpawned && (IsServer || localState != BRMatchState.MatchEnded)) ? (BRMatchState)netState.Value : localState);
@@ -173,7 +178,10 @@ namespace Railbound.BR
             lostServer = true;
             bool matchWasOver = frozenState == BRMatchState.MatchEnded;
             Debug.LogWarning($"[BRMatch] The game server connection ended (match state was {frozenState}); returning to the lobby.");
-            BRFeedNotificationManager.Instance?.ShowInfo(matchWasOver ? "THE MATCH SERVER HAS CLOSED" : "CONNECTION TO THE MATCH WAS LOST");
+            ServerConnectionLostAfterMatch = matchWasOver;
+            // the match HUD shows a banner now; the lobby repeats the reason once the player is back there
+            Railbound.UI.LobbyNotice.Set(matchWasOver ? "THE MATCH SERVER HAS CLOSED" : "CONNECTION TO THE MATCH WAS LOST",
+                matchWasOver ? Railbound.UI.LobbyNotice.Kind.Info : Railbound.UI.LobbyNotice.Kind.Problem);
             StartCoroutine(LeaveAfterConnectionLost());
         }
 

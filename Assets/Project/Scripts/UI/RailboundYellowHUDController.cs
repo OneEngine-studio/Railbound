@@ -490,7 +490,17 @@ namespace Railbound.UI
                 mm.StatusChanged += OnMatchmakingStatus;
             }
             RefreshDeployVisuals();
+
+            // the match or the loading screen sent the player back with a reason: say it (a problem offers RETRY)
+            if (LobbyNotice.TryTake(out string notice, out LobbyNotice.Kind noticeKind))
+            {
+                if (noticeKind == LobbyNotice.Kind.Problem) SetDeployState(DeployState.Failed, notice);
+                else { noticeText = notice; noticeUntil = Time.unscaledTime + 8f; }
+            }
         }
+
+        private string noticeText;      // an information line for the idle subtitle, shown for a few seconds
+        private float noticeUntil;
 
         private static CanvasGroup EnsureGroup(Transform t)
         {
@@ -542,11 +552,41 @@ namespace Railbound.UI
         private void OnMatchmakingStatus(string message)
         {
             string m = (message ?? "").ToUpperInvariant();
-            if (m.Contains("FAILED")) SetDeployState(DeployState.Failed, "MATCH SERVER IS STARTING - PLEASE TRY AGAIN");
+            if (m.Contains("FAILED")) SetDeployState(DeployState.Failed, FailureText());
             else if (m.Contains("CANCEL") && !m.Contains("CANCELLING")) SetDeployState(DeployState.Idle, "");
             else if (m.Contains("LOADING")) SetDeployState(DeployState.Loading, "LOADING MAP");
-            else if (m.Contains("STARTING")) { deployStage = "CONNECTING"; RefreshDeployVisuals(); }
-            else if (m.Contains("CREATING")) { deployStage = "FINDING MATCH"; RefreshDeployVisuals(); }
+            else
+            {
+                string stage = StageFor(m);
+                if (stage != null) { deployStage = stage; RefreshDeployVisuals(); }
+            }
+        }
+
+        /// <summary>The plain-words stage the player sees for a backend status line (null = keep the current one).</summary>
+        private static string StageFor(string status)
+        {
+            if (status.Contains("SEARCHING FOR PLAYERS")) return "SEARCHING FOR PLAYERS";
+            if (status.Contains("LOBBY FOUND")) return "LOBBY FOUND";
+            if (status.Contains("NO FULL LOBBY")) return "FILLING THE MATCH WITH BOTS";
+            if (status.Contains("REQUESTING GAME SERVER") || status.Contains("PREPARING A MATCH SERVER")) return "PREPARING A MATCH SERVER";
+            if (status.Contains("GAME SERVER READY")) return "MATCH SERVER READY";
+            if (status.Contains("CREATING")) return "SETTING UP THE MATCH";
+            if (status.Contains("WARMING UP")) return "WARMING UP THE SERVER";
+            if (status.Contains("CONNECTED TO GAME SERVER")) return "CONNECTED";
+            if (status.Contains("PREPARING NETWORK") || status.Contains("CONNECTING") || status.Contains("STARTING")) return "CONNECTING";
+            return null;
+        }
+
+        /// <summary>One calm sentence for the failure, by cause; never an exception text.</summary>
+        private string FailureText()
+        {
+            var mm = hookedMatchmaker != null ? hookedMatchmaker : LobbyMatchmakingController.Instance;
+            switch (mm != null ? mm.LastFailure : LobbyMatchmakingController.DeployFailure.Other)
+            {
+                case LobbyMatchmakingController.DeployFailure.ServersBusy: return "ALL MATCH SERVERS ARE BUSY - TRY AGAIN IN A MOMENT";
+                case LobbyMatchmakingController.DeployFailure.ConnectionFailed: return "COULD NOT REACH THE MATCH SERVER - PLEASE TRY AGAIN";
+                default: return "COULD NOT START THE MATCH - PLEASE TRY AGAIN";
+            }
         }
 
         private void SetDeployState(DeployState state, string stage)
@@ -609,6 +649,12 @@ namespace Railbound.UI
 
         private void TickDeployState()
         {
+            if (deployState == DeployState.Idle && !string.IsNullOrEmpty(noticeText) && modeSubtitleText != null)
+            {
+                if (Time.unscaledTime < noticeUntil) { modeSubtitleText.text = noticeText; modeSubtitleText.color = YellowAccent; }
+                else { noticeText = null; RefreshDeployVisuals(); }
+            }
+
             if (deployState == DeployState.Deploying || deployState == DeployState.Loading)
             {
                 int secs = Mathf.FloorToInt(Time.unscaledTime - deployStateStart);

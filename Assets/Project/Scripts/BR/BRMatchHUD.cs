@@ -139,6 +139,15 @@ namespace Railbound.BR
 
         private void UpdateCenterMessage(BRMatchCoordinator c)
         {
+            // the game server is gone: say so in the middle of the screen, also to a player who was already eliminated
+            if (c.ServerConnectionLost)
+            {
+                centerSmall.text = c.ServerConnectionLostAfterMatch ? "THE MATCH SERVER HAS CLOSED - RETURNING TO THE LOBBY" : "CONNECTION TO THE MATCH WAS LOST - RETURNING TO THE LOBBY";
+                centerBig.text = "";
+                centerGroup.alpha = Mathf.MoveTowards(centerGroup.alpha, 1f, Time.unscaledDeltaTime * 3f);
+                return;
+            }
+
             string small = "", big = "";
             switch (c.State)
             {
