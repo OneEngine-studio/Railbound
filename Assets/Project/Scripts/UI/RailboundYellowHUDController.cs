@@ -158,6 +158,11 @@ namespace Railbound.UI
 
             // the full-screen menus of the top navigation; they go back to PLAY when they close
             Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
+            settingsScreen = LobbyMenuScreen.Create<LobbySettingsScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            settingsScreen.SignOutRequested = () => { settingsScreen.CloseQuietly(); OnSettingsOrBackClicked(); };
+            levelUpPopup = LobbyLevelUpPopup.Create(plateFont);
+            PlayerProgression.Changed -= OnProgressChanged; PlayerProgression.Changed += OnProgressChanged;
+            ApplyProgress(true);
             menuScreens[2] = LobbyMenuScreen.Create<LobbyWeaponsScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[3] = LobbyMenuScreen.Create<LobbyBattlePassScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[4] = LobbyMenuScreen.Create<LobbyChallengesScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
@@ -177,10 +182,103 @@ namespace Railbound.UI
         private LobbyGameModePanel modePanel;
         private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
 
+        private LobbySettingsScreen settingsScreen;
+        private LobbyLevelUpPopup levelUpPopup;
+        private float shownFill = -1f;                  // the XP bar as drawn (it glides to the real value)
+        private float shownCoins = -1f, targetCoins;    // the coin counter as drawn (it counts up)
+        private bool levelUpRunning;
+
         private bool AnyMenuBusy()
         {
             foreach (var s in menuScreens) if (s != null && s.BusyThisFrame) return true;
-            return false;
+            if (settingsScreen != null && settingsScreen.BusyThisFrame) return true;
+            return levelUpPopup != null && levelUpPopup.IsOpen;
+        }
+
+        private void OpenSettings()
+        {
+            if (settingsScreen == null) return;
+            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;
+            for (int i = 0; i < menuScreens.Length; i++) if (menuScreens[i] != null) menuScreens[i].CloseQuietly();
+            settingsScreen.Open();
+        }
+
+        private void OnProgressChanged() { ApplyProgress(false); }
+
+        // level, XP bar, coins and gems in the header, from the real progress data
+        private void ApplyProgress(bool instant)
+        {
+            var d = PlayerProgression.Current;
+            if (headerPlayerLevel != null) headerPlayerLevel.text = PlayerProgression.LevelText;
+            targetCoins = d.coins;
+            if (instant || shownCoins < 0f) shownCoins = targetCoins;
+            if (headerCoinsText != null) headerCoinsText.text = Mathf.RoundToInt(shownCoins).ToString("N0");
+            if (headerStarsText != null) headerStarsText.text = d.gems.ToString("N0");
+            // a Filled image without a sprite ignores fillAmount (it just draws full), so the bar needs a plain white sprite
+            if (headerPlayerXpFill != null && headerPlayerXpFill.sprite == null)
+            {
+                var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                var cols = new Color32[16]; for (int i = 0; i < cols.Length; i++) cols[i] = new Color32(255, 255, 255, 255);
+                tex.SetPixels32(cols); tex.Apply();
+                headerPlayerXpFill.sprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+                headerPlayerXpFill.type = Image.Type.Filled;
+                headerPlayerXpFill.fillMethod = Image.FillMethod.Horizontal;
+                headerPlayerXpFill.fillOrigin = 0;
+            }
+            float fill = PlayerProgression.XpFill;
+            if (instant || shownFill < 0f) shownFill = fill;
+            if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = shownFill;
+            LobbyParty.Instance.SetLocal(headerPlayerName != null ? headerPlayerName.text : "OPERATOR", PlayerProgression.LevelText,
+                LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+        }
+
+        // the bar glides and the coins count up; a level-up that happened in the last match is shown once the lobby is quiet
+        private void TickProgress()
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (headerPlayerXpFill != null && shownFill >= 0f)
+            {
+                float target = PlayerProgression.XpFill;
+                if (!Mathf.Approximately(shownFill, target))
+                {
+                    shownFill = Mathf.MoveTowards(shownFill, target, dt * 0.6f);
+                    headerPlayerXpFill.fillAmount = shownFill;
+                }
+            }
+            if (headerCoinsText != null && shownCoins >= 0f && !Mathf.Approximately(shownCoins, targetCoins))
+            {
+                float diff = targetCoins - shownCoins;
+                shownCoins = Mathf.MoveTowards(shownCoins, targetCoins, Mathf.Max(8f, Mathf.Abs(diff) * 2.5f) * dt);
+                headerCoinsText.text = Mathf.RoundToInt(shownCoins).ToString("N0");
+            }
+
+            if (!levelUpRunning && PlayerProgression.Pending.Count > 0 && levelUpPopup != null && !levelUpPopup.IsOpen
+                && (deployState == DeployState.Idle || deployState == DeployState.Failed)
+                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !(modePanel != null && modePanel.IsOpen))
+                StartCoroutine(ShowLevelUps());
+        }
+
+        private IEnumerator ShowLevelUps()
+        {
+            levelUpRunning = true;
+            yield return new WaitForSecondsRealtime(0.9f);   // let the lobby appear first
+            // several levels gained since the last time are shown as one climb
+            int from = -1, to = 0, bonus = 0;
+            while (PlayerProgression.Pending.Count > 0)
+            {
+                var p = PlayerProgression.Pending.Dequeue();
+                if (from < 0) from = p.from;
+                to = p.to; bonus += p.bonusCoins;
+            }
+            if (from >= 0)
+            {
+                if (settingsScreen != null) settingsScreen.CloseQuietly();
+                foreach (var m in menuScreens) if (m != null) m.CloseQuietly();
+                bool closed = false;
+                levelUpPopup.Show(from, to, bonus, () => closed = true, PlayDeploySound);
+                while (!closed) yield return null;
+            }
+            levelUpRunning = false;
         }
 
         // the selected tab's label must stay readable (dark on the white block) whatever hover colours other scripts apply
@@ -194,6 +292,8 @@ namespace Railbound.UI
 
         private void Update()
         {
+            TickProgress();
+
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
             if (customizer != null && customizer.BusyThisFrame)
             {
@@ -263,6 +363,7 @@ namespace Railbound.UI
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
             GameModeCatalog.Changed -= ApplyModeToCard;
+            PlayerProgression.Changed -= OnProgressChanged;
             var partyService = NakamaPartyService.InstanceIfExists;
             if (partyService != null) { partyService.DeployRequested -= OnPartyDeployRequested; partyService.CancelRequested -= OnPartyCancelRequested; }
             var party = LobbyParty.InstanceIfExists;
@@ -292,15 +393,13 @@ namespace Railbound.UI
                 headerSettingsBtn.onClick.AddListener(() =>
                 {
                     PlayClickSound();
-                    OnSettingsOrBackClicked();
+                    OpenSettings();
                 });
         }
 
         public async void SyncProfileData()
         {
             string username = "OPERATOR";
-            string levelStr = "LVL. 69";
-            float xpProgress = 0.65f;
 
             if (AuthenticationService.Instance != null && AuthenticationService.Instance.Session != null)
             {
@@ -318,8 +417,8 @@ namespace Railbound.UI
                     if (profile != null && !string.IsNullOrEmpty(profile.username))
                     {
                         username = profile.username;
-                        levelStr = $"LVL. {profile.experienceLevel}";
                     }
+                    await PlayerProgression.LoadAsync();   // level, XP and coins (cloud copy merged with this device's)
                 }
             }
             catch (Exception ex)
@@ -327,14 +426,13 @@ namespace Railbound.UI
                 Debug.Log($"[YellowHUD] Profile fallback: {ex.Message}");
             }
 
+            string levelStr = PlayerProgression.LevelText;
             if (headerPlayerName != null) headerPlayerName.text = username.ToUpper();
             if (headerPlayerLevel != null) headerPlayerLevel.text = levelStr;
-            if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = xpProgress;
+            ApplyProgress(true);
 
             LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
 
-            if (headerCoinsText != null) headerCoinsText.text = "2,450";
-            if (headerStarsText != null) headerStarsText.text = "850";
 
             // Also update local player squad row
             if (squadRows != null && squadRows.Length > 0 && squadRows[0].nameText != null)
@@ -388,6 +486,7 @@ namespace Railbound.UI
             currentNavIndex = index;
             RefreshNavTabsVisual();
 
+            if (settingsScreen != null) settingsScreen.CloseQuietly();
             // leaving a full-screen menu for another tab closes it first
             for (int i = 0; i < menuScreens.Length; i++)
                 if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
