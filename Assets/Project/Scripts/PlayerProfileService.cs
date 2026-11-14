@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Nakama;
 using UnityEngine;
@@ -25,62 +24,64 @@ public static class PlayerProfileService
 {
     private const string Collection = "player_profiles";
     private const string Key = "profile";
+    private const int MinUsernameLength = 3;
+    private const int MaxUsernameLength = 16;
 
-    private static PlayerProfile _cached;   // last profile that was read successfully in this run
+    private static PlayerProfile _cached;
+
+    private static AuthenticationService Auth
+    {
+        get
+        {
+            var auth = AuthenticationService.Instance;
+            if (auth == null || !auth.IsAuthenticated)
+                throw new InvalidOperationException("AuthenticationService is not authenticated.");
+            return auth;
+        }
+    }
 
     public static async Task<PlayerProfile> LoadAsync()
     {
-        var authentication = AuthenticationService.Instance;
-        if (authentication == null || !authentication.IsAuthenticated)
-            throw new InvalidOperationException("AuthenticationService is not authenticated.");
-
+        var auth = Auth;
         var objectId = new StorageObjectId
         {
             Collection = Collection,
             Key = Key,
-            UserId = authentication.CurrentUserId
+            UserId = auth.CurrentUserId
         };
 
-        IApiStorageObjects result;
         try
         {
-            result = await authentication.Client.ReadStorageObjectsAsync(authentication.Session, new[] { objectId });
-        }
-        catch (ApiResponseException ex)
-        {
-            // keep the HTTP status: "Exceeded max retry attempts" alone does not say whether Nakama was down (5xx / 0) or refused us (401 / 404)
-            Debug.LogWarning($"[PlayerProfileService] Reading the profile failed (HTTP {ex.StatusCode}): {ex.Message}");
-            if (_cached != null && _cached.userId == authentication.CurrentUserId) return _cached;   // Nakama unreachable: keep the last known profile
-            throw;
-        }
-
-        foreach (var storageObject in result.Objects)
-        {
-            if (string.IsNullOrWhiteSpace(storageObject.Value))
-                return null;
-
-            try
+            var result = await auth.Client.ReadStorageObjectsAsync(auth.Session, new[] { objectId });
+            
+            foreach (var storageObject in result.Objects)
             {
-                var profile = UnityEngine.JsonUtility.FromJson<PlayerProfile>(storageObject.Value);
-                if (profile == null)
+                if (string.IsNullOrWhiteSpace(storageObject.Value))
+                    return null;
+
+                var profile = JsonUtility.FromJson<PlayerProfile>(storageObject.Value);
+                if (profile == null || !profile.isComplete)
                     return null;
 
                 profile.username = profile.username?.Trim();
                 if (string.IsNullOrWhiteSpace(profile.username))
                     return null;
 
-                if (!profile.isComplete)
-                    return null;
-
-                profile.userId = authentication.CurrentUserId;
+                profile.userId = auth.CurrentUserId;
                 _cached = profile;
                 return profile;
             }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[PlayerProfileService] Failed to parse profile JSON: {ex.Message}");
-                return null;
-            }
+        }
+        catch (ApiResponseException ex)
+        {
+            Debug.LogWarning($"[PlayerProfileService] Reading the profile failed (HTTP {ex.StatusCode}): {ex.Message}");
+            if (_cached != null && _cached.userId == auth.CurrentUserId) 
+                return _cached;
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[PlayerProfileService] Failed to parse profile JSON: {ex.Message}");
         }
 
         return null;
@@ -88,40 +89,35 @@ public static class PlayerProfileService
 
     public static async Task SaveAsync(string username, PlayerExperienceLevel experienceLevel, bool isComplete = true)
     {
-        var authentication = AuthenticationService.Instance;
-        if (authentication == null || !authentication.IsAuthenticated)
-            throw new InvalidOperationException("AuthenticationService is not authenticated.");
-
+        var auth = Auth;
         var cleanUsername = username?.Trim();
-        if (string.IsNullOrWhiteSpace(cleanUsername))
-            throw new InvalidOperationException("Username cannot be empty.");
 
-        if (cleanUsername.Length < 3 || cleanUsername.Length > 16)
-            throw new InvalidOperationException("Username must be between 3 and 16 characters.");
+        if (string.IsNullOrWhiteSpace(cleanUsername))
+            throw new ArgumentException("Username cannot be empty.", nameof(username));
+
+        if (cleanUsername.Length < MinUsernameLength || cleanUsername.Length > MaxUsernameLength)
+            throw new ArgumentOutOfRangeException(nameof(username), $"Username must be between {MinUsernameLength} and {MaxUsernameLength} characters.");
 
         var profile = new PlayerProfile
         {
             username = cleanUsername,
             experienceLevel = experienceLevel,
-            userId = authentication.CurrentUserId,
+            userId = auth.CurrentUserId,
             isComplete = isComplete,
             version = 1
         };
 
-        await authentication.Client.UpdateAccountAsync(
-            authentication.Session,
-            username: cleanUsername,
-            displayName: cleanUsername);
+        await auth.Client.UpdateAccountAsync(auth.Session, username: cleanUsername, displayName: cleanUsername);
 
         var writeObject = new WriteStorageObject
         {
             Collection = Collection,
             Key = Key,
-            Value = UnityEngine.JsonUtility.ToJson(profile),
+            Value = JsonUtility.ToJson(profile),
             PermissionRead = 2,
             PermissionWrite = 1
         };
 
-        await authentication.Client.WriteStorageObjectsAsync(authentication.Session, new[] { writeObject });
+        await auth.Client.WriteStorageObjectsAsync(auth.Session, new[] { writeObject });
     }
 }
