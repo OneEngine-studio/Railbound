@@ -67,4 +67,22 @@ def build_pdf(filename="payment-gateway_implementation_v2.pdf"):
     title_style = ParagraphStyle('DocTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=24, leading=28, textColor=colors.HexColor("#0F172A"))
     subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=16, textColor=colors.HexColor("#D97706"))
     h1_style = ParagraphStyle('Heading1_Custom', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, leading=19, textColor=colors.HexColor("#0F172A"), spaceBefore=12, spaceAfter=6, keepWithNext=True)
-    body_style = ParagraphStyle('Body_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=13, textColor=colors.HexColor("#334155"), spaceBefore=2,
+    body_style = ParagraphStyle('Body_Custom', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=13, textColor=colors.HexColor("#334155"), spaceBefore=2, spaceAfter=8)
+
+    story = []
+
+    # Title Section
+    story.append(Paragraph("RAILBOUND", title_style))
+    story.append(Paragraph("Game Payment Gateway & Real Coin Top-Up Specification", subtitle_style))
+    story.append(Spacer(1, 15))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#E2E8F0"), spaceAfter=15))
+
+    # Sample Content
+    story.append(Paragraph("1. Architecture Overview", h1_style))
+    story.append(Paragraph("This document outlines the core payment gateway integration for the Railbound ecosystem. All real-coin top-ups must strictly adhere to the security protocols defined within this architectural blueprint.", body_style))
+
+    # Build the document
+    doc.build(story, canvasmaker=NumberedCanvas)
+
+if __name__ == "__main__":
+    build_pdf()
