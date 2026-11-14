@@ -30,6 +30,11 @@ namespace Railbound.BR
         private TextMeshProUGUI aliveNum, killsNum, centerSmall, centerBig, spectateName, spectateHint, spectatePlace;
         private TextMeshProUGUI endTitle, endWinner, endFooter;
         private TextMeshProUGUI endPlaceVal, endKillsVal, endSurvivedVal, endMatchVal, endRewards;
+        // spectator controls: health of the watched player, previous / next, a leave button that asks first
+        private Image spectateHealthFill;
+        private TextMeshProUGUI spectateLeaveLabel;
+        private float leavePromptUntil;       // while it runs, the next leave request really leaves
+        private bool spectateUiFreed;         // the mouse is free for the spectator buttons
         private Button endPlayAgain, endReturn;
         private float localSurvived;          // match seconds at which the local player was eliminated
         private RectTransform feedRoot;
@@ -104,7 +109,11 @@ namespace Railbound.BR
             deathSequenceRunning = true;
             int total = BRMatchCoordinator.Instance != null ? Mathf.Max(BRMatchCoordinator.Instance.TotalCount, k.Placement) : k.Placement;
             float start = Time.unscaledTime;
-            DeathScreenUI.Show(DeathScreenSeconds, () => DeathScreenSeconds - (Time.unscaledTime - start), "", "SPECTATING IN", "#" + k.Placement + " OF " + total);
+
+            // who got the player: a gamertag, THE STORM or ENVIRONMENT; nothing when the cause is unknown or it was the player
+            string by = string.IsNullOrWhiteSpace(k.Killer) || string.Equals(k.Killer, k.Victim, System.StringComparison.OrdinalIgnoreCase)
+                ? "" : "   |   ELIMINATED BY  " + k.Killer.ToUpperInvariant();
+            DeathScreenUI.Show(DeathScreenSeconds, () => DeathScreenSeconds - (Time.unscaledTime - start), "", "SPECTATING IN", "#" + k.Placement + " OF " + total + by);
             while (Time.unscaledTime - start < DeathScreenSeconds) yield return null;
             DeathScreenUI.Hide();
             deathSequenceRunning = false;
@@ -218,7 +227,20 @@ namespace Railbound.BR
         {
             bool spectating = eliminatedLocally && !deathSequenceRunning;
             spectateGroup.alpha = Mathf.MoveTowards(spectateGroup.alpha, spectating ? 1f : 0f, Time.unscaledDeltaTime * 4f);
+
+            // the buttons only take clicks while the bar is visible (the root group blocks everything else)
+            bool clickable = spectating && !matchEnded && spectateGroup.alpha > 0.5f;
+            spectateGroup.blocksRaycasts = clickable;
+            spectateGroup.interactable = clickable;
             if (!spectating) return;
+
+            if (!spectateUiFreed)
+            {
+                spectateUiFreed = true;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                EnsureEventSystem();
+            }
 
             if (spectateTarget == null || !spectateTarget.IsAlive)
             {
@@ -234,8 +256,31 @@ namespace Railbound.BR
 
             spectateName.text = spectateTarget != null ? spectateTarget.DisplayName.ToUpperInvariant() : (matchEnded ? "MATCH OVER" : "NOBODY LEFT TO WATCH");
             spectatePlace.text = "PLACED #" + localPlacement + " OF " + Mathf.Max(c.TotalCount, localPlacement) + "   |   KILLS " + localKills;
-            spectateHint.text = matchEnded ? "ENTER   LEAVE MATCH" : "A / D   SWITCH PLAYER      ENTER   LEAVE MATCH";
-            if (kb != null && kb.enterKey.wasPressedThisFrame && !matchEnded) c.LeaveMatch();
+
+            // health of the watched player
+            var th = spectateTarget != null ? spectateTarget.Health : null;
+            float hp = th != null && th.MaxHealth > 0f ? Mathf.Clamp01(th.Health / th.MaxHealth) : 0f;
+            spectateHealthFill.rectTransform.anchorMax = new Vector2(hp, 1f);
+
+            // leaving the match from the spectator view is easy to do by accident (Enter): ask once
+            bool prompt = Time.unscaledTime < leavePromptUntil;
+            spectateLeaveLabel.text = prompt ? "PRESS AGAIN TO LEAVE" : "LEAVE MATCH";
+            spectateHint.text = matchEnded ? "ENTER   LEAVE MATCH"
+                : "A / D   SWITCH PLAYER      " + (prompt ? "ENTER AGAIN   CONFIRM LEAVE" : "ENTER   LEAVE MATCH");
+            if (kb != null && kb.enterKey.wasPressedThisFrame && !matchEnded) RequestLeave();
+        }
+
+        /// <summary>First request asks (for 3 seconds), the next one leaves.</summary>
+        private void RequestLeave()
+        {
+            if (Time.unscaledTime < leavePromptUntil) { LeaveToLobby(); return; }
+            leavePromptUntil = Time.unscaledTime + 3f;
+        }
+
+        private void PickTargetButton(int step)
+        {
+            var c = BRMatchCoordinator.Instance;
+            if (c != null) PickTarget(c, step);
         }
 
         private void PickTarget(BRMatchCoordinator c, int step)
@@ -393,6 +438,26 @@ namespace Railbound.BR
             spectateHint = NewText("Hint", spec, "", 16, fontSemi, Faint + new Color(0, 0, 0, 0.3f), 6f, TextAlignmentOptions.Center);
             var shr = spectateHint.rectTransform; shr.anchorMin = shr.anchorMax = new Vector2(0.5f, 0.5f); shr.pivot = new Vector2(0.5f, 0.5f); shr.anchoredPosition = new Vector2(0, -60); shr.sizeDelta = new Vector2(900, 24);
 
+            // health of the watched player: a thin bar under the name
+            var hpTrack = NewImage("HealthTrack", spec, px, new Color(1f, 1f, 1f, 0.16f)); var htr = hpTrack.rectTransform;
+            htr.anchorMin = htr.anchorMax = new Vector2(0.5f, 0.5f); htr.pivot = new Vector2(0.5f, 0.5f); htr.anchoredPosition = new Vector2(0, -22); htr.sizeDelta = new Vector2(360, 6);
+            spectateHealthFill = NewImage("HealthFill", htr, px, Color.white);
+            var hfr = spectateHealthFill.rectTransform; hfr.anchorMin = Vector2.zero; hfr.anchorMax = Vector2.one; hfr.pivot = new Vector2(0f, 0.5f); hfr.offsetMin = Vector2.zero; hfr.offsetMax = Vector2.zero;
+
+            // previous / next player and a leave button, for the mouse (A / D and Enter do the same)
+            ResultButton(spec, "<", new Vector2(-300, 2), false, () => PickTargetButton(-1), new Vector2(56, 56), 28f);
+            ResultButton(spec, ">", new Vector2(300, 2), false, () => PickTargetButton(1), new Vector2(56, 56), 28f);
+            // left of the bar and above the health panel: the bottom right belongs to the weapon slots
+            var leaveBtn = ResultButton(spec, "LEAVE MATCH", new Vector2(-440, 26), false, RequestLeave, new Vector2(210, 42), 16f);
+            spectateLeaveLabel = leaveBtn.GetComponentInChildren<TextMeshProUGUI>();
+
+            // the bar is a pure display until it has buttons: let its own canvas take clicks even though the root canvas group does not
+            var specCanvas = spec.gameObject.AddComponent<Canvas>(); specCanvas.overrideSorting = true; specCanvas.sortingOrder = 45;
+            spec.gameObject.AddComponent<GraphicRaycaster>();
+            spectateGroup.ignoreParentGroups = true;
+            spectateGroup.blocksRaycasts = false;
+            spectateGroup.interactable = false;
+
             // ---- results
             var end = NewRect("End", root, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             endGroup = end.gameObject.AddComponent<CanvasGroup>(); endGroup.alpha = 0f;
@@ -443,9 +508,9 @@ namespace Railbound.BR
             return value;
         }
 
-        private Button ResultButton(RectTransform parent, string label, Vector2 pos, bool primary, UnityEngine.Events.UnityAction onClick)
+        private Button ResultButton(RectTransform parent, string label, Vector2 pos, bool primary, UnityEngine.Events.UnityAction onClick, Vector2? size = null, float fontSize = 22f)
         {
-            var r = NewRect(label + " Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(320, 58));
+            var r = NewRect(label + " Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size ?? new Vector2(320, 58));
             var bg = NewImage("Bg", r, px, primary ? Color.white : new Color(1f, 1f, 1f, 0.14f)); Stretch(bg.rectTransform);
             bg.raycastTarget = true;
             var btn = r.gameObject.AddComponent<Button>();
@@ -457,7 +522,7 @@ namespace Railbound.BR
             colors.fadeDuration = 0.08f;
             btn.colors = colors;
             btn.onClick.AddListener(onClick);
-            var txt = NewText("Label", r, label, 22, fontBold, primary ? Color.black : Color.white, 8f, TextAlignmentOptions.Center);
+            var txt = NewText("Label", r, label, fontSize, fontBold, primary ? Color.black : Color.white, 8f, TextAlignmentOptions.Center);
             Stretch(txt.rectTransform);
             return btn;
         }
