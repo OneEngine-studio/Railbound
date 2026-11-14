@@ -39,6 +39,6 @@ public sealed class LobbyAccessGuard : MonoBehaviour
 
         _redirecting = true;
         Debug.LogWarning("[LobbyAccessGuard] Unauthenticated lobby access denied. Returning to LoginMenu.");
-        SceneManager.LoadScene(loginSceneName);
+        Railbound.UI.SceneTransition.Go(loginSceneName, "RETURNING TO LOGIN");
     }
 }

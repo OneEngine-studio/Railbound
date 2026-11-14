@@ -598,7 +598,7 @@ namespace Railbound.BR
             // leave the game server through the connection singleton so it forgets the address and does not report a lost connection
             if (Railbound.Networking.GameServerConnection.Instance != null) Railbound.Networking.GameServerConnection.Instance.Clear();
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) NetworkManager.Singleton.Shutdown();
-            SceneManager.LoadScene(LobbySceneName);
+            Railbound.UI.SceneTransition.Go(LobbySceneName, "RETURNING TO LOBBY");
         }
     }
 }
