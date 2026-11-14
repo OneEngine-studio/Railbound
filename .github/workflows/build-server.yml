@@ -49,6 +49,8 @@ env:
 
 jobs:
   build-and-push:
+    # the Linux runner (build-server-linux.yml) is the default now; set the repository variable CI_RUNNER=windows to build here instead
+    if: vars.CI_RUNNER == 'windows'
     runs-on: [self-hosted, windows, unity]
     timeout-minutes: 180
 

@@ -1,0 +1,286 @@
+# Build the Linux dedicated server with Unity and push the Docker image, on a self-hosted UBUNTU runner.
+#
+# This is the Linux twin of build-server.yml (Windows runner). Only one of them runs, chosen by a repository variable:
+#     (not set / anything but "windows") -> this workflow runs (the default), the Windows one is skipped
+#     CI_RUNNER = windows                -> the Windows workflow runs, this one is skipped
+# Settings -> Secrets and variables -> Actions -> Variables.
+# Works on Ubuntu and on Arch Linux (the runner only needs: git, git-lfs, rsync, docker, procps, Unity 2023.1.22f1).
+#
+# Why Linux: Docker runs natively (no Docker Desktop / WSL engine that can hang when the PC runs out of memory), and the
+# runner PC does not have to be the machine you work on.
+#
+# One-time setup of the runner: docs/ci-runner-ubuntu.md
+#
+# Repository variables (all optional):
+#     CI_RUNNER        = windows to use the Windows runner instead
+#     UNITY_PATH       path of the Unity editor binary   (default: ~/Unity/Hub/Editor/2023.1.22f1/Editor/Unity)
+#     MAP_ASSETS_DIR   folder with the git-ignored map    (default: ~/railbound-map-assets/TerrainDemoScene_HDRP)
+#     DEPLOY_GITOPS    true = also bump the image tag in railbound-gitops (needs the secret GITOPS_TOKEN)
+# Repository secrets: REGISTRY_USERNAME, REGISTRY_PASSWORD (and GITOPS_TOKEN for DEPLOY_GITOPS).
+name: Build & push dedicated server (Linux runner)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - "ProjectSettings/**"
+      - "Dockerfile"
+      - ".github/workflows/build-server-linux.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-server-linux
+  cancel-in-progress: false
+
+env:
+  IMAGE: registry.kushanherath.me/railbound-server
+  GITOPS_REPO: OneEngine-studio/railbound-gitops
+  GITOPS_VALUES: charts/game-server/values.yaml charts/agones-fleet/values.yaml
+
+jobs:
+  build-and-push:
+    if: vars.CI_RUNNER != 'windows'
+    # no custom label needed: a plain Linux self-hosted runner is enough (the labels self-hosted and linux are added automatically)
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 180
+
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      # 1. Checkout (the Library folder of the runner workspace is kept between runs: the first import is slow, later ones are not)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          clean: false
+
+      # 1b. The tools the job needs, checked up front so a missing package is a one-line error instead of a failure deep in the build
+      - name: Check runner tools
+        shell: bash
+        run: |
+          missing=""
+          for t in git git-lfs rsync docker pkill timeout; do
+            command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing on the runner:$missing  (Arch: sudo pacman -S git git-lfs rsync docker procps-ng coreutils | Ubuntu: see docs/ci-runner-ubuntu.md)"
+            exit 1
+          fi
+          echo "Runner: $(uname -sr), $(nproc) cpu, $(free -g | awk '/Mem:/{print $2}') GB RAM"
+
+      # 2. The map is git-ignored (4 GB): it lives in a folder on the runner and is copied into the project
+      - name: Copy map assets
+        shell: bash
+        env:
+          MAP_ASSETS_DIR: ${{ vars.MAP_ASSETS_DIR }}
+        run: |
+          set -euo pipefail
+          src="${MAP_ASSETS_DIR:-$HOME/railbound-map-assets/TerrainDemoScene_HDRP}"
+
+          if [ ! -f "$src/Scenes/MAP-2.unity" ]; then
+            echo "::error::Map assets not found at '$src' (expected $src/Scenes/MAP-2.unity). See docs/ci-runner-ubuntu.md, step 'Map assets'."
+            exit 1
+          fi
+
+          mkdir -p Assets/TerrainDemoScene_HDRP
+          rsync -a --update "$src/" Assets/TerrainDemoScene_HDRP/
+
+          # the folder's .meta keeps the asset GUIDs of the scene identical to the ones the project references
+          if [ -f "$src.meta" ]; then
+            cp -f "$src.meta" Assets/TerrainDemoScene_HDRP.meta
+          fi
+
+          echo "Map assets ready"
+
+      # 3. Import the project, then build the Linux dedicated server (shader stripping: see ServerShaderStripping)
+      - name: Build Linux dedicated server
+        shell: bash
+        env:
+          UNITY_PATH_VAR: ${{ vars.UNITY_PATH }}
+        run: |
+          set -uo pipefail
+          unity="${UNITY_PATH_VAR:-$HOME/Unity/Hub/Editor/2023.1.22f1/Editor/Unity}"
+
+          if [ ! -x "$unity" ]; then
+            echo "::error::Unity editor not found or not executable at '$unity'. Install it (docs/ci-runner-ubuntu.md) or set the repository variable UNITY_PATH."
+            exit 1
+          fi
+
+          # timeout -k: a hung Unity (or its shader compiler children) is killed instead of blocking the job
+          run_unity() {
+            local minutes="$1"; shift
+            timeout -k 60 "${minutes}m" "$unity" "$@"
+            return $?
+          }
+
+          run_unity 90 -batchmode -nographics -quit -projectPath "$PWD" -logFile unity-import.log
+          echo "Unity import exit code: $?"
+
+          code=1
+          for attempt in 1 2; do
+            [ "$code" -eq 0 ] && break
+            echo "Unity build attempt $attempt"
+            run_unity 90 -batchmode -nographics -projectPath "$PWD" \
+              -executeMethod Railbound.Editor.NetcodeServerBuildPipeline.BuildLinuxServerCI \
+              -logFile unity-build.log
+            code=$?
+            echo "Build exit code: $code"
+          done
+
+          # leave no stray Unity helper processes behind
+          pkill -f "UnityShaderCompiler" 2>/dev/null || true
+
+          if [ "$code" -ne 0 ]; then
+            [ -f unity-build.log ] && tail -80 unity-build.log
+            echo "::error::Unity build failed"
+            exit 1
+          fi
+
+          if [ ! -f Builds/Server/Linux/RailboundServer.x86_64 ]; then
+            echo "::error::Server binary missing"
+            exit 1
+          fi
+
+          grep -h "Server shader stripping removed" unity-build.log || true
+          ls -la Builds/Server/Linux
+
+      # 4. Upload Unity logs if the build fails
+      - name: Upload Unity logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-build-logs
+          path: |
+            unity-build.log
+            unity-import.log
+
+      # 5. Unique image tag
+      - name: Generate image tag
+        id: meta
+        shell: bash
+        run: |
+          tag="sha-${GITHUB_SHA:0:8}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Image tag: $tag"
+
+      # 6. Docker is a native service on Ubuntu; make sure it answers (with a time limit, never a silent hang)
+      - name: Check Docker
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -u
+          for i in $(seq 1 12); do
+            if timeout 20 docker info >/dev/null 2>&1; then
+              echo "Docker engine answers"
+              exit 0
+            fi
+            echo "Docker engine does not answer yet (try $i of 12)"
+            sleep 5
+          done
+          free -h || true
+          echo "::error::The Docker engine does not answer. On the runner PC: 'sudo systemctl status docker' and check that the runner user is in the docker group."
+          exit 1
+
+      # 7. Login to the private registry (the password goes through stdin, never on the command line)
+      - name: Login to private registry
+        shell: bash
+        timeout-minutes: 4
+        env:
+          REGISTRY_USER: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # an isolated Docker config: no credential helper, nothing left in the runner user's own ~/.docker
+          cfg="$RUNNER_TEMP/docker-config"
+          mkdir -p "$cfg"
+          echo '{"auths":{}}' > "$cfg/config.json"
+          echo "DOCKER_CONFIG=$cfg" >> "$GITHUB_ENV"
+          export DOCKER_CONFIG="$cfg"
+
+          user="${REGISTRY_USER:-registryadmin}"
+          echo "Logging into registry.kushanherath.me (user len: ${#user}, pass len: ${#REGISTRY_PASSWORD})..."
+          printf '%s' "$REGISTRY_PASSWORD" | timeout 120 docker login registry.kushanherath.me -u "$user" --password-stdin
+
+      # 8. Build and push the image
+      - name: Build and push image
+        shell: bash
+        timeout-minutes: 60
+        run: |
+          set -euo pipefail
+
+          ctx="$RUNNER_TEMP/docker-ctx"
+          rm -rf "$ctx"
+          mkdir -p "$ctx/Builds/Server"
+          cp -r Builds/Server/Linux "$ctx/Builds/Server/Linux"
+          cp Dockerfile "$ctx/"
+
+          tag="${{ steps.meta.outputs.tag }}"
+
+          docker build -t "$IMAGE:$tag" -t "$IMAGE:latest" "$ctx"
+
+          # The layers go to the registry over the uplink; a slow upload can abort one request. Layers that are already stored
+          # are skipped on the next attempt, so retrying converges.
+          push_with_retry() {
+            local ref="$1"
+            for i in 1 2 3 4; do
+              if docker push "$ref"; then return 0; fi
+              echo "docker push $ref failed (attempt $i of 4)"
+              sleep $((10 * i))
+            done
+            echo "::error::Docker push failed for $ref"
+            return 1
+          }
+
+          push_with_retry "$IMAGE:$tag"
+          push_with_retry "$IMAGE:latest"
+
+          echo "Successfully pushed images:"
+          echo "$IMAGE:$tag"
+          echo "$IMAGE:latest"
+
+  # 9. Update the GitOps repository (runs on GitHub's own runner, independent of the build PC)
+  deploy-gitops:
+    needs: build-and-push
+    if: vars.DEPLOY_GITOPS == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          ref: main
+
+      - name: Update Helm image tags
+        run: |
+          for f in $GITOPS_VALUES; do
+            if [ -f "$f" ]; then
+              sed -i -E "s|^(\s*repository:\s*).*$|\1$IMAGE|" "$f"
+              sed -i -E 's|^(\s*tag:\s*).*$|\1"${{ needs.build-and-push.outputs.tag }}"|' "$f"
+            fi
+          done
+
+          git --no-pager diff -- $GITOPS_VALUES || true
+
+      - name: Commit and push GitOps changes
+        run: |
+          git config user.name "railbound-ci"
+          git config user.email "ci@railbound.invalid"
+
+          for f in $GITOPS_VALUES; do
+            [ -f "$f" ] && git add "$f"
+          done
+
+          git diff --cached --quiet && {
+            echo "No changes detected"
+            exit 0
+          }
+
+          git commit -m "ci(game-server): deploy ${{ needs.build-and-push.outputs.tag }}"
+
+          git push origin HEAD:main
