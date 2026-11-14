@@ -167,13 +167,20 @@ namespace Railbound.BR
             if (lostServer) return;
             var nm = NetworkManager.Singleton;
             bool asClient = nm != null && nm.IsListening && nm.IsClient && !nm.IsServer;
-            if (asClient)
+            if (asClient && nm.IsConnectedClient)
             {
                 wasNetworkClient = true;
                 frozenState = State;   // remember where the match was
                 return;
             }
-            if (!wasNetworkClient) return;   // offline / host / server: nothing to guard
+            if (asClient) return;            // still connecting: nothing was lost yet
+            if (!wasNetworkClient)
+            {
+                return;   // offline / host / server: nothing to guard
+            }
+            // the connection routine restarts the client between attempts; that is not a lost server
+            var link = Railbound.Networking.GameServerConnection.Instance;
+            if (link != null && link.State == Railbound.Networking.GameServerState.Connecting) return;
 
             lostServer = true;
             bool matchWasOver = frozenState == BRMatchState.MatchEnded;

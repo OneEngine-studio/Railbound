@@ -204,6 +204,8 @@ namespace Railbound.Networking
 
             for (Attempt = 1; Attempt <= attempts && !connected; Attempt++)
             {
+                // the previous attempt may have finished its handshake after its timeout (a slow server): keep that connection
+                if (nm != null && nm.IsConnectedClient && !nm.IsServer) { connected = true; break; }
                 // an earlier session (a client that was started after login, the previous attempt, a previous match) has to be gone first
                 if (nm != null && nm.IsListening) nm.Shutdown();
                 float guard = 0f;
@@ -237,7 +239,16 @@ namespace Railbound.Networking
                 if (!connected)
                 {
                     Debug.LogWarning($"[GameServer] Attempt {Attempt}/{attempts} to {Endpoint} failed: {failure}");
-                    if (Attempt < attempts) yield return new WaitForSecondsRealtime(retryDelaySeconds);
+                    if (Attempt < attempts)
+                    {
+                        // a handshake that is still running can complete during the pause, so watch for it instead of sleeping blind
+                        float wait = 0f;
+                        while (wait < retryDelaySeconds && !(nm != null && nm.IsConnectedClient))
+                        {
+                            wait += Mathf.Min(Time.unscaledDeltaTime, 0.25f);
+                            yield return null;
+                        }
+                    }
                 }
             }
 
