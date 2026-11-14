@@ -55,6 +55,9 @@ namespace Railbound.Networking
         public string CurrentMatchId { get; private set; }
         public bool IsDeploying { get; private set; }
 
+        /// <summary>How long a deployment searches for other players before the match starts with bots.</summary>
+        public float QueueSeconds => queueSeconds;
+
         /// <summary>Why the last deployment failed, so the lobby can tell the player something useful.</summary>
         public enum DeployFailure { None, ServersBusy, ConnectionFailed, Other }
         public DeployFailure LastFailure { get; private set; }
@@ -212,13 +215,38 @@ namespace Railbound.Networking
                 return;
             }
 
+            // In a party of two or more the LEADER queues the whole party with one ticket; the other members do not queue, the match
+            // that the ticket finds reaches every member's socket. Everybody ends up with the same match id, so the same game server.
+            var party = NakamaPartyService.InstanceIfExists;
+            bool partyMode = party != null && party.InParty && party.MemberCount > 1;
+            string partyId = partyMode ? party.PartyId : null;
+            string partyTicket = null;
+
             var matched = new TaskCompletionSource<IMatchmakerMatched>();
             Action<IMatchmakerMatched> onMatched = m => matched.TrySetResult(m);
             socket.ReceivedMatchmakerMatched += onMatched;
             IMatchmakerTicket ticket = null;
             try
             {
-                ticket = await socket.AddMatchmakerAsync("*", queueMinPlayers, queueMaxPlayers);
+                // only players who chose the same mode and team size are matched together
+                string modeKey = Railbound.UI.GameModeCatalog.MatchKey;
+                string modeQuery = "+properties.mode:" + modeKey;
+                var modeProps = new System.Collections.Generic.Dictionary<string, string> { { "mode", modeKey } };
+
+                if (!partyMode)
+                {
+                    ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
+                }
+                else if (party.IsLeader)
+                {
+                    var pt = await socket.AddMatchmakerPartyAsync(partyId, modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
+                    partyTicket = pt.Ticket;
+                    Debug.Log($"[LobbyMatchmaker] Queued the party of {party.MemberCount} as one ticket.");
+                }
+                else
+                {
+                    Debug.Log("[LobbyMatchmaker] Party member: waiting for the leader's party ticket to find a match.");
+                }
                 float start = Time.realtimeSinceStartup;
                 while (!matched.Task.IsCompleted && !_cancelRequested)
                 {
@@ -232,11 +260,7 @@ namespace Railbound.Networking
                 {
                     // every member of a matchmaker lobby derives the same match id from the member list
                     var ids = matched.Task.Result.Users.Select(u => u.Presence.UserId).OrderBy(x => x, StringComparer.Ordinal).ToArray();
-                    using (var sha = System.Security.Cryptography.SHA1.Create())
-                    {
-                        byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("|", ids)));
-                        _queueMatchId = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant().Substring(0, 24);
-                    }
+                    _queueMatchId = MatchIdOf(ids);
                     _queuePlayers = ids.Length;
                     UpdateStatus("LOBBY FOUND");
                     Debug.Log($"[LobbyMatchmaker] Matchmaker formed a lobby of {matched.Task.Result.Users.Count()} players.");
@@ -244,6 +268,13 @@ namespace Railbound.Networking
                 }
                 else if (!_cancelRequested)
                 {
+                    // Nobody else was found. A party still plays together: every member derives the same match id from the party
+                    // roster, so all of them get the same game server (a solo player keeps a private id and the bots fill the rest).
+                    if (partyMode)
+                    {
+                        _queueMatchId = MatchIdOf(party.MemberUserIds);
+                        _queuePlayers = party.MemberCount;
+                    }
                     UpdateStatus("NO FULL LOBBY - BOTS WILL FILL THE MATCH");
                     Debug.Log("[LobbyMatchmaker] Queue window elapsed; continuing with bot backfill.");
                     await Task.Delay(900);
@@ -261,6 +292,22 @@ namespace Railbound.Networking
                     try { await socket.RemoveMatchmakerAsync(ticket); }
                     catch (Exception) { /* the ticket expires on its own */ }
                 }
+                if (partyTicket != null && !matched.Task.IsCompleted)
+                {
+                    try { await socket.RemoveMatchmakerPartyAsync(partyId, partyTicket); }
+                    catch (Exception) { /* the ticket expires on its own */ }
+                }
+            }
+        }
+
+        /// <summary>The match id all players of one match share: a hash of their sorted user ids.</summary>
+        private static string MatchIdOf(System.Collections.Generic.IEnumerable<string> userIds)
+        {
+            var ids = userIds.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+            using (var sha = System.Security.Cryptography.SHA1.Create())
+            {
+                byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("|", ids)));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant().Substring(0, 24);
             }
         }
 

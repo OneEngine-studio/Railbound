@@ -483,7 +483,7 @@ public class AuthenticationService : MonoBehaviour
         var active = SceneManager.GetActiveScene().name;
         if (active == lobbySceneName) return;
         Debug.Log($"[Auth] Loading lobby scene: {lobbySceneName}");
-        SceneManager.LoadSceneAsync(lobbySceneName);
+        Railbound.UI.SceneTransition.Go(lobbySceneName, "ENTERING LOBBY");
     }
 
     private static string CleanError(string msg)

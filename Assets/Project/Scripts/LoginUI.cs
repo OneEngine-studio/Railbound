@@ -222,7 +222,7 @@ public partial class LoginUI : MonoBehaviour
         if (!autoGoToLobby) return;
         if (string.IsNullOrEmpty(lobbySceneName)) return;
         if (SceneManager.GetActiveScene().name == lobbySceneName) return;
-        SceneManager.LoadSceneAsync(lobbySceneName);
+        Railbound.UI.SceneTransition.Go(lobbySceneName, "ENTERING LOBBY");
     }
 
     // ------------------------------------------------------------------ Google (placeholder -> guest)
@@ -418,7 +418,7 @@ public partial class LoginUI : MonoBehaviour
         if (loadingText) loadingText.text = "Success! Loading lobby...";
         // fallback load if service has autoLoad disabled
         if (autoGoToLobby && !string.IsNullOrEmpty(lobbySceneName) && SceneManager.GetActiveScene().name != lobbySceneName)
-            SceneManager.LoadSceneAsync(lobbySceneName);
+            Railbound.UI.SceneTransition.Go(lobbySceneName, "ENTERING LOBBY");
     }
 
     private void SetLoading(bool loading)

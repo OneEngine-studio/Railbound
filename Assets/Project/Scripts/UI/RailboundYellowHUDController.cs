@@ -150,8 +150,35 @@ namespace Railbound.UI
 
             // squad shown on the stage: nameplates over the models, daily challenges in the left column
             var plateFont = deployButtonLabel != null ? deployButtonLabel.font : null;
-            LobbyChallengesPanel.Create(transform, plateFont);
+            challengesPanel = LobbyChallengesPanel.Create(transform, plateFont);
+            RefreshChallengesPanel();
+            ChallengeService.Changed -= RefreshChallengesPanel; ChallengeService.Changed += RefreshChallengesPanel;
+
+            // the player's data (loadout, settings, challenges, history) is kept in Nakama; the lobby follows what it loads
+            PlayerDataService.EnsureStarted();
+            PlayerDataService.Loaded -= OnPlayerDataLoaded; PlayerDataService.Loaded += OnPlayerDataLoaded;
+            PlayerDataService.Instance.AttachLobby();
             LobbySquadNameplates.Create(transform, plateFont);
+            partyPanel = LobbyPartyPanel.Create(transform, plateFont);
+            modePanel = LobbyGameModePanel.Create(transform, plateFont);
+            SetupModeCard();
+
+            // the full-screen menus of the top navigation; they go back to PLAY when they close
+            Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
+            settingsScreen = LobbyReachSettings.Find();
+            if (settingsScreen != null)
+            {
+                settingsScreen.SignOutRequested = OnSettingsOrBackClicked;
+                settingsScreen.Closed = () => { if (PlayerDataService.Instance != null) PlayerDataService.Instance.SettingsChanged(); };
+            }
+            else Debug.LogWarning("[YellowHUD] The settings menu is missing from the lobby scene: run Railbound > Import MAP-2 Settings Menu into Lobby.");
+            levelUpPopup = LobbyLevelUpPopup.Create(plateFont);
+            PlayerProgression.Changed -= OnProgressChanged; PlayerProgression.Changed += OnProgressChanged;
+            ApplyProgress(true);
+            menuScreens[2] = LobbyMenuScreen.Create<LobbyWeaponsScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            menuScreens[3] = LobbyMenuScreen.Create<LobbyBattlePassScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            menuScreens[4] = LobbyMenuScreen.Create<LobbyChallengesScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            menuScreens[5] = LobbyMenuScreen.Create<LobbyStoreScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             customizer = LobbyCharacterCustomizer.Create(plateFont, gameObject, OnCustomizerClosed);
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
@@ -163,6 +190,130 @@ namespace Railbound.UI
         }
 
         private LobbyCharacterCustomizer customizer;
+        private LobbyPartyPanel partyPanel;
+        private LobbyGameModePanel modePanel;
+        private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
+
+        private LobbyReachSettings settingsScreen;   // the settings menu copied from MAP-2's pause menu (see LobbySettingsImporter)
+        private LobbyChallengesPanel challengesPanel;
+
+        private void RefreshChallengesPanel()
+        {
+            if (challengesPanel == null) return;
+            var list = ChallengeService.Get(ChallengeService.Tab.Daily);
+            var rows = new LobbyChallengesPanel.Challenge[list.Count];
+            for (int i = 0; i < rows.Length; i++) rows[i] = new LobbyChallengesPanel.Challenge(list[i].text, list[i].progress, list[i].goal, list[i].xp);
+            challengesPanel.SetChallenges(rows);
+        }
+
+        // the cloud copy of the player's data arrived: show it
+        private void OnPlayerDataLoaded()
+        {
+            RefreshChallengesPanel();
+            ApplyProgress(false);
+            if (PlayerDataService.Instance != null) PlayerDataService.Instance.ApplyLoadoutToLobby();
+            UpdateOperatorDisplay();
+        }
+        private LobbyLevelUpPopup levelUpPopup;
+        private float shownFill = -1f;                  // the XP bar as drawn (it glides to the real value)
+        private float shownCoins = -1f, targetCoins;    // the coin counter as drawn (it counts up)
+        private bool levelUpRunning;
+
+        private bool AnyMenuBusy()
+        {
+            foreach (var s in menuScreens) if (s != null && s.BusyThisFrame) return true;
+            if (settingsScreen != null && settingsScreen.BusyThisFrame) return true;
+            return levelUpPopup != null && levelUpPopup.IsOpen;
+        }
+
+        private void OpenSettings()
+        {
+            if (settingsScreen == null) return;
+            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;
+            for (int i = 0; i < menuScreens.Length; i++) if (menuScreens[i] != null) menuScreens[i].CloseQuietly();
+            settingsScreen.Open();
+        }
+
+        private void OnProgressChanged() { ApplyProgress(false); }
+
+        // level, XP bar, coins and gems in the header, from the real progress data
+        private void ApplyProgress(bool instant)
+        {
+            var d = PlayerProgression.Current;
+            if (headerPlayerLevel != null) headerPlayerLevel.text = PlayerProgression.LevelText;
+            targetCoins = d.coins;
+            if (instant || shownCoins < 0f) shownCoins = targetCoins;
+            if (headerCoinsText != null) headerCoinsText.text = Mathf.RoundToInt(shownCoins).ToString("N0");
+            if (headerStarsText != null) headerStarsText.text = d.gems.ToString("N0");
+            // a Filled image without a sprite ignores fillAmount (it just draws full), so the bar needs a plain white sprite
+            if (headerPlayerXpFill != null && headerPlayerXpFill.sprite == null)
+            {
+                var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                var cols = new Color32[16]; for (int i = 0; i < cols.Length; i++) cols[i] = new Color32(255, 255, 255, 255);
+                tex.SetPixels32(cols); tex.Apply();
+                headerPlayerXpFill.sprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+                headerPlayerXpFill.type = Image.Type.Filled;
+                headerPlayerXpFill.fillMethod = Image.FillMethod.Horizontal;
+                headerPlayerXpFill.fillOrigin = 0;
+            }
+            float fill = PlayerProgression.XpFill;
+            if (instant || shownFill < 0f) shownFill = fill;
+            if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = shownFill;
+            LobbyParty.Instance.SetLocal(headerPlayerName != null ? headerPlayerName.text : "OPERATOR", PlayerProgression.LevelText,
+                LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+        }
+
+        // the bar glides and the coins count up; a level-up that happened in the last match is shown once the lobby is quiet
+        private void TickProgress()
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (headerPlayerXpFill != null && shownFill >= 0f)
+            {
+                float target = PlayerProgression.XpFill;
+                if (!Mathf.Approximately(shownFill, target))
+                {
+                    shownFill = Mathf.MoveTowards(shownFill, target, dt * 0.6f);
+                    headerPlayerXpFill.fillAmount = shownFill;
+                }
+            }
+            if (headerCoinsText != null && shownCoins >= 0f && !Mathf.Approximately(shownCoins, targetCoins))
+            {
+                float diff = targetCoins - shownCoins;
+                shownCoins = Mathf.MoveTowards(shownCoins, targetCoins, Mathf.Max(8f, Mathf.Abs(diff) * 2.5f) * dt);
+                headerCoinsText.text = Mathf.RoundToInt(shownCoins).ToString("N0");
+            }
+
+            if (!levelUpRunning && PlayerProgression.Pending.Count > 0 && levelUpPopup != null && !levelUpPopup.IsOpen
+                && (deployState == DeployState.Idle || deployState == DeployState.Failed)
+                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !(modePanel != null && modePanel.IsOpen) && !AnyMenuBusy())
+                StartCoroutine(ShowLevelUps());
+        }
+
+        private IEnumerator ShowLevelUps()
+        {
+            levelUpRunning = true;
+            yield return new WaitForSecondsRealtime(0.9f);   // let the lobby appear first
+            // several levels gained since the last time are shown as one climb
+            int from = -1, to = 0, bonus = 0;
+            while (PlayerProgression.Pending.Count > 0)
+            {
+                var p = PlayerProgression.Pending.Dequeue();
+                if (from < 0) from = p.from;
+                to = p.to; bonus += p.bonusCoins;
+            }
+            if (from >= 0)
+            {
+                if (settingsScreen != null) settingsScreen.Close();
+                foreach (var m in menuScreens) if (m != null) m.CloseQuietly();
+                bool closed = false;
+                levelUpPopup.Show(from, to, bonus, () => closed = true, PlayDeploySound);
+                while (!closed) yield return null;
+            }
+            levelUpRunning = false;
+        }
+
+        // the selected tab's label must stay readable (dark on the white block) whatever hover colours other scripts apply
+        private void LateUpdate() { RefreshNavTabsVisual(); }
 
         private void OnCustomizerClosed()
         {
@@ -172,6 +323,8 @@ namespace Railbound.UI
 
         private void Update()
         {
+            TickProgress();
+
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
             if (customizer != null && customizer.BusyThisFrame)
             {
@@ -179,8 +332,35 @@ namespace Railbound.UI
                 return;
             }
 
+            // a full-screen menu (Battle Pass, Challenges, Store) owns the keyboard while it is open and on the frame its Esc closed it
+            if (AnyMenuBusy())
+            {
+                TickDeployState();
+                return;
+            }
+
+            // the party window owns the keyboard while it is open: Space / Esc / F1 must not deploy, go back or reopen it
+            // (typing a party code has Space and letters in it)
+            if (partyPanel != null && partyPanel.IsOpen)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape)) partyPanel.Hide();
+                TickDeployState();
+                return;
+            }
+
+            // the mode screen owns the keyboard while it is open (Space must not deploy, Esc must only close it)
+            if (modePanel != null && modePanel.IsOpen)
+            {
+                TickDeployState();
+                return;
+            }
+
             // Keyboard shortcuts
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.M))
+            {
+                OpenModePanel();
+            }
+            else if (Input.GetKeyDown(KeyCode.Space))
             {
                 if (deployState == DeployState.Idle || deployState == DeployState.Failed) OnDeployClicked();
             }
@@ -213,6 +393,13 @@ namespace Railbound.UI
         private void OnDestroy()
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
+            GameModeCatalog.Changed -= ApplyModeToCard;
+            ChallengeService.Changed -= RefreshChallengesPanel;
+            PlayerDataService.Loaded -= OnPlayerDataLoaded;
+            if (PlayerDataService.Instance != null) PlayerDataService.Instance.DetachLobby();
+            PlayerProgression.Changed -= OnProgressChanged;
+            var partyService = NakamaPartyService.InstanceIfExists;
+            if (partyService != null) { partyService.DeployRequested -= OnPartyDeployRequested; partyService.CancelRequested -= OnPartyCancelRequested; }
             var party = LobbyParty.InstanceIfExists;
             if (party != null) { party.Changed -= RefreshSquad; party.SelectionChanged -= UpdateOperatorDisplay; }
         }
@@ -240,15 +427,13 @@ namespace Railbound.UI
                 headerSettingsBtn.onClick.AddListener(() =>
                 {
                     PlayClickSound();
-                    OnSettingsOrBackClicked();
+                    OpenSettings();
                 });
         }
 
         public async void SyncProfileData()
         {
             string username = "OPERATOR";
-            string levelStr = "LVL. 69";
-            float xpProgress = 0.65f;
 
             if (AuthenticationService.Instance != null && AuthenticationService.Instance.Session != null)
             {
@@ -266,8 +451,8 @@ namespace Railbound.UI
                     if (profile != null && !string.IsNullOrEmpty(profile.username))
                     {
                         username = profile.username;
-                        levelStr = $"LVL. {profile.experienceLevel}";
                     }
+                    await PlayerProgression.LoadAsync();   // level, XP and coins (cloud copy merged with this device's)
                 }
             }
             catch (Exception ex)
@@ -275,14 +460,13 @@ namespace Railbound.UI
                 Debug.Log($"[YellowHUD] Profile fallback: {ex.Message}");
             }
 
+            string levelStr = PlayerProgression.LevelText;
             if (headerPlayerName != null) headerPlayerName.text = username.ToUpper();
             if (headerPlayerLevel != null) headerPlayerLevel.text = levelStr;
-            if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = xpProgress;
+            ApplyProgress(true);
 
             LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
 
-            if (headerCoinsText != null) headerCoinsText.text = "2,450";
-            if (headerStarsText != null) headerStarsText.text = "850";
 
             // Also update local player squad row
             if (squadRows != null && squadRows.Length > 0 && squadRows[0].nameText != null)
@@ -316,6 +500,8 @@ namespace Railbound.UI
         // ----------------------------------------------------
         private void BindNavigation()
         {
+            // the LOADOUT tab became WEAPONS
+            if (navLabels != null && navLabels.Length > 2 && navLabels[2] != null) navLabels[2].text = "WEAPONS";
             if (navButtons == null) return;
             for (int i = 0; i < navButtons.Length; i++)
             {
@@ -334,7 +520,12 @@ namespace Railbound.UI
             currentNavIndex = index;
             RefreshNavTabsVisual();
 
-            SetCustomizationPanelVisible(index == 2);
+            if (settingsScreen != null) settingsScreen.Close();
+            // leaving a full-screen menu for another tab closes it first
+            for (int i = 0; i < menuScreens.Length; i++)
+                if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
+
+            SetCustomizationPanelVisible(false);   // the old skills card is gone: skills show on the operator screens
 
             switch (index)
             {
@@ -345,21 +536,21 @@ namespace Railbound.UI
                     Debug.Log("[YellowHUD] Nav: OPERATORS");
                     if (customizer != null) customizer.Open();
                     break;
-                case 2: // LOADOUT
-                    Debug.Log("[YellowHUD] Nav: LOADOUT - Toggling loadout skills");
-                    LobbyCustomizationUI.Instance?.SendMessage("ToggleSkillsCard", SendMessageOptions.DontRequireReceiver);
+                case 2: // WEAPONS (was LOADOUT)
+                    Debug.Log("[YellowHUD] Nav: WEAPONS");
+                    if (menuScreens[2] != null) menuScreens[2].Open();
                     break;
                 case 3: // BATTLE PASS
                     Debug.Log("[YellowHUD] Nav: BATTLE PASS");
-                    ShowTacticalNotice("BATTLE PASS // SEASON 01 - TIER 24 / 100");
+                    if (menuScreens[3] != null) menuScreens[3].Open();
                     break;
                 case 4: // CHALLENGES
                     Debug.Log("[YellowHUD] Nav: CHALLENGES");
-                    ShowTacticalNotice("TACTICAL OPS // DAILY ASSIGNMENTS SYNCHRONIZED");
+                    if (menuScreens[4] != null) menuScreens[4].Open();
                     break;
                 case 5: // STORE
-                    Debug.Log("[YellowHUD] Nav: ARSENAL STORE");
-                    ShowTacticalNotice("TACTICAL ARSENAL // SUPPLY SHIPMENT EN ROUTE");
+                    Debug.Log("[YellowHUD] Nav: STORE");
+                    if (menuScreens[5] != null) menuScreens[5].Open();
                     break;
             }
         }
@@ -418,6 +609,85 @@ namespace Railbound.UI
             {
                 deployButton.onClick.AddListener(OnDeployClicked);
             }
+        }
+
+        // ----------------------------------------------------
+        // 3a. MATCH MODE: the card shows the chosen mode; clicking it (or key M) opens the mode screen
+        // ----------------------------------------------------
+        private Button modeCardButton;
+        private TextMeshProUGUI modeTagPlayers, modeTagMap;
+
+        private void SetupModeCard()
+        {
+            Transform card = modeTitleText != null ? modeTitleText.transform.parent : null;
+            if (card != null)
+            {
+                var tp = card.Find("Tag_30P"); if (tp != null) modeTagPlayers = tp.GetComponentInChildren<TextMeshProUGUI>(true);
+                var tm = card.Find("Tag_Map"); if (tm != null) modeTagMap = tm.GetComponentInChildren<TextMeshProUGUI>(true);
+
+                var hit = card.GetComponent<Image>();
+                if (hit == null) { hit = card.gameObject.AddComponent<Image>(); hit.color = new Color(0f, 0f, 0f, 0f); }
+                hit.raycastTarget = true;
+                modeCardButton = card.GetComponent<Button>();
+                if (modeCardButton == null) modeCardButton = card.gameObject.AddComponent<Button>();
+                modeCardButton.targetGraphic = hit;
+                modeCardButton.transition = Selectable.Transition.None;
+                modeCardButton.onClick.RemoveAllListeners();
+                modeCardButton.onClick.AddListener(OpenModePanel);
+
+                // a chip on the banner tells the player the mode can be changed (and which key does it)
+                var chipGo = new GameObject("Chip_ChangeMode", typeof(RectTransform), typeof(Image), typeof(Button));
+                chipGo.layer = card.gameObject.layer;
+                chipGo.transform.SetParent(card, false);
+                var cr = (RectTransform)chipGo.transform;
+                cr.anchorMin = cr.anchorMax = new Vector2(1f, 1f); cr.pivot = new Vector2(1f, 1f);
+                cr.anchoredPosition = new Vector2(-30f, -30f); cr.sizeDelta = new Vector2(176f, 30f);
+                var chipImg = chipGo.GetComponent<Image>(); chipImg.color = new Color(0f, 0f, 0f, 0.78f);
+                var chipBtn = chipGo.GetComponent<Button>(); chipBtn.targetGraphic = chipImg;
+                var cb = chipBtn.colors; cb.normalColor = Color.white; cb.highlightedColor = new Color(0.78f, 0.78f, 0.78f, 1f); cb.pressedColor = new Color(0.55f, 0.55f, 0.55f, 1f); cb.fadeDuration = 0.08f; chipBtn.colors = cb;
+                chipBtn.onClick.AddListener(OpenModePanel);
+                var chipTextGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                chipTextGo.layer = card.gameObject.layer;
+                chipTextGo.transform.SetParent(chipGo.transform, false);
+                var ctr = (RectTransform)chipTextGo.transform; ctr.anchorMin = Vector2.zero; ctr.anchorMax = Vector2.one; ctr.offsetMin = Vector2.zero; ctr.offsetMax = Vector2.zero;
+                var chipText = chipTextGo.GetComponent<TextMeshProUGUI>();
+                chipText.font = modeSubtitleText != null ? modeSubtitleText.font : TMP_Settings.defaultFontAsset;
+                chipText.text = "M   CHANGE MODE"; chipText.fontSize = 14; chipText.fontStyle = FontStyles.Bold; chipText.characterSpacing = 4f;
+                chipText.alignment = TextAlignmentOptions.Center; chipText.color = Color.white; chipText.raycastTarget = false;
+            }
+
+            GameModeCatalog.Changed -= ApplyModeToCard;
+            GameModeCatalog.Changed += ApplyModeToCard;
+            ApplyModeToCard();
+        }
+
+        private void ApplyModeToCard()
+        {
+            var mode = GameModeCatalog.Selected;
+            var team = GameModeCatalog.SelectedTeamSize;
+            if (modeTitleText != null) modeTitleText.text = mode.CardTitle;
+            if (modeTagPlayers != null) modeTagPlayers.text = mode.Players + "P";
+            if (modeTagMap != null) modeTagMap.text = mode.Map;
+
+            // the idle subtitle is the line under the title: team size or format and the player count
+            idleSubtitle = GameModeCatalog.Summary(mode, team);
+            if (deployState == DeployState.Idle) RefreshDeployVisuals();
+        }
+
+        private void OpenModePanel()
+        {
+            if (modePanel == null) return;
+            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;   // the mode cannot change while searching
+
+            var party = NakamaPartyService.InstanceIfExists;
+            if (party != null && party.InParty && party.MemberCount > 1 && !party.IsLeader)
+            {
+                noticeText = "ONLY THE PARTY LEADER CHOOSES THE MODE";
+                noticeUntil = Time.unscaledTime + 4f;
+                return;
+            }
+            PlayClickSound();
+            modePanel.Show();
         }
 
         private void ToggleFillSquad()
@@ -500,6 +770,59 @@ namespace Railbound.UI
 
             // "PLAY AGAIN" on the results screen asked for the next deployment to start by itself
             if (LobbyAutoDeploy.TryConsume()) StartCoroutine(AutoDeployRoutine());
+
+            // the party leader starts / cancels the search for everybody
+            var partyService = NakamaPartyService.Instance;
+            if (partyService != null)
+            {
+                partyService.DeployRequested -= OnPartyDeployRequested; partyService.DeployRequested += OnPartyDeployRequested;
+                partyService.CancelRequested -= OnPartyCancelRequested; partyService.CancelRequested += OnPartyCancelRequested;
+            }
+
+            SetupPartyChip();
+        }
+
+        private void OnPartyDeployRequested()
+        {
+            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;
+            deployFromParty = true;
+            OnDeployClicked();
+        }
+
+        private void OnPartyCancelRequested()
+        {
+            if (deployState == DeployState.Deploying) CancelDeploy();
+        }
+
+        // The "F1 SOCIAL" chip in the footer opens the party window with the mouse too and shows the size of the party.
+        private TextMeshProUGUI partyChipLabel;
+
+        private void SetupPartyChip()
+        {
+            Transform chip = transform.Find("Bottom_Footer/Keybinds/KB_Social");
+            if (chip == null) return;
+
+            var action = chip.Find("Action");
+            if (action != null) partyChipLabel = action.GetComponent<TextMeshProUGUI>();
+
+            var hit = chip.GetComponent<Image>();
+            if (hit == null) { hit = chip.gameObject.AddComponent<Image>(); hit.color = new Color(0f, 0f, 0f, 0f); }
+            hit.raycastTarget = true;
+            var btn = chip.GetComponent<Button>();
+            if (btn == null) btn = chip.gameObject.AddComponent<Button>();
+            btn.targetGraphic = hit;
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(OnInviteClicked);
+            RefreshPartyChip();
+        }
+
+        private void RefreshPartyChip()
+        {
+            if (partyChipLabel == null) return;
+            var lobbyParty = LobbyParty.InstanceIfExists;
+            int n = lobbyParty != null ? lobbyParty.Count : 1;
+            partyChipLabel.text = n > 1 ? "PARTY " + n + "/" + LobbyParty.MaxMembers : "SOCIAL";
         }
 
         private IEnumerator AutoDeployRoutine()
@@ -519,10 +842,24 @@ namespace Railbound.UI
             return g;
         }
 
+        private bool deployFromParty;   // the deployment was started by the party leader's signal, not by this player
+
         private void OnDeployClicked()
         {
             if (deployState == DeployState.Deploying) { CancelDeploy(); return; }
             if (deployState == DeployState.Loading) return;
+
+            // In a party only the leader starts the match; the members follow on the leader's signal.
+            var party = NakamaPartyService.InstanceIfExists;
+            bool inGroup = party != null && party.InParty && party.MemberCount > 1;
+            if (inGroup && !party.IsLeader && !deployFromParty)
+            {
+                noticeText = "ONLY THE PARTY LEADER CAN START THE MATCH";
+                noticeUntil = Time.unscaledTime + 4f;
+                return;
+            }
+            deployFromParty = false;
+            if (inGroup && party.IsLeader) _ = party.BroadcastDeployAsync();
 
             PlayDeploySound();
             Debug.Log("[YellowHUD] DEPLOY CLICKED! Initiating matchmaking...");
@@ -551,6 +888,9 @@ namespace Railbound.UI
             {
                 deployStage = "CANCELLING";
                 mm.CancelDeploy();
+                // the leader's cancel stops the search of the whole party
+                var party = NakamaPartyService.InstanceIfExists;
+                if (party != null && party.InParty && party.IsLeader && party.MemberCount > 1) _ = party.BroadcastCancelAsync();
             }
             else if (mm == null)
             {
@@ -668,6 +1008,12 @@ namespace Railbound.UI
             {
                 int secs = Mathf.FloorToInt(Time.unscaledTime - deployStateStart);
                 string line = $"{deployStage}   {secs / 60}:{secs % 60:00}";
+                // while searching, show how long the whole search window is (after it the match starts with bots)
+                if (deployStage == "SEARCHING FOR PLAYERS" && hookedMatchmaker != null)
+                {
+                    int window = Mathf.RoundToInt(hookedMatchmaker.QueueSeconds);
+                    line += $" / {window / 60}:{window % 60:00}";
+                }
                 if (modeSubtitleText != null) { modeSubtitleText.text = line; modeSubtitleText.color = YellowAccent; }
                 if (loadingSub != null) loadingSub.text = line;
             }
@@ -823,7 +1169,11 @@ namespace Railbound.UI
                     if (cg == null) cg = row.root.AddComponent<CanvasGroup>();
                     cg.alpha = has ? 1f : 0.35f;
 
-                    if (row.nameText != null) row.nameText.text = has ? members[i].displayName : "OPEN SLOT";
+                    if (row.nameText != null)
+                    {
+                        row.nameText.richText = true;
+                        row.nameText.text = has ? members[i].displayName + (members[i].isLeader && members.Count > 1 ? "  <size=65%><color=#B0B0B0>LEADER</color></size>" : "") : "OPEN SLOT";
+                    }
                     if (row.levelText != null) row.levelText.text = has ? members[i].levelText : "";
 
                     if (row.readyBadgeBg != null)
@@ -848,6 +1198,7 @@ namespace Railbound.UI
                 }
             }
 
+            RefreshPartyChip();
             if (squadCountText != null) squadCountText.text = $"{members.Count} / {LobbyParty.MaxMembers} PLAYERS";
             if (invitePlayerBtn != null) invitePlayerBtn.gameObject.SetActive(!party.IsFull);
 
@@ -859,8 +1210,8 @@ namespace Railbound.UI
         private void OnInviteClicked()
         {
             PlayClickSound();
-            Debug.Log("[YellowHUD] Invite Player Clicked!");
-            ShowTacticalNotice("PARTY INVITATION LINK COPIED TO CLIPBOARD");
+            // the party window: your party code (copy it for a friend) and a field to join a friend's party
+            if (partyPanel != null) partyPanel.Show();
         }
 
         // ----------------------------------------------------

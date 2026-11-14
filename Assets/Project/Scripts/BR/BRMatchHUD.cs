@@ -29,7 +29,7 @@ namespace Railbound.BR
         private CanvasGroup rootGroup, hudGroup, centerGroup, spectateGroup, endGroup;
         private TextMeshProUGUI aliveNum, killsNum, centerSmall, centerBig, spectateName, spectateHint, spectatePlace;
         private TextMeshProUGUI endTitle, endWinner, endFooter;
-        private TextMeshProUGUI endPlaceVal, endKillsVal, endSurvivedVal, endMatchVal;
+        private TextMeshProUGUI endPlaceVal, endKillsVal, endSurvivedVal, endMatchVal, endRewards;
         // spectator controls: health of the watched player, previous / next, a leave button that asks first
         private Image spectateHealthFill;
         private TextMeshProUGUI spectateLeaveLabel;
@@ -330,6 +330,12 @@ namespace Railbound.BR
                 endSurvivedVal.text = Mmss(eliminatedLocally && !won ? localSurvived : matchLength);
                 endMatchVal.text = Mmss(matchLength);
 
+                // XP and coins for this match (the lobby plays the level-up popup if it moved the player up a level)
+                PlayerProgression.MatchReward(place, total, localKills, eliminatedLocally && !won ? localSurvived : matchLength, won, out int rewardXp, out int rewardCoins);
+                endRewards.text = "<color=#FFFFFF>+ " + rewardXp.ToString("N0") + "</color> XP        <color=#FFFFFF>+ " + rewardCoins.ToString("N0") + "</color> COINS";
+                var summary = new MatchSummary { mode = Railbound.UI.GameModeCatalog.MatchKey, placement = place, totalPlayers = total, kills = localKills, survivedSeconds = eliminatedLocally && !won ? localSurvived : matchLength, won = won };
+                AwardMatchAsync(summary, rewardXp, rewardCoins);
+
                 // the results have buttons: free the mouse and make sure the UI can receive clicks
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
@@ -346,6 +352,21 @@ namespace Railbound.BR
             var kb = Keyboard.current;
             if (kb != null && kb.spaceKey.wasPressedThisFrame) { PlayAgain(); return; }
             if (left <= 0f || (kb != null && kb.enterKey.wasPressedThisFrame)) LeaveToLobby();
+        }
+
+        private async void AwardMatchAsync(MatchSummary summary, int xp, int coins)
+        {
+            try
+            {
+                // the match counts towards the player's stats, the challenges and the match history, then pays out
+                PlayerDataService.EnsureStarted();
+                ChallengeService.OnMatchFinished(summary);
+                PlayerDataService.Instance.RecordMatch(summary, xp, coins);
+                var award = await PlayerProgression.RecordMatchAsync(summary, xp, coins);
+                if (this != null && endRewards != null && award.LeveledUp)
+                    endRewards.text += "        <color=#FFFFFF>LEVEL UP  " + award.oldLevel + "  >  " + award.newLevel + "</color>";
+            }
+            catch (System.Exception ex) { Debug.LogWarning("[BRMatchHUD] Could not record the match reward: " + ex.Message); }
         }
 
         /// <summary>Back to the lobby, which starts the next deployment by itself.</summary>
@@ -456,12 +477,16 @@ namespace Railbound.BR
             endSurvivedVal = ResultTile(end, "SURVIVED", 115f);
             endMatchVal = ResultTile(end, "MATCH TIME", 345f);
 
+            // what the match earned
+            endRewards = NewText("Rewards", end, "", 24, fontSemi, Dim, 6f, TextAlignmentOptions.Center); endRewards.richText = true;
+            var erw = endRewards.rectTransform; erw.anchorMin = erw.anchorMax = new Vector2(0.5f, 0.5f); erw.pivot = new Vector2(0.5f, 0.5f); erw.anchoredPosition = new Vector2(0, -196); erw.sizeDelta = new Vector2(1500, 36);
+
             // buttons (mouse); Space and Enter do the same
-            endPlayAgain = ResultButton(end, "PLAY AGAIN", new Vector2(-170, -214), true, PlayAgain);
-            endReturn = ResultButton(end, "RETURN TO LOBBY", new Vector2(170, -214), false, LeaveToLobby);
+            endPlayAgain = ResultButton(end, "PLAY AGAIN", new Vector2(-170, -250), true, PlayAgain);
+            endReturn = ResultButton(end, "RETURN TO LOBBY", new Vector2(170, -250), false, LeaveToLobby);
 
             endFooter = NewText("Footer", end, "", 18, fontSemi, Faint + new Color(0, 0, 0, 0.35f), 6f, TextAlignmentOptions.Center); endFooter.richText = true;
-            var ef = endFooter.rectTransform; ef.anchorMin = ef.anchorMax = new Vector2(0.5f, 0.5f); ef.pivot = new Vector2(0.5f, 0.5f); ef.anchoredPosition = new Vector2(0, -284); ef.sizeDelta = new Vector2(1500, 30);
+            var ef = endFooter.rectTransform; ef.anchorMin = ef.anchorMax = new Vector2(0.5f, 0.5f); ef.pivot = new Vector2(0.5f, 0.5f); ef.anchoredPosition = new Vector2(0, -318); ef.sizeDelta = new Vector2(1500, 30);
 
             // the root group blocks all clicks (it is a pure display); the results are the one part that takes input
             end.gameObject.AddComponent<GraphicRaycaster>();

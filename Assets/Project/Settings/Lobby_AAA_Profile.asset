@@ -169,7 +169,7 @@ MonoBehaviour:
     m_Value: 3
   intensity:
     m_OverrideState: 1
-    m_Value: 0.28
+    m_Value: 0.12
   response:
     m_OverrideState: 1
     m_Value: 0.8
@@ -255,7 +255,7 @@ MonoBehaviour:
     m_Value: {x: 0.5, y: 0.5}
   intensity:
     m_OverrideState: 1
-    m_Value: 0.3
+    m_Value: 0.36
   smoothness:
     m_OverrideState: 1
     m_Value: 0.55
@@ -586,7 +586,7 @@ MonoBehaviour:
     m_Value: 0.9
   intensity:
     m_OverrideState: 1
-    m_Value: 0.28
+    m_Value: 0.35
   scatter:
     m_OverrideState: 1
     m_Value: 0.7
@@ -629,7 +629,7 @@ MonoBehaviour:
     m_Value: 0.15
   contrast:
     m_OverrideState: 1
-    m_Value: 14
+    m_Value: 24
   colorFilter:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
@@ -638,7 +638,7 @@ MonoBehaviour:
     m_Value: 0
   saturation:
     m_OverrideState: 1
-    m_Value: -10
+    m_Value: 6
 --- !u!114 &5669746980182710241
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -721,7 +721,7 @@ MonoBehaviour:
     m_Value: 6
   meanFreePath:
     m_OverrideState: 1
-    m_Value: 34
+    m_Value: 46
   enableVolumetricFog:
     m_OverrideState: 1
     m_Value: 1

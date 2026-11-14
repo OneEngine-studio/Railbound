@@ -119,6 +119,9 @@ namespace Railbound.UI
                 if (!visible) continue;
 
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(area, sp, null, out var local);
+                // a plate must never run into the top navigation bar (about 100 px of the canvas): the head may be high on the screen
+                float maxY = area.rect.height * 0.5f - 100f - 62f * Mathf.Lerp(0.8f, 1f, p.focus) - 6f;
+                if (local.y > maxY) local.y = maxY;
                 p.pos = p.placed ? Vector2.Lerp(p.pos, local, follow) : local;
                 p.placed = true;
                 p.rt.anchoredPosition = p.pos;   // the local point is relative to the area's centre pivot, same as the plate's anchors

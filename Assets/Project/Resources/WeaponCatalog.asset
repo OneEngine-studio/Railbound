@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9497206f914bc7b49b8155a3bb1915ac, type: 3}
+  m_Name: WeaponCatalog
+  m_EditorClassIdentifier: 
+  weapons:
+  - id: p226
+    displayName: P226
+    category: 0
+    blurb: A semi-automatic sidearm. Light, quick to draw and dependable at close
+      and medium range.
+    prefab: {fileID: 3349917300126915435, guid: 31354f2fc9735834d855e7ec008a1cc2,
+      type: 3}
+    isMelee: 0
+    damage: 20
+    pellets: 1
+    roundsPerMinute: 600
+    magazine: 16
+    reserve: 32
+    recoil: 0.226
+    spreadPerShot: 1
+    aimFov: 30
+    fireMode: SEMI-AUTO
+    aimMode: IRON SIGHTS
+  - id: p226dual
+    displayName: P226 DUAL
+    category: 0
+    blurb: Two pistols firing together with automatic fire. A big magazine and a
+      lot of kick.
+    prefab: {fileID: 5522025127296107316, guid: 280e114e844adfb47bddec8bcab103ac,
+      type: 3}
+    isMelee: 0
+    damage: 20
+    pellets: 1
+    roundsPerMinute: 600
+    magazine: 16
+    reserve: 64
+    recoil: 0.096
+    spreadPerShot: 1
+    aimFov: 30
+    fireMode: AUTO
+    aimMode: IRON SIGHTS
+  - id: ump
+    displayName: UMP
+    category: 1
+    blurb: A fast-firing submachine gun with a large magazine. Controllable and strong
+      in close fights.
+    prefab: {fileID: 2699567156601855460, guid: 21944e43693201f46a01a25ae54686d3,
+      type: 3}
+    isMelee: 0
+    damage: 20
+    pellets: 1
+    roundsPerMinute: 666.6666
+    magazine: 38
+    reserve: 38
+    recoil: 0.105
+    spreadPerShot: 0.2
+    aimFov: 30
+    fireMode: AUTO
+    aimMode: IRON SIGHTS
+  - id: benelli
+    displayName: BENELLI M4
+    category: 2
+    blurb: A pump-action shotgun that fires a spread of pellets. Devastating up close,
+      slow to cycle.
+    prefab: {fileID: 5649899735864999517, guid: adb104378856a7748abb638ce946bec0,
+      type: 3}
+    isMelee: 0
+    damage: 120
+    pellets: 12
+    roundsPerMinute: 75
+    magazine: 8
+    reserve: 48
+    recoil: 0.151
+    spreadPerShot: 0.025
+    aimFov: 30
+    fireMode: PUMP
+    aimMode: IRON SIGHTS
+  - id: m82
+    displayName: M82
+    category: 3
+    blurb: A bolt-action sniper rifle with a scope. Slow and heavy, and it hits hard
+      from far away.
+    prefab: {fileID: 2930857990971156363, guid: 12ee8c7845ee649429e2f2a3886c056d,
+      type: 3}
+    isMelee: 0
+    damage: 60
+    pellets: 1
+    roundsPerMinute: 49.999996
+    magazine: 7
+    reserve: 14
+    recoil: 0.22
+    spreadPerShot: 1
+    aimFov: 15
+    fireMode: BOLT-ACTION
+    aimMode: SCOPE
+  - id: bat
+    displayName: BASEBALL BAT
+    category: 4
+    blurb: A heavy melee weapon for when the ammunition runs out.
+    prefab: {fileID: 2960658994057386622, guid: 8908fcaa0ad536743b86aeb5d88313ec,
+      type: 3}
+    isMelee: 1
+    damage: 40
+    pellets: 1
+    roundsPerMinute: 0
+    magazine: 0
+    reserve: 0
+    recoil: 0
+    spreadPerShot: 0
+    aimFov: 0
+    fireMode: MELEE
+    aimMode: NONE

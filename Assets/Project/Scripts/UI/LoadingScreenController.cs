@@ -25,7 +25,7 @@ namespace Railbound.UI
         public static void Load(string sceneName)
         {
             NextScene = sceneName;
-            if (Application.CanStreamedLevelBeLoaded(LoadingSceneName)) SceneManager.LoadScene(LoadingSceneName);
+            if (Application.CanStreamedLevelBeLoaded(LoadingSceneName)) SceneTransition.Go(LoadingSceneName, new SceneTransition.Options { label = null, fadeOut = 0.45f, fadeIn = 0.5f, minBlack = 0.1f });
             else SceneManager.LoadSceneAsync(sceneName);   // loading scene not in the build: still load the target
         }
 
@@ -50,6 +50,8 @@ namespace Railbound.UI
         [Header("Loading")]
         [SerializeField] private string defaultScene = "MAP-2";
         [SerializeField] private float minLoadTime = 4f;
+        [Tooltip("The loading screen stays up at least this long in total (scene load and connection), so it never flashes by.")]
+        [SerializeField] private float minTotalTime = 6f;
         [SerializeField] private float fadeTime = 0.6f;
         [SerializeField] private float tipInterval = 6f;
 
@@ -80,6 +82,8 @@ namespace Railbound.UI
         private RenderTexture videoTexture;
         private float shown;      // smoothed progress that is drawn
         private float target;     // real progress from the async load
+        private float shownVel;
+        private float totalTime;  // seconds since this screen appeared (scene load and connection together)
 
         private void Awake()
         {
@@ -107,27 +111,33 @@ namespace Railbound.UI
             AsyncOperation op = SceneManager.LoadSceneAsync(scene);
             op.allowSceneActivation = false;
             float elapsed = 0f;
+            // with a game server to reach, the scene load fills the first part of the bar and the connection stages fill the rest
+            bool hasServer = waitForServer && GameServerConnection.Instance.HasEndpoint;
+            float sceneShare = hasServer ? 0.6f : 1f;
+            float minScene = Mathf.Max(minLoadTime, hasServer ? minLoadTime : minTotalTime - 1f);
 
             while (true)
             {
                 elapsed += Time.unscaledDeltaTime;
-                target = Mathf.Clamp01(op.progress / 0.9f);
-                // never show 100% before the minimum time has passed, so the screen does not flash by
-                float cap = Mathf.Clamp01(elapsed / Mathf.Max(0.1f, minLoadTime));
-                shown = Mathf.MoveTowards(shown, Mathf.Min(target, cap), Time.unscaledDeltaTime * 0.45f);
-                SetProgress(shown);
+                target = Mathf.Clamp01(op.progress / 0.9f) * sceneShare;
+                // never run ahead of the clock, so the screen does not flash by
+                float cap = Mathf.Clamp01(elapsed / Mathf.Max(0.1f, minScene)) * sceneShare;
+                shown = Mathf.SmoothDamp(shown, Mathf.Min(target, cap), ref shownVel, 0.55f, Mathf.Infinity, Time.unscaledDeltaTime);
+                SetProgress(shown / sceneShare);   // the stage names follow the scene part of the bar
 
-                if (op.progress >= 0.9f && shown >= 0.999f) break;
+                if (op.progress >= 0.9f && shown >= sceneShare - 0.004f) break;
                 yield return null;
             }
+            shown = sceneShare;
 
             if (statusText != null) statusText.text = Stages[Stages.Length - 1];
             yield return new WaitForSecondsRealtime(0.35f);
 
             if (!waitForServer || !GameServerConnection.Instance.HasEndpoint)
             {
-                // offline / direct play: nothing to wait for, show the map as soon as it is loaded
-                yield return Fade(1f, 0f);
+                // offline / direct play: nothing to wait for. Dip to black, switch to the map behind it, and fade up on the map.
+                yield return SceneTransition.Cover(0.5f);
+                SceneTransition.RevealAfterNextLoad(1.0f);
                 op.allowSceneActivation = true;
                 yield break;
             }
@@ -174,8 +184,8 @@ namespace Railbound.UI
             string server = conn.Endpoint;   // for the log only: players never see addresses or raw errors
             // the singleton retries on its own; never give up before it has
             float connectLimit = Mathf.Max(connectTimeoutSeconds, conn.ConnectTimeoutSeconds + 10f);
-            SetProgress(1f);
             if (percentText != null) percentText.text = "";
+            float stageTarget = shown;   // where the bar is heading: each connection stage moves it on
 
             var offlineChar = GameObject.Find("TPS Character");
             if (offlineChar != null && offlineChar.GetComponent<NetworkObject>() == null)
@@ -191,7 +201,10 @@ namespace Railbound.UI
 
             while (failure == null)
             {
-                elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.25f);   // long frames (scene activation) must not eat the timeout
+                float frame = Mathf.Min(Time.unscaledDeltaTime, 0.25f);
+                elapsed += frame;   // long frames (scene activation) must not eat the timeout
+                shown = Mathf.SmoothDamp(shown, stageTarget, ref shownVel, 0.6f, Mathf.Infinity, Mathf.Max(0.0001f, frame));
+                SetBarOnly(shown);
                 var nm = NetworkManager.Singleton;
                 string stage;
                 bool done = false;
@@ -203,7 +216,7 @@ namespace Railbound.UI
                 }
                 else if (nm == null)
                 {
-                    stage = "PREPARING NETWORK";
+                    stage = "PREPARING NETWORK"; stageTarget = 0.66f;
                     if (elapsed > connectLimit) failure = "NETWORK UNAVAILABLE";
                 }
                 else
@@ -212,11 +225,12 @@ namespace Railbound.UI
                     {
                         // first try: plain connecting; later tries read as a calm "still working on it", not as an error
                         stage = conn.Attempt <= 1 ? "CONNECTING TO MATCH" : "WARMING UP MATCH SERVER";
+                        stageTarget = conn.Attempt <= 1 ? 0.74f : 0.78f;
                         if (elapsed > connectLimit) failure = "COULD NOT REACH THE GAME SERVER";
                     }
                     else if (nm.LocalClient == null || nm.LocalClient.PlayerObject == null)
                     {
-                        stage = "JOINING MATCH";
+                        stage = "JOINING MATCH"; stageTarget = 0.86f;
                         if (elapsed > connectLimit + 15f) failure = "THE SERVER DID NOT SPAWN YOUR PLAYER";
                     }
                     else
@@ -224,19 +238,20 @@ namespace Railbound.UI
                         var match = BRMatchCoordinator.Instance;
                         if (match == null || !match.IsSpawned)
                         {
-                            stage = "SYNCHRONIZING MATCH";
+                            stage = "SYNCHRONIZING MATCH"; stageTarget = 0.94f;
                             if (elapsed > connectLimit + 15f) done = true;   // no coordinator in this scene: nothing more to wait for
                         }
                         else
                         {
-                            stage = "MATCH READY  " + match.TotalCount + " COMBATANTS";
+                            stage = "MATCH READY  " + match.TotalCount + " COMBATANTS"; stageTarget = 1f;
                             done = true;
                         }
                     }
                 }
 
                 if (statusText != null) statusText.text = stage;
-                if (done) break;
+                // finished only when the bar is full and the screen has been up long enough to be read
+                if (done && shown >= 0.995f && totalTime >= minTotalTime) break;
                 yield return null;
             }
 
@@ -247,19 +262,35 @@ namespace Railbound.UI
                 yield return new WaitForSecondsRealtime(1.5f);
                 conn.Clear();   // leaves the server and forgets the address
                 LobbyNotice.Set("COULD NOT JOIN THE MATCH - PLEASE TRY AGAIN", LobbyNotice.Kind.Problem);   // the lobby tells the player why they are back
-                if (Application.CanStreamedLevelBeLoaded(lobbySceneName)) SceneManager.LoadScene(lobbySceneName);
+                yield return SceneTransition.Cover(0.4f);
                 DismissOverlay();
+                SceneTransition.Go(lobbySceneName, "RETURNING TO LOBBY");
                 yield break;
             }
 
             yield return new WaitForSecondsRealtime(0.4f);
-            yield return Fade(1f, 0f);
+            // the match is already running behind this screen: dip to black, drop the screen, fade up on the match
+            yield return SceneTransition.Cover(0.45f);
             DismissOverlay();
+            SceneTransition.Reveal(1.0f);
         }
 
         private void Update()
         {
+            totalTime += Time.unscaledDeltaTime;
             if (spinner != null) spinner.Rotate(0f, 0f, -240f * Time.unscaledDeltaTime);
+        }
+
+        // the bar and the percentage only (the stage text is set by whoever knows the stage)
+        private void SetBarOnly(float p)
+        {
+            if (progressFill != null) progressFill.fillAmount = p;
+            if (percentText != null) percentText.text = Mathf.RoundToInt(p * 100f) + "%";
+            if (progressGlow != null && progressFill != null)
+            {
+                var bar = (RectTransform)progressFill.transform;
+                progressGlow.anchoredPosition = new Vector2(bar.rect.width * p, 0f);
+            }
         }
 
         private void SetProgress(float p)
