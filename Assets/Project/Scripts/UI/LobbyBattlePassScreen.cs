@@ -33,6 +33,11 @@ namespace Railbound.UI
         };
 
         private ScrollRect scroll;
+        private TextMeshProUGUI tierNum, xpText;
+        private Image xpFill;
+        private readonly Image[] tierChip = new Image[Tiers];
+        private readonly TextMeshProUGUI[] tierChipLabel = new TextMeshProUGUI[Tiers];
+        private readonly TextMeshProUGUI[] freeFoot = new TextMeshProUGUI[Tiers];
         private RectTransform content;
         private float keyTarget = float.NaN;
         private float keyUntil;
@@ -45,11 +50,11 @@ namespace Railbound.UI
             var er = edge.rectTransform; er.anchorMin = new Vector2(0f, 1f); er.anchorMax = new Vector2(1f, 1f); er.pivot = new Vector2(0.5f, 1f); er.anchoredPosition = Vector2.zero; er.sizeDelta = new Vector2(0f, 3f);
             var s = strip.rectTransform;
             LabelL(s, "YOUR TIER", 14, false, Dim, -850f, 34f, 200f);
-            LabelL(s, "1", 64, true, Color.white, -850f, -14f, 120f, 80f);
+            tierNum = LabelL(s, "1", 64, true, Color.white, -850f, -14f, 120f, 80f);
             LabelL(s, "/ " + Tiers, 26, true, Dim, -770f, -22f, 120f);
             LabelL(s, "SEASON XP", 14, false, Dim, -560f, 34f, 300f);
-            Bar(s, new Vector2(-560f + 280f, 0f), new Vector2(560f, 12f), 0f, Color.white);
-            LabelL(s, "0 / 1,000 XP", 16, true, Dim, -560f, -30f, 300f);
+            xpFill = Bar(s, new Vector2(-560f + 280f, 0f), new Vector2(560f, 12f), 0f, Color.white);
+            xpText = LabelL(s, "0 / 1,000 XP", 16, true, Dim, -560f, -30f, 300f);
 
             LabelR(s, "PREVIEW   |   REWARDS ARE NOT FINAL", 13, false, Dim, 850f, 38f, 520f);
             var buy = MakeButton(s, "UNLOCK PREMIUM   |   COMING SOON", new Vector2(590f, -6f), new Vector2(520f, 60f), false, () => { }, 17f);
@@ -91,16 +96,17 @@ namespace Railbound.UI
             // tier number chip
             var chip = Img("Tier " + tier, content, tier == 1 ? Color.white : (milestone ? new Color(1f, 1f, 1f, 0.22f) : new Color(1f, 1f, 1f, 0.1f)));
             Place(chip.rectTransform, new Vector2(cx, 270f), new Vector2(152f, 40f));
-            LabelC(chip.rectTransform, tier.ToString("00"), 22, true, tier == 1 ? Color.black : Color.white, Vector2.zero, new Vector2(140f, 30f));
+            tierChip[i] = chip;
+            tierChipLabel[i] = LabelC(chip.rectTransform, tier.ToString("00"), 22, true, tier == 1 ? Color.black : Color.white, Vector2.zero, new Vector2(140f, 30f));
 
-            BuildCard(cx, 120f, f, false, milestone, tier == 1);
+            freeFoot[i] = BuildCard(cx, 120f, f, false, milestone, tier == 1);
             BuildCard(cx, -120f, p, true, milestone, false);
 
             // XP to reach the tier
             LabelC(content, "1,000 XP", 13, false, Faint, new Vector2(cx, -285f), new Vector2(152f, 20f));
         }
 
-        private void BuildCard(float cx, float cy, Reward r, bool premium, bool milestone, bool current)
+        private TextMeshProUGUI BuildCard(float cx, float cy, Reward r, bool premium, bool milestone, bool current)
         {
             var card = Img(premium ? "Premium" : "Free", content, premium ? new Color(0.085f, 0.09f, 0.105f, 1f) : Panel);
             Place(card.rectTransform, new Vector2(cx, cy), new Vector2(152f, 200f));
@@ -117,12 +123,33 @@ namespace Railbound.UI
 
             var foot = Img("Foot", card.rectTransform, premium ? new Color(1f, 1f, 1f, 0.08f) : new Color(1f, 1f, 1f, 0.06f));
             Place(foot.rectTransform, new Vector2(0f, -82f), new Vector2(146f, 28f));
-            LabelC(foot.rectTransform, premium ? "PREMIUM" : (current ? "NEXT" : "LOCKED"), 12, true, premium ? Faint : Dim, Vector2.zero, new Vector2(140f, 22f));
+            return LabelC(foot.rectTransform, premium ? "PREMIUM" : (current ? "NEXT" : "LOCKED"), 12, true, premium ? Faint : Dim, Vector2.zero, new Vector2(140f, 22f));
+        }
+
+        // the tier comes from the player's real XP: one tier per 1,000 XP
+        private void RefreshTier()
+        {
+            long total = PlayerProgression.Current.totalXp;
+            int current = Mathf.Clamp(1 + (int)(total / 1000), 1, Tiers);
+            long inTier = current >= Tiers ? 1000 : total - (current - 1) * 1000L;
+            tierNum.text = current.ToString();
+            xpText.text = inTier.ToString("N0") + " / 1,000 XP";
+            xpFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(inTier / 1000f), 1f);
+            for (int i = 0; i < Tiers; i++)
+            {
+                int tier = i + 1;
+                bool milestone = tier % 5 == 0;
+                tierChip[i].color = tier == current ? Color.white : (tier < current ? new Color(1f, 1f, 1f, 0.4f) : (milestone ? new Color(1f, 1f, 1f, 0.22f) : new Color(1f, 1f, 1f, 0.1f)));
+                tierChipLabel[i].color = tier == current ? Color.black : Color.white;
+                freeFoot[i].text = tier < current ? "REACHED" : (tier == current ? "CURRENT" : "LOCKED");
+            }
+            float max = Mathf.Max(0f, content.rect.width - ViewW);
+            content.anchoredPosition = new Vector2(-Mathf.Clamp((current - 3) * ColW, 0f, max), 0f);
         }
 
         protected override void OnOpened()
         {
-            content.anchoredPosition = Vector2.zero;
+            RefreshTier();
             keyTarget = float.NaN;
             scroll.velocity = Vector2.zero;
         }

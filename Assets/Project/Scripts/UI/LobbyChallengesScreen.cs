@@ -8,42 +8,26 @@ using UnityEngine.UI;
 namespace Railbound.UI
 {
     /// <summary>
-    /// The CHALLENGES menu: Daily / Weekly / Season tabs, a row per challenge (description, progress bar, XP reward) and a side panel with the
-    /// reset timer and totals. The lists are sample content until the challenge service is connected, and the screen says so.
+    /// The CHALLENGES menu: Daily / Weekly / Season tabs with a row per challenge (description, progress bar, XP and coin reward), a side
+    /// panel with the reset timer and totals, and a CLAIM button on each completed challenge. The progress is real: it is counted from the
+    /// player's finished matches by <see cref="ChallengeService"/> and kept with the player in Nakama.
     /// </summary>
     public class LobbyChallengesScreen : LobbyMenuScreen
     {
         protected override string Title => "CHALLENGES";
-        protected override string Subtitle => "COMPLETE ASSIGNMENTS TO EARN XP";
+        protected override string Subtitle => "COMPLETE ASSIGNMENTS TO EARN XP AND COINS";
         protected override int NavIndex => 4;
         protected override string Hints => "A D  CHANGE TAB      ESC  BACK";
 
         private static readonly string[] TabNames = { "DAILY", "WEEKLY", "SEASON" };
 
-        private static readonly LobbyChallengesPanel.Challenge[] Weekly =
-        {
-            new LobbyChallengesPanel.Challenge("Win 3 matches", 0, 3, 15000),
-            new LobbyChallengesPanel.Challenge("Eliminate 25 players", 0, 25, 15000),
-            new LobbyChallengesPanel.Challenge("Reach the final zone 3 times", 0, 3, 12000),
-            new LobbyChallengesPanel.Challenge("Deal 5000 damage", 0, 5000, 12000),
-        };
-        private static readonly LobbyChallengesPanel.Challenge[] Season =
-        {
-            new LobbyChallengesPanel.Challenge("Play 50 matches", 0, 50, 50000),
-            new LobbyChallengesPanel.Challenge("Win 10 matches", 0, 10, 50000),
-            new LobbyChallengesPanel.Challenge("Eliminate 500 players", 0, 500, 75000),
-        };
-
         private readonly List<Image> tabBg = new List<Image>();
         private readonly List<TextMeshProUGUI> tabLabel = new List<TextMeshProUGUI>();
         private RectTransform listRoot;
-        private TextMeshProUGUI resetLabel, resetValue, totalXp, doneCount;
+        private TextMeshProUGUI resetLabel, resetValue, totalXp, doneCount, noteBody;
         private int tab;
         private float nextClock;
         private float fade;   // rows slide in after a tab change
-
-        private LobbyChallengesPanel.Challenge[] Current =>
-            tab == 0 ? LobbyChallengesPanel.Daily : (tab == 1 ? Weekly : Season);
 
         protected override void BuildContent(RectTransform c)
         {
@@ -64,17 +48,22 @@ namespace Railbound.UI
             doneCount = LabelL(side.rectTransform, "", 44, true, Color.white, -240f, 2f, 480f, 60f);
             var rule2 = Img("Rule2", side.rectTransform, Line); Place(rule2.rectTransform, new Vector2(0, -60f), new Vector2(480f, 2f));
 
-            var note = LabelL(side.rectTransform, "SAMPLE LIST", 15, true, Color.white, -240f, -100f, 480f);
-            var body = LabelL(side.rectTransform, "These challenges are examples. Progress tracking and real rewards go live when the challenge service is connected.", 16, false, Dim, -240f, -190f, 480f, 150f);
-            body.enableWordWrapping = true; body.alignment = TextAlignmentOptions.TopLeft; body.characterSpacing = 1f;
-            _ = note;
+            LabelL(side.rectTransform, "HOW IT WORKS", 15, true, Color.white, -240f, -100f, 480f);
+            noteBody = LabelL(side.rectTransform, "Play matches to fill the bars. When one is complete, press CLAIM to collect its XP and coins. Daily challenges reset at midnight UTC, weekly ones on Monday.", 16, false, Dim, -240f, -190f, 480f, 150f);
+            noteBody.enableWordWrapping = true; noteBody.alignment = TextAlignmentOptions.TopLeft; noteBody.characterSpacing = 1f;
         }
 
         protected override void OnOpened()
         {
             tab = 0;
-            Refresh();
+            ChallengeService.Changed -= OnChanged; ChallengeService.Changed += OnChanged;
+            Refresh(true);
         }
+
+        protected override void OnClosing() { ChallengeService.Changed -= OnChanged; }
+        protected override void OnDestroy() { ChallengeService.Changed -= OnChanged; base.OnDestroy(); }
+
+        private void OnChanged() { if (IsOpen) Refresh(false); }
 
         protected override void OnKeys()
         {
@@ -105,8 +94,10 @@ namespace Railbound.UI
             t = Mathf.Clamp(t, 0, TabNames.Length - 1);
             if (t == tab) return;
             tab = t;
-            Refresh();
+            Refresh(true);
         }
+
+        private ChallengeService.Tab CurrentTab => (ChallengeService.Tab)tab;
 
         private void UpdateTimer()
         {
@@ -121,14 +112,14 @@ namespace Railbound.UI
             else { resetLabel.text = "AVAILABLE"; resetValue.text = "ALL SEASON"; }
         }
 
-        private void Refresh()
+        private void Refresh(bool animate)
         {
             MarkTabs(tabBg, tabLabel, tab);
             UpdateTimer();
 
-            var list = Current;
-            totalXp.text = list.Sum(x => x.xp).ToString("N0");
-            doneCount.text = list.Count(x => x.progress >= x.goal) + " / " + list.Length;
+            var list = ChallengeService.Get(CurrentTab);
+            totalXp.text = list.Where(x => !x.claimed).Sum(x => x.xp).ToString("N0");
+            doneCount.text = list.Count(x => x.Complete) + " / " + list.Count;
 
             for (int i = listRoot.childCount - 1; i >= 0; i--) Destroy(listRoot.GetChild(i).gameObject);
             const float rowH = 104f, gap = 12f;
@@ -136,33 +127,44 @@ namespace Railbound.UI
             foreach (var ch in list)
             {
                 var row = NewRect("Row", listRoot, new Vector2(0.5f, 0.5f), new Vector2(1180f, rowH), new Vector2(0f, y));
-                row.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
+                row.gameObject.AddComponent<CanvasGroup>().alpha = animate ? 0f : 1f;
                 y -= rowH + gap;
-                bool done = ch.progress >= ch.goal;
 
                 var bg = Img("Bg", row, Panel); Stretch(bg.rectTransform);
-                var side = Img("Side", row, done ? Color.white : new Color(1f, 1f, 1f, 0.35f));
+                var side = Img("Side", row, ch.claimed ? new Color(1f, 1f, 1f, 0.2f) : (ch.Complete ? Color.white : new Color(1f, 1f, 1f, 0.35f)));
                 var sr = side.rectTransform; sr.anchorMin = Vector2.zero; sr.anchorMax = new Vector2(0f, 1f); sr.pivot = new Vector2(0f, 0.5f); sr.sizeDelta = new Vector2(5f, 0f); sr.anchoredPosition = Vector2.zero;
 
-                var marker = Img("Marker", row, done ? Color.white : new Color(1f, 1f, 1f, 0.5f));
+                var marker = Img("Marker", row, ch.Complete ? Color.white : new Color(1f, 1f, 1f, 0.5f));
                 Place(marker.rectTransform, new Vector2(-545f, 0f), new Vector2(16f, 16f)); marker.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
-                LabelL(row, ch.text.ToUpperInvariant(), 24, true, Color.white, -510f, 20f, 700f);
-                Bar(row, new Vector2(-510f + 260f, -22f), new Vector2(520f, 10f), ch.goal > 0 ? (float)ch.progress / ch.goal : 0f, Color.white);
+                LabelL(row, ch.text.ToUpperInvariant(), 24, true, ch.claimed ? Dim : Color.white, -510f, 20f, 700f);
+                Bar(row, new Vector2(-510f + 260f, -22f), new Vector2(520f, 10f), ch.goal > 0 ? (float)ch.progress / ch.goal : 0f, ch.claimed ? Dim : Color.white);
                 LabelL(row, ch.progress.ToString("N0") + " / " + ch.goal.ToString("N0"), 18, true, Dim, -510f + 540f, -22f, 160f);
 
-                LabelR(row, done ? "COMPLETE" : "IN PROGRESS", 13, false, done ? Color.white : Dim, 540f, 24f, 220f);
-                var chip = Img("Reward", row, new Color(1f, 1f, 1f, 0.1f)); Place(chip.rectTransform, new Vector2(465f, -16f), new Vector2(170f, 44f));
-                LabelC(chip.rectTransform, ch.xp.ToString("N0") + " XP", 20, true, Color.white, Vector2.zero, new Vector2(160f, 30f));
+                // reward chip, and the state / CLAIM button on the right
+                var chip = Img("Reward", row, new Color(1f, 1f, 1f, 0.1f)); Place(chip.rectTransform, new Vector2(300f, 0f), new Vector2(210f, 60f));
+                LabelC(chip.rectTransform, ch.xp.ToString("N0") + " XP", 20, true, Color.white, new Vector2(0f, 10f), new Vector2(200f, 26f));
+                LabelC(chip.rectTransform, ch.coins.ToString("N0") + " COINS", 13, false, new Color(1f, 0.86f, 0.3f, 1f), new Vector2(0f, -14f), new Vector2(200f, 20f));
+
+                if (ch.CanClaim)
+                {
+                    string key = ch.key; var t = CurrentTab;
+                    MakeButton(row, "CLAIM", new Vector2(480f, 0f), new Vector2(160f, 56f), true, () => { _ = ChallengeService.ClaimAsync(t, key); }, 20f);
+                }
+                else LabelC(row, ch.claimed ? "CLAIMED" : "IN PROGRESS", 14, true, ch.claimed ? Dim : Faint, new Vector2(480f, 0f), new Vector2(160f, 24f));
             }
 
-            // a locked bonus row closes the list, as in the lobby's daily card
-            var bonus = NewRect("Row", listRoot, new Vector2(0.5f, 0.5f), new Vector2(1180f, 64f), new Vector2(0f, y + 20f));
-            bonus.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
-            var bb = Img("Bg", bonus, new Color(0.05f, 0.055f, 0.065f, 1f)); Stretch(bb.rectTransform);
-            LabelL(bonus, "BONUS CHALLENGE", 20, true, Dim, -560f, 0f, 500f);
-            LabelR(bonus, "COMPLETE EVERY CHALLENGE ABOVE TO UNLOCK", 14, false, Faint, 560f, 0f, 700f);
-            fade = 0f;
+            // a locked bonus row closes the daily list, as in the lobby's daily card
+            if (tab == 0)
+            {
+                bool all = list.All(x => x.Complete);
+                var bonus = NewRect("Row", listRoot, new Vector2(0.5f, 0.5f), new Vector2(1180f, 64f), new Vector2(0f, y + 20f));
+                bonus.gameObject.AddComponent<CanvasGroup>().alpha = animate ? 0f : 1f;
+                var bb = Img("Bg", bonus, new Color(0.05f, 0.055f, 0.065f, 1f)); Stretch(bb.rectTransform);
+                LabelL(bonus, "BONUS CHALLENGE", 20, true, all ? Color.white : Dim, -560f, 0f, 500f);
+                LabelR(bonus, all ? "ALL DAILY CHALLENGES COMPLETE" : "COMPLETE EVERY CHALLENGE ABOVE TO UNLOCK", 14, false, all ? Dim : Faint, 560f, 0f, 700f);
+            }
+            fade = animate ? 0f : 1f;
         }
     }
 }

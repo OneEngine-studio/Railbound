@@ -150,7 +150,14 @@ namespace Railbound.UI
 
             // squad shown on the stage: nameplates over the models, daily challenges in the left column
             var plateFont = deployButtonLabel != null ? deployButtonLabel.font : null;
-            LobbyChallengesPanel.Create(transform, plateFont);
+            challengesPanel = LobbyChallengesPanel.Create(transform, plateFont);
+            RefreshChallengesPanel();
+            ChallengeService.Changed -= RefreshChallengesPanel; ChallengeService.Changed += RefreshChallengesPanel;
+
+            // the player's data (loadout, settings, challenges, history) is kept in Nakama; the lobby follows what it loads
+            PlayerDataService.EnsureStarted();
+            PlayerDataService.Loaded -= OnPlayerDataLoaded; PlayerDataService.Loaded += OnPlayerDataLoaded;
+            PlayerDataService.Instance.AttachLobby();
             LobbySquadNameplates.Create(transform, plateFont);
             partyPanel = LobbyPartyPanel.Create(transform, plateFont);
             modePanel = LobbyGameModePanel.Create(transform, plateFont);
@@ -159,7 +166,11 @@ namespace Railbound.UI
             // the full-screen menus of the top navigation; they go back to PLAY when they close
             Action backToPlay = () => { currentNavIndex = 0; RefreshNavTabsVisual(); };
             settingsScreen = LobbyReachSettings.Find();
-            if (settingsScreen != null) settingsScreen.SignOutRequested = OnSettingsOrBackClicked;
+            if (settingsScreen != null)
+            {
+                settingsScreen.SignOutRequested = OnSettingsOrBackClicked;
+                settingsScreen.Closed = () => { if (PlayerDataService.Instance != null) PlayerDataService.Instance.SettingsChanged(); };
+            }
             else Debug.LogWarning("[YellowHUD] The settings menu is missing from the lobby scene: run Railbound > Import MAP-2 Settings Menu into Lobby.");
             levelUpPopup = LobbyLevelUpPopup.Create(plateFont);
             PlayerProgression.Changed -= OnProgressChanged; PlayerProgression.Changed += OnProgressChanged;
@@ -184,6 +195,25 @@ namespace Railbound.UI
         private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
 
         private LobbyReachSettings settingsScreen;   // the settings menu copied from MAP-2's pause menu (see LobbySettingsImporter)
+        private LobbyChallengesPanel challengesPanel;
+
+        private void RefreshChallengesPanel()
+        {
+            if (challengesPanel == null) return;
+            var list = ChallengeService.Get(ChallengeService.Tab.Daily);
+            var rows = new LobbyChallengesPanel.Challenge[list.Count];
+            for (int i = 0; i < rows.Length; i++) rows[i] = new LobbyChallengesPanel.Challenge(list[i].text, list[i].progress, list[i].goal, list[i].xp);
+            challengesPanel.SetChallenges(rows);
+        }
+
+        // the cloud copy of the player's data arrived: show it
+        private void OnPlayerDataLoaded()
+        {
+            RefreshChallengesPanel();
+            ApplyProgress(false);
+            if (PlayerDataService.Instance != null) PlayerDataService.Instance.ApplyLoadoutToLobby();
+            UpdateOperatorDisplay();
+        }
         private LobbyLevelUpPopup levelUpPopup;
         private float shownFill = -1f;                  // the XP bar as drawn (it glides to the real value)
         private float shownCoins = -1f, targetCoins;    // the coin counter as drawn (it counts up)
@@ -255,7 +285,7 @@ namespace Railbound.UI
 
             if (!levelUpRunning && PlayerProgression.Pending.Count > 0 && levelUpPopup != null && !levelUpPopup.IsOpen
                 && (deployState == DeployState.Idle || deployState == DeployState.Failed)
-                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !(modePanel != null && modePanel.IsOpen))
+                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !(modePanel != null && modePanel.IsOpen) && !AnyMenuBusy())
                 StartCoroutine(ShowLevelUps());
         }
 
@@ -364,6 +394,9 @@ namespace Railbound.UI
         {
             if (hookedMatchmaker != null) hookedMatchmaker.StatusChanged -= OnMatchmakingStatus;
             GameModeCatalog.Changed -= ApplyModeToCard;
+            ChallengeService.Changed -= RefreshChallengesPanel;
+            PlayerDataService.Loaded -= OnPlayerDataLoaded;
+            if (PlayerDataService.Instance != null) PlayerDataService.Instance.DetachLobby();
             PlayerProgression.Changed -= OnProgressChanged;
             var partyService = NakamaPartyService.InstanceIfExists;
             if (partyService != null) { partyService.DeployRequested -= OnPartyDeployRequested; partyService.CancelRequested -= OnPartyCancelRequested; }

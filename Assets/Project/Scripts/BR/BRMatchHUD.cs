@@ -288,7 +288,8 @@ namespace Railbound.BR
                 // XP and coins for this match (the lobby plays the level-up popup if it moved the player up a level)
                 PlayerProgression.MatchReward(place, total, localKills, eliminatedLocally && !won ? localSurvived : matchLength, won, out int rewardXp, out int rewardCoins);
                 endRewards.text = "<color=#FFFFFF>+ " + rewardXp.ToString("N0") + "</color> XP        <color=#FFFFFF>+ " + rewardCoins.ToString("N0") + "</color> COINS";
-                AwardMatchAsync(rewardXp, rewardCoins);
+                var summary = new MatchSummary { mode = Railbound.UI.GameModeCatalog.MatchKey, placement = place, totalPlayers = total, kills = localKills, survivedSeconds = eliminatedLocally && !won ? localSurvived : matchLength, won = won };
+                AwardMatchAsync(summary, rewardXp, rewardCoins);
 
                 // the results have buttons: free the mouse and make sure the UI can receive clicks
                 Cursor.lockState = CursorLockMode.None;
@@ -308,11 +309,15 @@ namespace Railbound.BR
             if (left <= 0f || (kb != null && kb.enterKey.wasPressedThisFrame)) LeaveToLobby();
         }
 
-        private async void AwardMatchAsync(int xp, int coins)
+        private async void AwardMatchAsync(MatchSummary summary, int xp, int coins)
         {
             try
             {
-                var award = await PlayerProgression.AwardAsync(xp, coins);
+                // the match counts towards the player's stats, the challenges and the match history, then pays out
+                PlayerDataService.EnsureStarted();
+                ChallengeService.OnMatchFinished(summary);
+                PlayerDataService.Instance.RecordMatch(summary, xp, coins);
+                var award = await PlayerProgression.RecordMatchAsync(summary, xp, coins);
                 if (this != null && endRewards != null && award.LeveledUp)
                     endRewards.text += "        <color=#FFFFFF>LEVEL UP  " + award.oldLevel + "  >  " + award.newLevel + "</color>";
             }

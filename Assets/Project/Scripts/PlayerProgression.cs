@@ -14,7 +14,21 @@ public sealed class ProgressData
     public int coins;
     public int gems;
     public int matches;
+    public int wins;
+    public int kills;
+    public long playSeconds;
+    public int bestPlacement;   // best (lowest) finishing place, 0 = no match yet
+    public long updatedAt;      // UTC unix milliseconds of the last change
     public int version = 1;
+}
+
+/// <summary>What one finished match was, as the client saw it.</summary>
+public struct MatchSummary
+{
+    public string mode;
+    public int placement, totalPlayers, kills;
+    public float survivedSeconds;
+    public bool won;
 }
 
 /// <summary>The result of one reward: what was earned and where the level and XP moved from and to.</summary>
@@ -96,6 +110,7 @@ public static class PlayerProgression
     {
         try
         {
+            current.updatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             PlayerPrefs.SetString(LocalPrefix + loadedFor, JsonUtility.ToJson(current));
             PlayerPrefs.Save();
         }
@@ -124,8 +139,10 @@ public static class PlayerProgression
         {
             var id = new StorageObjectId { Collection = Collection, Key = Key, UserId = auth.CurrentUserId };
             var result = await auth.Client.ReadStorageObjectsAsync(auth.Session, new[] { id });
+            bool found = false;
             foreach (var o in result.Objects)
             {
+                found = true;
                 var remote = string.IsNullOrWhiteSpace(o.Value) ? null : Sanitize(JsonUtility.FromJson<ProgressData>(o.Value));
                 if (remote != null && remote.totalXp >= current.totalXp)
                 {
@@ -137,6 +154,7 @@ public static class PlayerProgression
                     await SaveRemoteAsync();   // the device is ahead (an award that never reached the cloud)
                 }
             }
+            if (!found) await SaveRemoteAsync();   // first sign-in of this account: create its progress record
         }
         catch (Exception ex)
         {
@@ -151,6 +169,7 @@ public static class PlayerProgression
         if (auth == null || !auth.IsAuthenticated) return;
         try
         {
+            if (current.updatedAt == 0) current.updatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var write = new WriteStorageObject
             {
                 Collection = Collection, Key = Key, Value = JsonUtility.ToJson(current),
@@ -166,7 +185,7 @@ public static class PlayerProgression
 
     // ---------------- awards ----------------
     /// <summary>Adds XP and coins, moves the level up as often as the XP allows, queues the level-up popup and saves.</summary>
-    public static async Task<ProgressAward> AwardAsync(int xp, int coins)
+    public static async Task<ProgressAward> AwardAsync(int xp, int coins, bool countsAsMatch = true)
     {
         EnsureLocal();
         xp = Mathf.Max(0, xp); coins = Mathf.Max(0, coins);
@@ -175,7 +194,7 @@ public static class PlayerProgression
 
         d.coins += coins;
         d.totalXp += xp;
-        d.matches++;
+        if (countsAsMatch) d.matches++;
         if (d.level < MaxLevel)
         {
             d.xp += xp;
@@ -195,6 +214,19 @@ public static class PlayerProgression
         Changed?.Invoke();
         await SaveRemoteAsync();
         return new ProgressAward(xp, coins, bonus, oldLevel, d.level, oldXp, d.xp);
+    }
+
+    /// <summary>Records a finished match (wins, kills, time, best place) and awards its XP and coins.</summary>
+    public static Task<ProgressAward> RecordMatchAsync(MatchSummary m, int xp, int coins)
+    {
+        EnsureLocal();
+        var d = current;
+        if (m.won) d.wins++;
+        d.kills += Mathf.Max(0, m.kills);
+        d.playSeconds += (long)Mathf.Max(0f, m.survivedSeconds);
+        int place = m.won ? 1 : m.placement;
+        if (place > 0 && (d.bestPlacement == 0 || place < d.bestPlacement)) d.bestPlacement = place;
+        return AwardAsync(xp, coins, true);
     }
 
     /// <summary>What a finished match is worth: a base amount, kills, time survived and placement (a win is worth the most).</summary>

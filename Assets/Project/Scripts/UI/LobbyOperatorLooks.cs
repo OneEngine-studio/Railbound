@@ -53,6 +53,35 @@ namespace Railbound.UI
         private static readonly int PartCount = System.Enum.GetValues(typeof(LookPart)).Length;
         private static int[,] choices;      // [operator, part], loaded from PlayerPrefs on first use
 
+        /// <summary>Raised when a saved choice changed (the cloud copy listens).</summary>
+        public static event System.Action Changed;
+        public static int OperatorCount => Defaults.Length;
+
+        /// <summary>All choices as one flat list: index = operator * parts + part.</summary>
+        public static int[] Export()
+        {
+            Load();
+            var flat = new int[Defaults.Length * PartCount];
+            for (int o = 0; o < Defaults.Length; o++)
+                for (int p = 0; p < PartCount; p++) flat[o * PartCount + p] = choices[o, p];
+            return flat;
+        }
+
+        /// <summary>Replaces every saved choice (from the cloud copy). Does not raise <see cref="Changed"/>.</summary>
+        public static void Import(int[] flat)
+        {
+            if (flat == null || flat.Length != Defaults.Length * PartCount) return;
+            Load();
+            for (int o = 0; o < Defaults.Length; o++)
+                for (int p = 0; p < PartCount; p++)
+                {
+                    choices[o, p] = flat[o * PartCount + p];
+                    if (flat[o * PartCount + p] == Default) PlayerPrefs.DeleteKey(Key(o, (LookPart)p));
+                    else PlayerPrefs.SetInt(Key(o, (LookPart)p), flat[o * PartCount + p]);
+                }
+            PlayerPrefs.Save();
+        }
+
         private static int Wrap(int op) { return Mathf.Abs(op) % Defaults.Length; }
         private static string Key(int op, LookPart part) { return "railbound.look." + op + "." + (int)part; }
 
@@ -78,6 +107,7 @@ namespace Railbound.UI
             choices[op, (int)part] = choice;
             PlayerPrefs.SetInt(Key(op, part), choice);
             PlayerPrefs.Save();
+            if (Changed != null) Changed();
         }
 
         /// <summary>Drops every saved choice for this operator, back to its authored look.</summary>
@@ -91,6 +121,7 @@ namespace Railbound.UI
                 PlayerPrefs.DeleteKey(Key(op, (LookPart)p));
             }
             PlayerPrefs.Save();
+            if (Changed != null) Changed();
         }
 
         /// <summary>The look to put on a model: the authored one, plus the player's saved choices when <paramref name="applyChoices"/> is set.</summary>
