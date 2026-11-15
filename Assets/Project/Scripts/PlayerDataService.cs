@@ -199,7 +199,8 @@ public sealed class PlayerDataService : MonoBehaviour
         bool was = applying; applying = true;
         try
         {
-            if (lastOperator != preview.CurrentOperatorIndex && lastOperator < preview.TotalOperators) preview.SelectOperator(lastOperator);
+            // an operator the player does not own (a stale or copied profile) is not equipped: the starting one stays
+            if (lastOperator != preview.CurrentOperatorIndex && lastOperator < preview.TotalOperators && preview.IsOperatorOwned(lastOperator)) preview.SelectOperator(lastOperator);
             else preview.RefreshLook();
         }
         finally { applying = was; }
@@ -227,7 +228,7 @@ public sealed class PlayerDataService : MonoBehaviour
     private void OnOperatorChanged(OperatorDefinition op)
     {
         var preview = LobbyCharacterPreviewManager.Instance;
-        if (preview != null) lastOperator = preview.CurrentOperatorIndex;
+        if (preview != null) lastOperator = preview.EquippedOperatorIndex;
         OnLoadoutChanged();
     }
 
@@ -283,7 +284,7 @@ public sealed class PlayerDataService : MonoBehaviour
     private LoadoutDoc CaptureLoadout(long now)
     {
         var preview = LobbyCharacterPreviewManager.Instance;
-        if (preview != null) lastOperator = preview.CurrentOperatorIndex;
+        if (preview != null) lastOperator = preview.EquippedOperatorIndex;
         var mode = GameModeCatalog.Selected;
         return new LoadoutDoc { updatedAt = now, op = lastOperator, looks = LobbyOperatorLooks.Export(), mode = mode.Id, team = (int)GameModeCatalog.SelectedTeamSize };
     }

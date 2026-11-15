@@ -44,8 +44,11 @@ namespace Railbound.UI
             tab = 0;
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null && !subscribed) { preview.OnOperatorChanged += OnOperatorChanged; subscribed = true; }
+            PlayerProgression.Changed -= OnCoinsChanged; PlayerProgression.Changed += OnCoinsChanged;
             Refresh();
         }
+
+        private void OnCoinsChanged() { if (IsOpen && tab == 0) Refresh(false); }
 
         private void OnDisable() { Unsubscribe(); }
         protected override void OnDestroy() { Unsubscribe(); base.OnDestroy(); }
@@ -54,6 +57,7 @@ namespace Railbound.UI
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null && subscribed) preview.OnOperatorChanged -= OnOperatorChanged;
             subscribed = false;
+            PlayerProgression.Changed -= OnCoinsChanged;
         }
 
         private void OnOperatorChanged(OperatorDefinition op) { if (IsOpen && tab == 0) Refresh(false); }
@@ -116,7 +120,10 @@ namespace Railbound.UI
                 int col = i % cols, row = i / cols;
                 var card = NewRect("Operator " + i, body, new Vector2(0.5f, 0.5f), new Vector2(cardW, cardH), new Vector2(x0 + col * (cardW + gap), top - cardH * 0.5f - row * (cardH + gap)));
                 card.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
-                bool equipped = i == preview.CurrentOperatorIndex;
+                bool equipped = i == preview.EquippedOperatorIndex;
+                bool owned = preview.IsOperatorOwned(i);
+                int price = preview.PriceOf(i);
+                int coins = PlayerProgression.Current.coins;
                 int index = i;
 
                 var frame = Img("Frame", card, equipped ? Color.white : new Color(1f, 1f, 1f, 0.14f)); Stretch(frame.rectTransform);
@@ -145,14 +152,34 @@ namespace Railbound.UI
 
                 var tag = Img("Tag", card, equipped ? Color.white : new Color(1f, 1f, 1f, 0.14f));
                 var tg = tag.rectTransform; tg.anchorMin = tg.anchorMax = new Vector2(0f, 1f); tg.pivot = new Vector2(0f, 1f); tg.anchoredPosition = new Vector2(3f, -3f); tg.sizeDelta = new Vector2(equipped ? 130f : 120f, 30f);
-                LabelC(tg, equipped ? "EQUIPPED" : "UNLOCKED", 13, true, equipped ? Color.black : Dim, Vector2.zero, new Vector2(116f, 26f));
+                LabelC(tg, equipped ? "EQUIPPED" : owned ? "UNLOCKED" : "LOCKED", 13, true, equipped ? Color.black : Dim, Vector2.zero, new Vector2(116f, 26f));
 
-                var btn = MakeButton(card, equipped ? "EQUIPPED" : "EQUIP", new Vector2(0f, -cardH * 0.5f + 44f), new Vector2(cardW - 40f, 52f), !equipped, () => Equip(index));
-                if (equipped)
+                if (!owned)
                 {
-                    btn.interactable = false;
-                    btn.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
-                    btn.GetComponentInChildren<TextMeshProUGUI>().color = Dim;
+                    // locked: look at it first, then buy it with coins
+                    bool onStage = i == preview.CurrentOperatorIndex;
+                    var look = MakeButton(card, onStage ? "ON STAGE" : "PREVIEW", new Vector2(0f, -cardH * 0.5f + 122f), new Vector2(cardW - 40f, 36f), false, () => Equip(index), 13f);
+                    if (onStage) { look.interactable = false; look.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f); look.GetComponentInChildren<TextMeshProUGUI>().color = Dim; }
+
+                    bool canAfford = coins >= price;
+                    var buy = MakeButton(card, canAfford ? "BUY   " + price.ToString("N0") + " COINS" : price.ToString("N0") + " COINS", new Vector2(0f, -cardH * 0.5f + 40f), new Vector2(cardW - 40f, 48f), canAfford, () => Buy(index));
+                    if (!canAfford)
+                    {
+                        buy.interactable = false;
+                        buy.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
+                        buy.GetComponentInChildren<TextMeshProUGUI>().color = Dim;
+                        LabelC(card, "NEED " + (price - coins).ToString("N0") + " MORE COINS", 12, false, Faint, new Vector2(0f, -cardH * 0.5f + 80f), new Vector2(cardW - 30f, 18f));
+                    }
+                }
+                else
+                {
+                    var btn = MakeButton(card, equipped ? "EQUIPPED" : "EQUIP", new Vector2(0f, -cardH * 0.5f + 44f), new Vector2(cardW - 40f, 52f), !equipped, () => Equip(index));
+                    if (equipped)
+                    {
+                        btn.interactable = false;
+                        btn.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
+                        btn.GetComponentInChildren<TextMeshProUGUI>().color = Dim;
+                    }
                 }
             }
         }
@@ -178,6 +205,12 @@ namespace Railbound.UI
         {
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null) preview.SelectOperator(index);   // raises OnOperatorChanged, which redraws the cards
+        }
+
+        private void Buy(int index)
+        {
+            var preview = LobbyCharacterPreviewManager.Instance;
+            if (preview != null && preview.TryBuyOperator(index)) Refresh(false);   // bought and equipped
         }
 
         // ---------------- coming soon ----------------
