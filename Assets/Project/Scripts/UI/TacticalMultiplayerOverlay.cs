@@ -79,6 +79,10 @@ namespace Railbound.UI
             bool isOffline = args.Any(a => string.Equals(a, "-offline", StringComparison.OrdinalIgnoreCase) ||
                                            string.Equals(a, "-solo", StringComparison.OrdinalIgnoreCase));
 
+            // The scene's offline "TPS Character" is only a placeholder for single-player. On a dedicated server it would count
+            // as a human: the match would start (and run its bots) on an empty server, long before the first real player.
+            if (isServer && !isHost) DeactivateOfflineScenePlayer();
+
             if (isServer || isHost || isOffline) yield break;
 
             if (autoConnectClientOnStart)
@@ -86,11 +90,7 @@ namespace Railbound.UI
                 DeactivateOfflineScenePlayer();
                 yield return new WaitForSeconds(0.3f);
 
-                if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-                {
-                    Debug.Log($"[TacticalMultiplayerOverlay] Direct Public Join: Auto-connecting client to {serverAddress}:{serverPort}...");
-                    StartClient();
-                }
+                yield return ConnectAutomatically();
             }
         }
 
@@ -145,8 +145,8 @@ namespace Railbound.UI
             }
             else if (isClient)
             {
-                Debug.Log($"[TacticalMultiplayerOverlay] Auto-starting Client connecting to {serverAddress}:{serverPort}...");
-                StartClient();
+                if (HasCommandLineEndpoint()) { Debug.Log($"[TacticalMultiplayerOverlay] Auto-starting Client connecting to {serverAddress}:{serverPort}..."); StartClient(); }
+                else StartCoroutine(ConnectAutomatically());
             }
         }
 
@@ -214,6 +214,74 @@ namespace Railbound.UI
             }
         }
 
+        private bool _autoConnecting;
+
+        /// <summary>
+        /// Connects without any -ip / -port: when the lobby has not already allocated a server, this asks Nakama (RPC railbound_allocate,
+        /// which allocates a Ready server through Agones) for the current game server address and port. Everybody who starts with the same
+        /// match id (default: the current half hour, or "-match &lt;id&gt;") gets the same server, so friends on other networks land together.
+        /// If the allocation fails it falls back to the configured address.
+        /// </summary>
+        private System.Collections.IEnumerator ConnectAutomatically()
+        {
+            var nm = NetworkManager.Singleton;
+            if (_autoConnecting || nm == null || nm.IsClient || nm.IsServer) yield break;
+            _autoConnecting = true;
+            _isConnecting = true;
+
+            var server = Railbound.Networking.GameServerConnection.Instance;
+            if (!HasCommandLineEndpoint() && !(server != null && server.HasEndpoint))
+            {
+                var task = AllocateFromNakamaAsync();
+                while (!task.IsCompleted) yield return null;
+                if (task.Status == System.Threading.Tasks.TaskStatus.RanToCompletion && task.Result.HasValue)
+                {
+                    serverAddress = task.Result.Value.Host;
+                    serverPort = (ushort)task.Result.Value.Port;
+                    Debug.Log($"[TacticalMultiplayerOverlay] Nakama allocated {task.Result.Value.ServerName}: {serverAddress}:{serverPort}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[TacticalMultiplayerOverlay] No server allocated (Nakama unreachable or none ready); trying {serverAddress}:{serverPort}.");
+                }
+            }
+
+            _isConnecting = false;
+            _autoConnecting = false;
+            if (nm != null && !nm.IsClient && !nm.IsServer)
+            {
+                Debug.Log($"[TacticalMultiplayerOverlay] Auto-connecting client to {serverAddress}:{serverPort}...");
+                StartClient();
+            }
+        }
+
+        private static async System.Threading.Tasks.Task<ServerAllocationClient.Allocation?> AllocateFromNakamaAsync()
+        {
+            try
+            {
+                var client = new Nakama.Client(ServerConfig.NakamaScheme, ServerConfig.NakamaHost, ServerConfig.NakamaPort,
+                    ServerConfig.NakamaServerKey, Nakama.UnityWebRequestAdapter.Instance);
+                string deviceId = PlayerPrefs.GetString("nakama.device.id", "");
+                if (string.IsNullOrEmpty(deviceId)) deviceId = SystemInfo.deviceUniqueIdentifier;
+                if (string.IsNullOrEmpty(deviceId) || deviceId == SystemInfo.unsupportedIdentifier) deviceId = Guid.NewGuid().ToString("N");
+                PlayerPrefs.SetString("nakama.device.id", deviceId);
+                var session = await client.AuthenticateDeviceAsync(deviceId);
+
+                string matchId = null;
+                string[] args = Environment.GetCommandLineArgs();
+                for (int i = 0; i < args.Length - 1; i++) if (string.Equals(args[i], "-match", StringComparison.OrdinalIgnoreCase)) matchId = args[i + 1];
+                if (string.IsNullOrEmpty(matchId)) matchId = "open-" + DateTime.UtcNow.ToString("yyyyMMdd-HH") + (DateTime.UtcNow.Minute < 30 ? "a" : "b");
+
+                return await ServerAllocationClient.AllocateAsync(client, session, matchId, 1, 90f, null,
+                    s => Debug.Log("[TacticalMultiplayerOverlay] " + s));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[TacticalMultiplayerOverlay] Allocation failed: " + ex.Message);
+                return null;
+            }
+        }
+
         public void StartClient()
         {
             UpdateTransportConfig();
@@ -259,6 +327,12 @@ namespace Railbound.UI
         private void UpdateTransportConfig()
         {
             if (NetworkManager.Singleton == null) return;
+            Railbound.Networking.ConnectionApprovalGate.Configure(NetworkManager.Singleton);   // client and server must agree on connection approval
+            if (!NetworkManager.Singleton.IsListening)
+            {
+                var link = Railbound.Networking.GameServerConnection.Instance;
+                if (link != null) NetworkManager.Singleton.NetworkConfig.ConnectionData = Railbound.Networking.ConnectionApprovalGate.BuildClientPayload(link.MatchId, link.JoinToken);
+            }
 
             // the lobby asked Nakama for this match's game server (Agones); a command-line -ip / -port still wins
             var server = Railbound.Networking.GameServerConnection.Instance;
@@ -272,6 +346,10 @@ namespace Railbound.UI
             if (transport != null)
             {
                 transport.SetConnectionData(serverAddress, serverPort, "0.0.0.0");
+                // Precaution: the default send queue is only ~96 KB per connection, about two seconds of this match's replicated state
+                // (19 bots). A client that stalls (alt-tab, Wi-Fi hiccup) should not overflow it and lose messages.
+                transport.MaxSendQueueSize = 4 * 1024 * 1024;
+                transport.MaxPacketQueueSize = Mathf.Max(transport.MaxPacketQueueSize, 512);
             }
         }
 

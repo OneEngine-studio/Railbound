@@ -36,6 +36,7 @@ namespace JUTPS
         public string[] PhysicalDamageIgnoreTags = new string[] { "Player", "Enemy", "Bones", "Wall", "Bullet" };
         void FixedUpdate()
         {
+            if (IsRemotePuppet) return;
             if (IsDead == true || DisableAllMove == true || JUPauseGame.IsPaused) { return; }
             Movement();
             SlopeSlide();
@@ -44,6 +45,7 @@ namespace JUTPS
 
         void Update()
         {
+            if (IsRemotePuppet) return;   // a copy of a character another machine controls: PuppetUpdate drives it
             if (JUPauseGame.IsPaused) return;
 
             FootPlacementIKController();
@@ -631,6 +633,70 @@ namespace JUTPS
 
 
 
+        #region REMOTE PUPPET
+        /// <summary>
+        /// This character is a COPY of one that another machine controls (a remote player, or a bot on a client). It does no input, movement,
+        /// physics or damage (the network supplies position, animator parameters and health), but it still has to place the hands on the weapon,
+        /// aim the spine and the head and keep the weapon pointing where its owner aims. That is what <see cref="PuppetUpdate"/> and OnAnimatorIK do.
+        /// </summary>
+        [HideInInspector] public bool IsRemotePuppet;
+        [HideInInspector] public int DebugWeaponReactivated;   // test counter
+
+        /// <summary>The state the owner of this character aims and fires with (replicated by the network components).</summary>
+        public void CapturePuppetState(out bool firing, out bool reloading, out Vector3 look)
+        {
+            firing = FiringMode;
+            reloading = IsReloading;
+            look = GetLookPosition();
+        }
+
+        /// <summary>Test aid: where the right hand IK target, the aim pivot and the real right hand are.</summary>
+        public string PuppetDebug()
+        {
+            var hand = anim != null ? anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+            return "ikTarget=" + (IKPositionRightHand != null ? IKPositionRightHand.position.ToString("F2") : "null")
+                + " pivot=" + (PivotItemRotation != null ? PivotItemRotation.transform.position.ToString("F2") + "/" + PivotItemRotation.transform.eulerAngles.ToString("F0") : "null")
+                + " hand=" + (hand != null ? hand.position.ToString("F2") : "null") + " root=" + transform.position.ToString("F2")
+                + " reactivated=" + DebugWeaponReactivated + (HoldableItemInUseRightHand != null ? " qty=" + HoldableItemInUseRightHand.ItemQuantity + " unlocked=" + HoldableItemInUseRightHand.Unlocked : "") + " switching=" + IsWeaponSwitching + " reload=" + IsReloading + " lookW=" + LookWeightIK.ToString("F2") + " ik=" + InverseKinematics;
+        }
+
+        public void PuppetUpdate(bool firing, bool reloading, Vector3 look)
+        {
+            if (!IsRemotePuppet) return;
+            MyCamera = null;
+            LookAtPosition = look;
+            FiringMode = firing; FiringModeIK = firing; IsReloading = reloading; IsAiming = false;
+            IsWeaponSwitching = false;   // the switch timer runs in Update, which a puppet does not run
+
+            if (Inventory != null)
+            {
+                CurrentItemIDRightHand = Inventory.CurrentRightHandItemID;
+                CurrentItemIDLeftHand = Inventory.CurrentLeftHandItemID;
+                HoldableItemInUseRightHand = Inventory.HoldableItemInUseInRightHand;
+                HoldableItemInUseLeftHand = Inventory.HoldableItemInUseInLeftHand;
+                WeaponInUseRightHand = Inventory.WeaponInUseInRightHand;
+                WeaponInUseLeftHand = Inventory.WeaponInUseInLeftHand;
+                IsItemEquiped = Inventory.IsItemSelected;
+            }
+            if (IsDead || !IsItemEquiped) return;
+
+            // the weapon the owner holds must be visible in the hand (the inventory can switch it off on a copy; its muzzle flash is a child of it)
+            if (HoldableItemInUseRightHand != null && !HoldableItemInUseRightHand.gameObject.activeSelf)
+            {
+                DebugWeaponReactivated++;
+                HoldableItemInUseRightHand.Unlocked = true;
+                if (HoldableItemInUseRightHand.ItemQuantity <= 0) HoldableItemInUseRightHand.ItemQuantity = 1;
+                HoldableItemInUseRightHand.gameObject.SetActive(true);
+            }
+            if (HoldableItemInUseLeftHand != null && !HoldableItemInUseLeftHand.gameObject.activeSelf) HoldableItemInUseLeftHand.gameObject.SetActive(true);
+
+            RefreshItemAimRotationPivot();
+            WieldingIKWeightController();
+            if (WeaponInUseRightHand != null) WeaponInUseRightHand.SetWeaponOrientation(Vector3.zero, GetCurrentWeaponLookDirection());
+            if (WeaponInUseLeftHand != null) WeaponInUseLeftHand.SetWeaponOrientation(Vector3.zero, GetCurrentWeaponLookDirection(false));
+        }
+        #endregion
+
         #region ITEM MANAGEMENT
         private void WeaponOrientator()
         {
@@ -939,6 +1005,7 @@ namespace JUTPS
         #region Physics Check
         void OnTriggerEnter(Collider other)
         {
+            if (IsRemotePuppet) return;
             if (other.gameObject.tag == "DeadZone")
             {
                 KillCharacter();
@@ -952,6 +1019,7 @@ namespace JUTPS
 
         void OnCollisionEnter(Collision other)
         {
+            if (IsRemotePuppet) return;
             if (other.gameObject.tag == "DeadZone")
             {
                 KillCharacter();
@@ -999,8 +1067,10 @@ namespace JUTPS
         #endregion
 
 
+        [HideInInspector] public int DebugIkCalls;   // test counter: how often Unity asked this character for its IK
         void OnAnimatorIK(int layerIndex)
         {
+            DebugIkCalls++;
             if (IsDead || InverseKinematics == false) return;
 
             //Get Original Spine Rotation
@@ -1023,6 +1093,7 @@ namespace JUTPS
         }
         private void OnAnimatorMove()
         {
+            if (IsRemotePuppet) return;   // the position comes from the network
             ApplyRootMotionOnLocomotion();
         }
     }

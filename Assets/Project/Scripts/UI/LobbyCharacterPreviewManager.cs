@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Project.Character;
 using UnityEngine;
 
 namespace Railbound.UI
@@ -11,6 +12,8 @@ namespace Railbound.UI
         public string displayName;
         public string roleCategory; // Assault, Recon, Vanguard, Support
         public GameObject characterPrefab;
+        [Tooltip("Model used in a match (id of the CharacterSkinCatalog).")] public string skinId = "player1";
+        [Tooltip("Coins to unlock it in the store. The first operator is the starting one and is always owned.")] public int priceCoins = 0;
         [TextArea(2, 3)] public string activeSkillName;
         [TextArea(2, 3)] public string activeSkillDesc;
         [TextArea(2, 3)] public string passiveSkillName;
@@ -53,6 +56,35 @@ namespace Railbound.UI
             ? operators[currentOperatorIndex] : null;
 
         public int CurrentOperatorIndex => currentOperatorIndex;
+
+        private const string EquippedOperatorKey = "railbound.equipped.operator";
+        private int equippedOperatorIndex;
+
+        /// <summary>The operator the player will play in a match: the last OWNED one that was selected. (CurrentOperatorIndex is only what is on stage, it may be a locked one being previewed.)</summary>
+        public int EquippedOperatorIndex => equippedOperatorIndex;
+
+        public bool IsOperatorOwned(int index)
+        {
+            var op = GetOperator(index);
+            return op != null && PlayerProgression.OwnsOperator(op.operatorId, index == 0);
+        }
+
+        /// <summary>The price shown: the server's price table once the profile was read (the server charges that), the catalog's before.</summary>
+        public int PriceOf(int index) { var op = GetOperator(index); return op != null ? PlayerProgression.PriceOf(op.operatorId, Mathf.Max(0, op.priceCoins)) : 0; }
+
+        /// <summary>
+        /// Buys a locked operator and equips it when that worked. Signed in, the SERVER charges its own price and adds the operator; this only
+        /// shows the outcome.
+        /// </summary>
+        public async System.Threading.Tasks.Task<BuyResult> BuyOperatorAsync(int index)
+        {
+            var op = GetOperator(index);
+            if (op == null) return BuyResult.UnknownOperator;
+            if (IsOperatorOwned(index)) return BuyResult.AlreadyOwned;
+            var result = await PlayerProgression.BuyOperatorAsync(op.operatorId, Mathf.Max(0, op.priceCoins));
+            if (result == BuyResult.Bought && this != null) SelectOperator(index);
+            return result;
+        }
         /// <summary>The local player's spawned model (null until the first operator is spawned).</summary>
         public GameObject CurrentModel => currentCharacterInstance;
         public Transform SpawnAnchor => characterSpawnAnchor != null ? characterSpawnAnchor : transform;
@@ -76,6 +108,8 @@ namespace Railbound.UI
                 characterSpawnAnchor = transform;
             }
             EnsureDefaultOperators();
+            AppendCatalogOperators();
+            RestoreEquippedOperator();
             SpawnOperator(currentOperatorIndex);
         }
 
@@ -141,6 +175,35 @@ namespace Railbound.UI
             }
         }
 
+        // the operators of the skin catalog (real models) after the four starting ones; the model is the catalog's, not a tint of the first
+        private void AppendCatalogOperators()
+        {
+            for (int i = 1; i < operators.Count && i <= 3; i++)
+            {
+                if (operators[i].priceCoins <= 0) operators[i].priceCoins = 1500;     // the look variants of the starting model are not free either
+                if (string.IsNullOrEmpty(operators[i].skinId)) operators[i].skinId = CharacterSkinCatalog.DefaultSkinId;
+            }
+            var catalog = CharacterSkinCatalog.Instance;
+            if (catalog == null) return;
+            foreach (var e in catalog.entries)
+            {
+                if (e == null || !e.Usable || e.id == CharacterSkinCatalog.DefaultSkinId) continue;
+                string opId = "op_" + e.id;
+                if (operators.Exists(o => o.operatorId == opId)) continue;
+                operators.Add(new OperatorDefinition { operatorId = opId, displayName = e.displayName, roleCategory = e.roleCategory, characterPrefab = e.prefab, skinId = e.id, priceCoins = e.priceCoins });
+            }
+        }
+
+        private void RestoreEquippedOperator()
+        {
+            equippedOperatorIndex = 0;
+            string saved = PlayerPrefs.GetString(EquippedOperatorKey, "");
+            for (int i = 0; i < operators.Count; i++)
+                if (!string.IsNullOrEmpty(saved) && operators[i].operatorId == saved && IsOperatorOwned(i)) { equippedOperatorIndex = i; break; }
+            currentOperatorIndex = equippedOperatorIndex;
+            CharacterSkins.SetEquipped(operators.Count > 0 ? operators[equippedOperatorIndex].skinId : CharacterSkinCatalog.DefaultSkinId);
+        }
+
         private void Update()
         {
             // Smoothly damp rotation to target
@@ -169,6 +232,14 @@ namespace Railbound.UI
         {
             if (operators == null || index < 0 || index >= operators.Count) return;
             currentOperatorIndex = index;
+            // any operator can be put on stage to look at; only an owned one becomes the one played in matches
+            if (IsOperatorOwned(index))
+            {
+                equippedOperatorIndex = index;
+                PlayerPrefs.SetString(EquippedOperatorKey, operators[index].operatorId);
+                CharacterSkins.SetEquipped(operators[index].skinId);
+                PlayerPrefs.Save();
+            }
             SpawnOperator(currentOperatorIndex);
             // Subtle presentation turn-in when switching operators
             currentYRotation = targetYRotation - 22f;

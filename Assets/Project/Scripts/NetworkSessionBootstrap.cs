@@ -36,6 +36,7 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
             DontDestroyOnLoad(gameObject);
 
         ConfigureTransport();
+        Railbound.Networking.ConnectionApprovalGate.Configure(_networkManager);   // before StartServer / StartClient: both sides must agree
         SubscribeToAuthentication();
     }
 

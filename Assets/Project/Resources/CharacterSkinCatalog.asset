@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e62425b643ec344bbbe7d47c40c759e, type: 3}
+  m_Name: CharacterSkinCatalog
+  m_EditorClassIdentifier: 
+  entries:
+  - id: player1
+    displayName: MIL-R5 GHOST
+    roleCategory: ASSAULT / SPEC-OPS
+    prefab: {fileID: 5262736616703033270, guid: 0a62f36e1c145bf41b7407e3d0061deb,
+      type: 3}
+    priceCoins: 0
+    ownedByDefault: 1
+    botEligible: 1
+    note: The starting model.
+  - id: striker
+    displayName: STRIKER-14
+    roleCategory: ASSAULT
+    prefab: {fileID: 189594847504061872, guid: 0a14966f4f9da8846be3249d32182e29, type: 3}
+    priceCoins: 3000
+    ownedByDefault: 0
+    botEligible: 1
+    note: 
+  - id: cammy
+    displayName: CAMMY
+    roleCategory: RECON
+    prefab: {fileID: 4656128204067938039, guid: cd2f9218828243743bc096d011600f6c,
+      type: 3}
+    priceCoins: 3500
+    ownedByDefault: 0
+    botEligible: 1
+    note: 
+  - id: tactical
+    displayName: TACTICAL
+    roleCategory: SUPPORT
+    prefab: {fileID: 9046776935561883247, guid: 147a350b1d0704c49aa168df31402ea8,
+      type: 3}
+    priceCoins: 3500
+    ownedByDefault: 0
+    botEligible: 1
+    note: 
+  - id: swat
+    displayName: S.W.A.T. OPERATOR
+    roleCategory: BREACHER / TACTICAL
+    prefab: {fileID: 9002664075841270621, guid: 37ad9dfe1d27de445ad3aa7c8c5b6b10,
+      type: 3}
+    priceCoins: 3000
+    ownedByDefault: 0
+    botEligible: 1
+    note: 

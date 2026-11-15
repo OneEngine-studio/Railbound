@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// Daily, weekly and season challenges. The definitions live here; the progress is counted from finished matches and kept with the player
-/// (device copy plus the Nakama document "challenges" through <see cref="PlayerDataService"/>). A completed challenge is claimed by the
-/// player and pays XP and coins through <see cref="PlayerProgression"/>. Periods roll over by UTC date (daily), ISO week (weekly) and
-/// season id (season).
+/// Daily, weekly and season challenges. The definitions (and rewards) live here for display; periods roll over by UTC date (daily), ISO week
+/// (weekly) and season id (season).
 ///
-/// NOTE: like the rest of the player's progress, this is counted on the client for now; it moves to the game server together with the
-/// match result reporting.
+/// SIGNED IN: the SERVER counts the progress (from the match results the game server reports) and pays a claim; this class only shows the
+/// state Nakama returned (<see cref="ApplyServer"/>) and asks <see cref="PlayerProgression.ClaimChallengeAsync"/> to claim. The definitions
+/// are duplicated in charts/nakama/files/modules/index.js (CHALLENGE_DEFS): change both together.
+/// NOT SIGNED IN: a local-only copy on this device is counted from finished offline matches and pays the local-only profile.
 /// </summary>
 public static class ChallengeService
 {
@@ -53,7 +53,9 @@ public static class ChallengeService
     [Serializable] private sealed class Period { public string id; public List<Entry> items = new List<Entry>(); }
     [Serializable] private sealed class State { public int v = 1; public long updatedAt; public Period daily = new Period(), weekly = new Period(), season = new Period(); }
 
-    private static State state;
+    private static State state;            // the one in use: serverState when signed in, localState otherwise
+    private static State localState, serverState;
+    private static bool usingServer;
 
     /// <summary>What the screens draw for one challenge.</summary>
     public struct View
@@ -84,24 +86,37 @@ public static class ChallengeService
 
     private static void Ensure()
     {
-        if (state == null)
+        usingServer = PlayerProgression.UsesServer;
+        if (usingServer)
         {
-            try
+            if (serverState == null) serverState = new State();
+            state = serverState;
+        }
+        else
+        {
+            if (localState == null)
             {
-                string json = PlayerPrefs.GetString(LocalKey, "");
-                if (!string.IsNullOrEmpty(json)) state = JsonUtility.FromJson<State>(json);
+                try
+                {
+                    string json = PlayerPrefs.GetString(LocalKey, "");
+                    if (!string.IsNullOrEmpty(json)) localState = JsonUtility.FromJson<State>(json);
+                }
+                catch (Exception) { /* unreadable: start fresh */ }
+                if (localState == null) localState = new State();
             }
-            catch (Exception) { /* unreadable: start fresh */ }
-            if (state == null) state = new State();
+            state = localState;
         }
         bool rolled = false;
         foreach (Tab tab in Enum.GetValues(typeof(Tab)))
         {
             var p = PeriodOf(tab);
             string id = CurrentId(tab);
-            if (p.id != id || p.items == null || p.items.Count != Defs[tab].Length || !Defs[tab].All(d => p.items.Any(e => e.key == d.key)))
+            // the server decides when a period ends: its state is only completed with empty entries, never reset by this device's clock
+            bool stale = !usingServer && p.id != id;
+            if (stale || p.items == null || p.items.Count != Defs[tab].Length || !Defs[tab].All(d => p.items.Any(e => e.key == d.key)))
             {
-                p.id = id; p.items = Defs[tab].Select(d => new Entry { key = d.key }).ToList();
+                if (!usingServer || string.IsNullOrEmpty(p.id)) p.id = id;
+                p.items = Defs[tab].Select(d => new Entry { key = d.key }).ToList();
                 rolled = true;
             }
         }
@@ -110,33 +125,26 @@ public static class ChallengeService
 
     private static void Persist(bool notify)
     {
+        if (usingServer) { if (notify && Changed != null) Changed(); return; }   // the server's state is never written on this device
         state.updatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         try { PlayerPrefs.SetString(LocalKey, JsonUtility.ToJson(state)); PlayerPrefs.Save(); } catch (Exception) { /* device copy only */ }
-        var svc = PlayerDataService.Instance;
-        if (svc != null) svc.MarkDirty(PlayerDataService.Doc.Challenges);
         if (notify && Changed != null) Changed();
     }
 
-    // ---------------- cloud copy ----------------
-    public static string ToJson() { Ensure(); return JsonUtility.ToJson(state); }
-    public static long UpdatedAt { get { Ensure(); return state.updatedAt; } }
-
-    /// <summary>Takes the cloud copy when it is newer than this device's.</summary>
-    public static void ApplyRemote(string json)
+    // ---------------- server state ----------------
+    /// <summary>Takes the challenge state of the profile Nakama returned (daily / weekly / season periods with the server's progress).</summary>
+    public static void ApplyServer(string json)
     {
         if (string.IsNullOrEmpty(json)) return;
         try
         {
             var remote = JsonUtility.FromJson<State>(json);
             if (remote == null) return;
-            Ensure();
-            if (remote.updatedAt <= state.updatedAt) return;
-            state = remote;
-            Ensure();   // roll any period that has ended since
-            try { PlayerPrefs.SetString(LocalKey, JsonUtility.ToJson(state)); PlayerPrefs.Save(); } catch (Exception) { }
+            serverState = remote;
+            if (usingServer || PlayerProgression.UsesServer) { state = serverState; Ensure(); }
             if (Changed != null) Changed();
         }
-        catch (Exception ex) { Debug.LogWarning("[Challenges] Could not read the cloud copy: " + ex.Message); }
+        catch (Exception ex) { Debug.LogWarning("[Challenges] Could not read the server state: " + ex.Message); }
     }
 
     // ---------------- reading ----------------
@@ -164,6 +172,7 @@ public static class ChallengeService
     public static void OnMatchFinished(MatchSummary m)
     {
         Ensure();
+        if (usingServer) return;   // the server counts the matches it reports
         int place = m.won ? 1 : m.placement;
         foreach (Tab tab in Enum.GetValues(typeof(Tab)))
         {
@@ -194,6 +203,13 @@ public static class ChallengeService
         var d = Defs[tab].FirstOrDefault(x => x.key == key);
         var e = PeriodOf(tab).items.FirstOrDefault(x => x.key == key);
         if (d == null || e == null || e.claimed || e.progress < d.goal) return false;
+        if (usingServer)
+        {
+            // the server checks its own count and pays; the profile it returns brings the new state (ApplyServer)
+            bool paid = await PlayerProgression.ClaimChallengeAsync(tab.ToString().ToLowerInvariant(), key);
+            if (Changed != null) Changed();
+            return paid;
+        }
         e.claimed = true;                 // mark first: a double click must not pay twice
         Persist(true);
         await PlayerProgression.AwardAsync(d.xp, d.coins, false);

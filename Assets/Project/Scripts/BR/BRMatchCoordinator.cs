@@ -105,7 +105,7 @@ namespace Railbound.BR
         private readonly HashSet<string> usedNames = new HashSet<string>();
         private System.Random rng;
         private float nextScan, stableHumanTime;
-        private bool rosterBuilt, botsHeld, endHandled;
+        private bool rosterBuilt, botsHeld, endHandled, botsDormant;
         private BRMatchState lastReportedState = (BRMatchState)(-1);
         private readonly List<Behaviour> heldBotBrains = new List<Behaviour>();
 
@@ -245,6 +245,22 @@ namespace Railbound.BR
                 case BRMatchState.WaitingForPlayers:
                 {
                     int humans = CountHumans();
+                    // Nobody is playing yet. An empty dedicated server must not simulate its bots at all (they were about half of
+                    // its CPU while idle, with the AI held or not). They wake when the first human is there; the brains stay held
+                    // until BeginBattle.
+                    bool wantDormant = NetworkActive && IsServer && humans == 0;
+                    if (wantDormant != botsDormant)
+                    {
+                        botsDormant = wantDormant;
+                        foreach (var p in participants)
+                        {
+                            if (p == null || !p.IsBot) continue;
+                            var nb = p.GetComponent<BRNetBot>();
+                            if (nb != null) nb.SetDormant(wantDormant);
+                        }
+                        if (!wantDormant) HoldBots(true);
+                    }
+                    else if (!wantDormant && !botsHeld && participants.Count > 0) HoldBots(true);
                     stableHumanTime = humans >= 1 ? stableHumanTime + Time.unscaledDeltaTime : 0f;
                     // a dedicated server collects a lobby first; a host or offline game has nobody else to wait for
                     bool dedicated = NetworkActive && NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient;
@@ -322,6 +338,7 @@ namespace Railbound.BR
             if (NetworkActive && IsSpawned && IsServer) netWinner.Value = new FixedString64Bytes(name);
             SetState(BRMatchState.MatchEnded);
 
+            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteMatchEnd(participants, TotalCount, MatchSeconds);
             ulong winnerClient = winner != null ? winner.ClientId : ulong.MaxValue;
             if (NetworkActive && IsSpawned && IsServer) MatchEndedClientRpc(name, winnerClient);
             else RaiseMatchEnded(name, winnerClient);
@@ -422,6 +439,26 @@ namespace Railbound.BR
             int humans = CountHumans();
             int wanted = Mathf.Max(0, Capacity - humans);
 
+            // Networked match: the bots are in-scene NetworkObjects the server owns. A client never edits the roster (its bots
+            // are mirrors), and the server retires surplus bots through the network instead of cloning missing ones (a clone
+            // would exist on the server only).
+            if (NetworkActive)
+            {
+                if (IsServer)
+                {
+                    for (int i = bots.Count - 1; i >= 0 && bots.Count > wanted; i--)
+                    {
+                        participants.Remove(bots[i]);
+                        var nb = bots[i].GetComponent<BRNetBot>();
+                        if (nb != null) nb.Retire(); else bots[i].gameObject.SetActive(false);
+                        bots.RemoveAt(i);
+                    }
+                    RecountAlive();
+                    Debug.Log("[BRMatchCoordinator] Roster ready (network): humans=" + humans + " bots=" + bots.Count + " wanted=" + wanted);
+                }
+                return;
+            }
+
             // too many: retire the surplus so the match is exactly Capacity strong
             for (int i = bots.Count - 1; i >= 0 && bots.Count > wanted; i--)
             {
@@ -465,6 +502,12 @@ namespace Railbound.BR
         private void HoldBots(bool hold)
         {
             botsHeld = hold;
+            // a client never runs bot brains (the server does): releasing "held" brains here would switch its mirrors back on
+            if (!hold && NetworkActive && !IsServer)
+            {
+                heldBotBrains.Clear();
+                return;
+            }
             if (hold)
             {
                 foreach (var p in participants) if (p != null && p.IsBot) HoldBot(p.Controller);
@@ -523,8 +566,11 @@ namespace Railbound.BR
                 killer = h.LastAttacker.GetComponentInParent<BRParticipant>();
                 if (killer == victim) killer = null;
             }
+            // A networked client does not credit kills or announce them itself: it has no attacker information (that lives on the
+            // server), which showed every kill as "ENVIRONMENT". The server's KillClientRpc does both.
+            bool networkedClient = NetworkActive && IsSpawned && !IsServer;
             string killerName;
-            if (killer != null) { killer.Kills++; killerName = killer.DisplayName; }
+            if (killer != null) { if (!networkedClient) killer.Kills++; killerName = killer.DisplayName; }
             else
             {
                 var zone = BRZoneManager.Instance;
@@ -543,17 +589,23 @@ namespace Railbound.BR
                 AliveAfter = localAlive
             };
 
+            // the server is the authority on who finished where: Nakama pays the rewards from what the server reports
+            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0);
             if (NetworkActive && IsSpawned && IsServer) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
-            else RaiseKill(info);
+            else if (!networkedClient) RaiseKill(info);
         }
 
         // ================================================================= networking
         [ClientRpc]
         private void KillClientRpc(string killer, string victim, ulong victimClient, ulong killerClient, int placement, int aliveAfter)
         {
-            // When running as a client, local PollEliminations() tracks the scene's bots and local player directly;
-            // ignore server-only bot-vs-bot kills so the client's killfeed and placement match its own scene.
-            if (!IsServer && !Headless && victimClient == ulong.MaxValue && killerClient == ulong.MaxValue) return;
+            // Bots are replicated now, so the server's kill list is the truth for every kill (bot or human). The kill is credited
+            // here on the client too, so the local player's KILLS counter follows what the server decided.
+            if (!IsServer && killerClient != ulong.MaxValue)
+            {
+                foreach (var p in participants)
+                    if (p != null && !p.IsBot && p.ClientId == killerClient) { p.Kills++; break; }
+            }
             RaiseKill(new BRKillInfo { Killer = killer, Victim = victim, VictimClientId = victimClient, KillerClientId = killerClient, Placement = placement, AliveAfter = aliveAfter });
         }
 

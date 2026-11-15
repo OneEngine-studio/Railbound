@@ -86,6 +86,17 @@ namespace Railbound.Networking
             LoadPlayerPrefabIfNull();
         }
 
+        // test builds: "-autoplay" presses DEPLOY once the player is signed in (login -> lobby -> loading -> map without clicking)
+        private System.Collections.IEnumerator Start()
+        {
+            bool autoplay = Array.Exists(Environment.GetCommandLineArgs(), a => string.Equals(a, "-autoplay", StringComparison.OrdinalIgnoreCase));
+            if (!autoplay) yield break;
+            float waited = 0f;
+            while (waited < 60f && (AuthenticationService.Instance == null || !AuthenticationService.Instance.IsAuthenticated)) { waited += Time.unscaledDeltaTime; yield return null; }
+            yield return new WaitForSecondsRealtime(4f);   // let the lobby finish loading its data and characters
+            if (!IsDeploying) { Debug.Log("[LobbyMatchmaker] -autoplay: pressing DEPLOY."); Deploy(); }
+        }
+
         private void LoadPlayerPrefabIfNull()
         {
             if (playerPrefab == null)
@@ -331,7 +342,7 @@ namespace Railbound.Networking
 
             if (allocation.HasValue)
             {
-                GameServerConnection.Instance.SetAllocation(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName);
+                GameServerConnection.Instance.SetAllocation(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName, allocation.Value.Token);
                 UpdateStatus("GAME SERVER READY");
                 await Task.Delay(500);
                 return true;

@@ -16,14 +16,16 @@ public static class ServerAllocationClient
     private class Request { public string matchId; public int players; }
 
     [Serializable]
-    private class Reply { public string status; public string matchId; public string host; public int port; public string name; }
+    private class Reply { public string status; public string matchId; public string host; public int port; public string name; public string token; }
 
     public readonly struct Allocation
     {
         public readonly string Host;
         public readonly int Port;
         public readonly string ServerName;
-        public Allocation(string host, int port, string serverName) { Host = host; Port = port; ServerName = serverName; }
+        /// <summary>Join ticket issued by Nakama for this player and match; the game server refuses a client without it.</summary>
+        public readonly string Token;
+        public Allocation(string host, int port, string serverName, string token = "") { Host = host; Port = port; ServerName = serverName; Token = token ?? ""; }
     }
 
     /// <summary>
@@ -38,7 +40,12 @@ public static class ServerAllocationClient
             Debug.Log("[ServerAllocation] Not signed in to Nakama: no allocation possible.");
             return null;
         }
+        return await AllocateAsync(auth.Client, auth.Session, matchId, players, timeoutSeconds, cancelled, status);
+    }
 
+    /// <summary>Same, with an explicit Nakama client and session (a build that skips the lobby signs in as a guest itself).</summary>
+    public static async Task<Allocation?> AllocateAsync(IClient client, ISession session, string matchId, int players, float timeoutSeconds, Func<bool> cancelled, Action<string> status)
+    {
         string payload = JsonUtility.ToJson(new Request { matchId = matchId, players = Mathf.Max(1, players) });
         float start = Time.realtimeSinceStartup;
         int attempt = 0;
@@ -50,13 +57,13 @@ public static class ServerAllocationClient
 
             try
             {
-                var rpc = await auth.Client.RpcAsync(auth.Session, RpcName, payload);
+                var rpc = await client.RpcAsync(session, RpcName, payload);
                 var reply = JsonUtility.FromJson<Reply>(rpc.Payload);
                 switch (reply != null ? reply.status : null)
                 {
                     case "ready":
                         Debug.Log($"[ServerAllocation] Server ready for match {matchId}: {reply.host}:{reply.port} ({reply.name})");
-                        return new Allocation(reply.host, reply.port, reply.name);
+                        return new Allocation(reply.host, reply.port, reply.name, reply.token);
 
                     case "pending":
                         status?.Invoke("PREPARING YOUR MATCH SERVER...");

@@ -330,11 +330,28 @@ namespace Railbound.BR
                 endSurvivedVal.text = Mmss(eliminatedLocally && !won ? localSurvived : matchLength);
                 endMatchVal.text = Mmss(matchLength);
 
-                // XP and coins for this match (the lobby plays the level-up popup if it moved the player up a level)
-                PlayerProgression.MatchReward(place, total, localKills, eliminatedLocally && !won ? localSurvived : matchLength, won, out int rewardXp, out int rewardCoins);
-                endRewards.text = "<color=#FFFFFF>+ " + rewardXp.ToString("N0") + "</color> XP        <color=#FFFFFF>+ " + rewardCoins.ToString("N0") + "</color> COINS";
-                var summary = new MatchSummary { mode = Railbound.UI.GameModeCatalog.MatchKey, placement = place, totalPlayers = total, kills = localKills, survivedSeconds = eliminatedLocally && !won ? localSurvived : matchLength, won = won };
-                AwardMatchAsync(summary, rewardXp, rewardCoins);
+                // XP and coins for this match. On a dedicated server the SERVER reports the result to Nakama and Nakama pays it: this screen
+                // only waits for that payment and shows it (the lobby plays the level-up popup if it moved the player up a level).
+                // A match with no server (offline play) pays only the clearly marked local-only profile of a player who is not signed in.
+                float survivedForRewards = eliminatedLocally && !won ? localSurvived : matchLength;
+                var summary = new MatchSummary { mode = Railbound.UI.GameModeCatalog.MatchKey, placement = place, totalPlayers = total, kills = localKills, survivedSeconds = survivedForRewards, won = won };
+                var net = Unity.Netcode.NetworkManager.Singleton;
+                bool ranOnServer = net != null && net.IsConnectedClient && !net.IsHost && !net.IsServer;
+                if (PlayerProgression.UsesServer && ranOnServer)
+                {
+                    endRewards.text = "<color=#8C8C8C>CONFIRMING YOUR REWARDS WITH THE SERVER...</color>";
+                    AwaitServerRewardAsync(summary, Railbound.Networking.GameServerConnection.Instance != null ? Railbound.Networking.GameServerConnection.Instance.MatchId : "");
+                }
+                else if (PlayerProgression.UsesServer)
+                {
+                    endRewards.text = "<color=#8C8C8C>OFFLINE MATCH - NO REWARDS</color>";
+                }
+                else
+                {
+                    PlayerProgression.MatchReward(place, total, localKills, survivedForRewards, won, out int rewardXp, out int rewardCoins);
+                    endRewards.text = "<color=#FFFFFF>+ " + rewardXp.ToString("N0") + "</color> XP        <color=#FFFFFF>+ " + rewardCoins.ToString("N0") + "</color> COINS        <color=#FFC040>LOCAL ONLY - NOT SAVED ONLINE</color>";
+                    AwardLocalMatchAsync(summary, rewardXp, rewardCoins);
+                }
 
                 // the results have buttons: free the mouse and make sure the UI can receive clicks
                 Cursor.lockState = CursorLockMode.None;
@@ -354,11 +371,32 @@ namespace Railbound.BR
             if (left <= 0f || (kb != null && kb.enterKey.wasPressedThisFrame)) LeaveToLobby();
         }
 
-        private async void AwardMatchAsync(MatchSummary summary, int xp, int coins)
+        // the game server reported this player's result to Nakama; wait until Nakama's profile has the payment and show it
+        private async void AwaitServerRewardAsync(MatchSummary summary, string matchId)
         {
             try
             {
-                // the match counts towards the player's stats, the challenges and the match history, then pays out
+                var award = await PlayerProgression.WaitForMatchAwardAsync(matchId, 30f);
+                if (this == null || endRewards == null) return;
+                if (award == null)
+                {
+                    endRewards.text = "<color=#8C8C8C>REWARDS NOT CONFIRMED YET - THEY WILL APPEAR IN THE LOBBY</color>";
+                    return;
+                }
+                string text = "<color=#FFFFFF>+ " + award.xp.ToString("N0") + "</color> XP        <color=#FFFFFF>+ " + (award.coins + award.levelBonusCoins).ToString("N0") + "</color> COINS";
+                if (award.LeveledUp) text += "        <color=#FFFFFF>LEVEL UP  " + award.oldLevel + "  >  " + award.newLevel + "</color>";
+                endRewards.text = text;
+                PlayerDataService.EnsureStarted();
+                PlayerDataService.Instance.RecordMatch(summary, award.xp, award.coins + award.levelBonusCoins);
+            }
+            catch (System.Exception ex) { Debug.LogWarning("[BRMatchHUD] Could not read the match reward: " + ex.Message); }
+        }
+
+        private async void AwardLocalMatchAsync(MatchSummary summary, int xp, int coins)
+        {
+            try
+            {
+                // local-only profile: the match counts towards the device's stats, the local challenges and the match history, then pays out
                 PlayerDataService.EnsureStarted();
                 ChallengeService.OnMatchFinished(summary);
                 PlayerDataService.Instance.RecordMatch(summary, xp, coins);

@@ -372,6 +372,11 @@ namespace Project.AI.RL
             }
             Physics.SyncTransforms();
 
+            // a networked bot: tell the clients it jumped (otherwise they interpolate it across the whole map)
+            var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (netTransform != null && netTransform.IsSpawned && netTransform.CanCommitToTransform)
+                netTransform.Teleport(position, rotation, transform.localScale);
+
             spawnPosition = position;
             spawnRotation = rotation;
             roamDestination = position + transform.forward * 15f;
@@ -661,7 +666,8 @@ namespace Project.AI.RL
             sensor.AddObservation(Mathf.Clamp(localTargetVel.z, -1f, 1f));
 
             // 5. Safe Zone & Acoustic Threat Awareness (3 floats)
-            Vector3 toSafeCenter = SafeZoneCenter - transform.position;
+            GetSafeCircle(out Vector3 zoneCenterNow, out float zoneRadiusNow, out _);
+            Vector3 toSafeCenter = zoneCenterNow - transform.position;
             toSafeCenter.y = 0f;
             float distToCenter = toSafeCenter.magnitude;
             Vector3 localSafeDir = distToCenter > 0.01f
@@ -886,6 +892,16 @@ namespace Project.AI.RL
                 }
             }
 
+            // The storm comes first: outside the safe circle (or about to be), or late in the match when everybody has to
+            // converge on the last circle, a bot walks towards it before looting or fighting.
+            if (TryGetZoneSteer(out Vector3 zoneDir, out bool zoneRun))
+            {
+                cont[0] = Mathf.Clamp(zoneDir.x, -1f, 1f);
+                cont[1] = Mathf.Clamp(zoneDir.z, -1f, 1f);
+                disc[3] = zoneRun ? 1 : 0;
+                return;
+            }
+
             // Loot first: an unarmed bot goes for a weapon, a bot low on ammo goes for an ammo box,
             // unless an enemy already has line of sight close by.
             // An unarmed ranged bot cannot fight, so it ignores enemies entirely until it has a gun.
@@ -1101,6 +1117,47 @@ namespace Project.AI.RL
             }
 
             return (-dirToThreatFlat * 0.65f + fallbackStrafe * 0.75f).normalized;
+        }
+
+        /// <summary>The circle that is safe right now: the live storm when there is one, else the (legacy) inspector values.</summary>
+        private void GetSafeCircle(out Vector3 center, out float radius, out bool shrinking)
+        {
+            if (Railbound.BR.BRZoneManager.TryGetSafeCircle(out center, out radius, out shrinking)) return;
+            center = SafeZoneCenter;
+            radius = SafeZoneRadius;
+            shrinking = false;
+        }
+
+        /// <summary>
+        /// Direction for a bot that must move to stay alive: outside the circle (while the ring shrinks, the circle it is
+        /// shrinking to), within a safety margin of its edge, or too far from the middle once the ring is small. Without
+        /// this the bots roam around their spawn and the last survivors never meet at the final circle.
+        /// </summary>
+        private bool TryGetZoneSteer(out Vector3 dir, out bool run)
+        {
+            dir = Vector3.zero;
+            run = false;
+            if (!Railbound.BR.BRZoneManager.TryGetSafeCircle(out Vector3 center, out float radius, out bool shrinking)) return false;
+
+            Vector3 pos = transform.position;
+            Vector2 offset = new Vector2(pos.x - center.x, pos.z - center.z);
+            float dist = offset.magnitude;
+
+            var zone = Railbound.BR.BRZoneManager.Instance;
+            float opening = zone != null ? Mathf.Max(1f, zone.InitialRadius) : Mathf.Max(1f, radius);
+            float margin = shrinking ? 14f : 6f;
+            bool outside = dist > radius - margin;
+            // a small ring pulls everybody in towards the middle, so the match actually ends in one place
+            bool lateGame = radius < opening * 0.45f && dist > radius * 0.55f;
+            if (!outside && !lateGame) return false;
+
+            // aim at a point inside the circle on the bot's side, not at the exact middle (no queue at one spot)
+            Vector2 side = dist > 0.5f ? offset / dist : Vector2.right;
+            float aim = Mathf.Max(0f, radius * 0.45f);
+            Vector3 dest = new Vector3(center.x + side.x * aim, pos.y, center.z + side.y * aim);
+            dir = ComputeSteeredDirectionTo(dest);
+            run = dist > radius - margin || dist > radius * 0.8f;
+            return dir.sqrMagnitude > 0.0001f;
         }
 
         private Vector3 GetWaypointPatrolDirection()
@@ -1441,10 +1498,11 @@ namespace Project.AI.RL
             }
 
             // 4. Safe Zone Boundary Check
+            GetSafeCircle(out Vector3 rewardCenter, out float rewardRadius, out _);
             float distFromCenter = Vector2.Distance(
                 new Vector2(transform.position.x, transform.position.z),
-                new Vector2(SafeZoneCenter.x, SafeZoneCenter.z));
-            if (distFromCenter > SafeZoneRadius)
+                new Vector2(rewardCenter.x, rewardCenter.z));
+            if (distFromCenter > rewardRadius)
             {
                 ProvideReward(-0.05f * Time.deltaTime);
             }
