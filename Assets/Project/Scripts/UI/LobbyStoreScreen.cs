@@ -108,7 +108,7 @@ namespace Railbound.UI
             const int cols = 5;
             int rows = (n + cols - 1) / cols;
             float cardW = 336f, gap = 20f;
-            float cardH = rows == 1 ? 640f : 380f;
+            float cardH = rows == 1 ? 640f : 340f;   // two rows must fit between the tab strip and the hint line
             float totalW = Mathf.Min(n, cols) * cardW + (Mathf.Min(n, cols) - 1) * gap;
             float x0 = -totalW * 0.5f + cardW * 0.5f;
             float top = (rows * cardH + (rows - 1) * gap) * 0.5f;
@@ -130,11 +130,11 @@ namespace Railbound.UI
                 var bg = Img("Bg", card, Panel);
                 bg.rectTransform.anchorMin = Vector2.zero; bg.rectTransform.anchorMax = Vector2.one; bg.rectTransform.offsetMin = new Vector2(3, 3); bg.rectTransform.offsetMax = new Vector2(-3, -3);
 
-                float posterH = rows == 1 ? 250f : 130f;
+                float posterH = rows == 1 ? 250f : 100f;
                 float posterY = cardH * 0.5f - 3f - posterH * 0.5f;
                 var band = Img("Band", card, new Color(1f, 1f, 1f, 0.18f)); band.sprite = gradient;
                 Place(band.rectTransform, new Vector2(0f, posterY), new Vector2(cardW - 6f, posterH));
-                LabelC(card, Initials(op.displayName), rows == 1 ? 110 : 64, true, Color.white, new Vector2(0f, posterY), new Vector2(cardW - 20f, posterH));
+                LabelC(card, Initials(op.displayName), rows == 1 ? 110 : 52, true, Color.white, new Vector2(0f, posterY), new Vector2(cardW - 20f, posterH));
                 var rule = Img("Rule", card, new Color(1f, 1f, 1f, 0.9f)); Place(rule.rectTransform, new Vector2(0f, posterY - posterH * 0.5f), new Vector2(cardW - 6f, 3f));
 
                 float y = posterY - posterH * 0.5f - 44f;

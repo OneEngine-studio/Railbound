@@ -321,8 +321,32 @@ namespace Railbound.UI
             RefreshNavTabsVisual();
         }
 
+        // test builds: "-lobbytab 5,1" opens those menu tabs one after another (STORE, then OPERATORS) so they can be screenshotted
+        private int[] testTabs; private int testTabNext; private float testTabAt = -1f;
+        private void RunTestTabs()
+        {
+            if (testTabs == null)
+            {
+                testTabs = new int[0];
+                string[] a = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i < a.Length - 1; i++)
+                    if (string.Equals(a[i], "-lobbytab", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        var list = new System.Collections.Generic.List<int>();
+                        foreach (var part in a[i + 1].Split(',')) if (int.TryParse(part, out int n)) list.Add(n);
+                        testTabs = list.ToArray(); testTabAt = Time.realtimeSinceStartup + 18f;
+                    }
+            }
+            if (testTabNext < testTabs.Length && Time.realtimeSinceStartup >= testTabAt)
+            {
+                SelectNavTab(testTabs[testTabNext++]);
+                testTabAt = Time.realtimeSinceStartup + 14f;
+            }
+        }
+
         private void Update()
         {
+            RunTestTabs();
             TickProgress();
 
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
