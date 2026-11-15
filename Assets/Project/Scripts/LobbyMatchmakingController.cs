@@ -342,7 +342,7 @@ namespace Railbound.Networking
 
             if (allocation.HasValue)
             {
-                GameServerConnection.Instance.SetAllocation(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName);
+                GameServerConnection.Instance.SetAllocation(_queueMatchId, allocation.Value.Host, allocation.Value.Port, allocation.Value.ServerName, allocation.Value.Token);
                 UpdateStatus("GAME SERVER READY");
                 await Task.Delay(500);
                 return true;

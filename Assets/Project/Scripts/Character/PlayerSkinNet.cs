@@ -7,7 +7,8 @@ namespace Project.Character
     /// <summary>
     /// The model a human player wears. The owner publishes the id of the skin it equipped in the lobby; every peer puts that model on its copy
     /// of the character. Offline (single player) the equipped skin is applied locally.
-    /// Which skins a player may wear is checked in the lobby store (owned or bought); the server does not check it yet.
+    /// Which skins a player may wear is checked in the lobby store (owned or bought on the server); the game server does not check it in a match yet
+    /// (cosmetic only, see docs/server-authoritative-economy.md, known gaps).
     /// </summary>
     [DisallowMultipleComponent]
     public class PlayerSkinNet : NetworkBehaviour

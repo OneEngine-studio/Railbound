@@ -69,16 +69,21 @@ namespace Railbound.UI
             return op != null && PlayerProgression.OwnsOperator(op.operatorId, index == 0);
         }
 
-        public int PriceOf(int index) { var op = GetOperator(index); return op != null ? Mathf.Max(0, op.priceCoins) : 0; }
+        /// <summary>The price shown: the server's price table once the profile was read (the server charges that), the catalog's before.</summary>
+        public int PriceOf(int index) { var op = GetOperator(index); return op != null ? PlayerProgression.PriceOf(op.operatorId, Mathf.Max(0, op.priceCoins)) : 0; }
 
-        /// <summary>Buys a locked operator with coins and equips it. False when it is already owned, unknown or too expensive.</summary>
-        public bool TryBuyOperator(int index)
+        /// <summary>
+        /// Buys a locked operator and equips it when that worked. Signed in, the SERVER charges its own price and adds the operator; this only
+        /// shows the outcome.
+        /// </summary>
+        public async System.Threading.Tasks.Task<BuyResult> BuyOperatorAsync(int index)
         {
             var op = GetOperator(index);
-            if (op == null || IsOperatorOwned(index)) return false;
-            if (!PlayerProgression.TryBuyOperator(op.operatorId, Mathf.Max(0, op.priceCoins))) return false;
-            SelectOperator(index);
-            return true;
+            if (op == null) return BuyResult.UnknownOperator;
+            if (IsOperatorOwned(index)) return BuyResult.AlreadyOwned;
+            var result = await PlayerProgression.BuyOperatorAsync(op.operatorId, Mathf.Max(0, op.priceCoins));
+            if (result == BuyResult.Bought && this != null) SelectOperator(index);
+            return result;
         }
         /// <summary>The local player's spawned model (null until the first operator is spawned).</summary>
         public GameObject CurrentModel => currentCharacterInstance;

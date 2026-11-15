@@ -63,6 +63,8 @@ namespace Railbound.Networking
         public string Host { get; private set; } = "";
         public ushort Port { get; private set; }
         public string ServerName { get; private set; } = "";
+        /// <summary>Join ticket from Nakama's allocation; sent to the game server in the connection payload (connection approval).</summary>
+        public string JoinToken { get; private set; } = "";
         public GameServerState State { get; private set; } = GameServerState.Idle;
         public string LastError { get; private set; } = "";
 
@@ -101,12 +103,13 @@ namespace Railbound.Networking
         // ---------------- address ----------------
 
         /// <summary>Stores the server Nakama allocated for the match.</summary>
-        public void SetAllocation(string matchId, string host, int port, string serverName)
+        public void SetAllocation(string matchId, string host, int port, string serverName, string joinToken = "")
         {
             string resolved = ResolveHost(host);
             if (!string.Equals(resolved, host, StringComparison.OrdinalIgnoreCase))
                 Debug.Log($"[GameServer] Nakama reported host '{host}'; using the configured game server host {resolved} with the allocated port {port}.");
             SetEndpoint(matchId, resolved, port, serverName);
+            JoinToken = joinToken ?? "";
         }
 
         /// <summary>Uses the default game server of <see cref="ServerConfig"/> (no allocation available).</summary>
@@ -137,6 +140,7 @@ namespace Railbound.Networking
             Host = host ?? "";
             Port = (ushort)Mathf.Clamp(port, 0, ushort.MaxValue);
             ServerName = serverName ?? "";
+            JoinToken = "";   // SetAllocation stores the ticket of this endpoint right after
             LastError = "";
             SetState(HasEndpoint ? GameServerState.Allocated : GameServerState.Idle);
             Debug.Log($"[GameServer] Endpoint set: {Endpoint} ({ServerName}).");
@@ -146,7 +150,7 @@ namespace Railbound.Networking
         public void Clear()
         {
             if (State == GameServerState.Connecting || State == GameServerState.Connected) Disconnect();
-            MatchId = Host = ServerName = LastError = "";
+            MatchId = Host = ServerName = LastError = JoinToken = "";
             Port = 0;
             SetState(GameServerState.Idle);
         }
@@ -217,6 +221,8 @@ namespace Railbound.Networking
                 if (nm == null) { Fail("NETWORK UNAVAILABLE"); yield break; }
 
                 nm.NetworkConfig.EnableSceneManagement = true;   // the server loads the map on this client
+                ConnectionApprovalGate.Configure(nm);            // same flag as the server (part of the netcode config hash)
+                nm.NetworkConfig.ConnectionData = ConnectionApprovalGate.BuildClientPayload(MatchId, JoinToken);   // match id, Nakama user id, join ticket
                 if (!ApplyToTransport()) { Fail("NETWORK TRANSPORT MISSING"); yield break; }
                 if (!nm.StartClient()) { Fail("FAILED TO START NETWORK CLIENT"); yield break; }
                 Debug.Log($"[GameServer] Netcode client started -> {Endpoint} (attempt {Attempt}/{attempts})");

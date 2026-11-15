@@ -8,25 +8,23 @@ using Railbound.UI;
 using UnityEngine;
 
 /// <summary>
-/// Keeps the player's lobby data in Nakama. After sign-in it reads the player's documents (collection "player_data", plus the existing
-/// "player_profiles" and "player_progress"), applies the newer copy of each, and creates whatever is missing from what this device has,
-/// so a new guest gets a complete record at once. After that, changes are pushed a moment after the last edit (and when the game pauses
-/// or quits).
+/// Keeps the player's lobby PREFERENCES in Nakama. After sign-in it reads the player's documents (collection "player_data", plus the
+/// existing "player_profiles"), applies the newer copy of each, and creates whatever is missing from what this device has, so a new guest
+/// gets a complete record at once. After that, changes are pushed a moment after the last edit (and when the game pauses or quits).
 ///
 ///   profile    (player_profiles/profile)   name and skill level           - PlayerProfileService
-///   progress   (player_progress/progress)  level, XP, coins, match stats    - PlayerProgression
 ///   loadout    (player_data/loadout)       chosen operator, looks, mode, team size
 ///   settings   (player_data/settings)      graphics, audio, controls, key bindings, language
-///   challenges (player_data/challenges)    daily, weekly and season progress - ChallengeService
-///   history    (player_data/history)       the last 20 matches
+///   history    (player_data/history)       the last 20 matches (display only, written from the server's reward)
 ///
-/// Last write wins per document, by its "updatedAt" time. The client writes these documents, so a modified client can change them: the
-/// authoritative version moves to Nakama server code with the match result reporting.
+/// These documents hold nothing with a value: the client may write them (last write wins per document, by its "updatedAt" time).
+/// Coins, XP, level, owned operators and challenges are NOT here: they are the server's (player_economy/profile, read-only for the client,
+/// changed only by the Nakama module) and are handled by <see cref="PlayerProgression"/> and <see cref="ChallengeService"/>.
 /// </summary>
 public sealed class PlayerDataService : MonoBehaviour
 {
     public const string Collection = "player_data";
-    public enum Doc { Loadout, Settings, Challenges, History }
+    public enum Doc { Loadout, Settings, History }
 
     public static PlayerDataService Instance { get; private set; }
     public static event Action Loaded;
@@ -107,7 +105,7 @@ public sealed class PlayerDataService : MonoBehaviour
             }
             catch (Exception ex) { Debug.LogWarning("[PlayerData] Profile: " + ex.Message); }
 
-            await PlayerProgression.LoadAsync();   // reads, merges and creates the progress record
+            await PlayerProgression.LoadAsync();   // the server's profile: coins, XP, level, operators, challenges
 
             var ids = new List<IApiReadStorageObjectId>();
             foreach (Doc d in Enum.GetValues(typeof(Doc))) ids.Add(new StorageObjectId { Collection = Collection, Key = Key(d), UserId = user });
@@ -120,7 +118,6 @@ public sealed class PlayerDataService : MonoBehaviour
             {
                 LoadLoadout(remote);
                 LoadSettings(remote);
-                LoadChallenges(remote);
                 LoadHistory(remote);
             }
             finally { applying = false; }
@@ -173,12 +170,6 @@ public sealed class PlayerDataService : MonoBehaviour
                 if (gm != null && gm.gameObject.scene.IsValid()) gm.LoadAndApplyAllSettings();
         }
         else if (doc == null) { dirty.Add(Doc.Settings); lastChange = -PushDelay; }
-    }
-
-    private void LoadChallenges(Dictionary<string, string> remote)
-    {
-        if (remote.TryGetValue(Key(Doc.Challenges), out var json)) ChallengeService.ApplyRemote(json);
-        else { dirty.Add(Doc.Challenges); lastChange = -PushDelay; }
     }
 
     private void LoadHistory(Dictionary<string, string> remote)
@@ -263,7 +254,6 @@ public sealed class PlayerDataService : MonoBehaviour
                 {
                     case Doc.Loadout: value = JsonUtility.ToJson(CaptureLoadout(now)); break;
                     case Doc.Settings: value = JsonUtility.ToJson(CaptureSettings(now)); break;
-                    case Doc.Challenges: value = ChallengeService.ToJson(); break;
                     case Doc.History: history.updatedAt = now; value = JsonUtility.ToJson(history); break;
                 }
                 if (value == null) continue;

@@ -16,14 +16,16 @@ public static class ServerAllocationClient
     private class Request { public string matchId; public int players; }
 
     [Serializable]
-    private class Reply { public string status; public string matchId; public string host; public int port; public string name; }
+    private class Reply { public string status; public string matchId; public string host; public int port; public string name; public string token; }
 
     public readonly struct Allocation
     {
         public readonly string Host;
         public readonly int Port;
         public readonly string ServerName;
-        public Allocation(string host, int port, string serverName) { Host = host; Port = port; ServerName = serverName; }
+        /// <summary>Join ticket issued by Nakama for this player and match; the game server refuses a client without it.</summary>
+        public readonly string Token;
+        public Allocation(string host, int port, string serverName, string token = "") { Host = host; Port = port; ServerName = serverName; Token = token ?? ""; }
     }
 
     /// <summary>
@@ -61,7 +63,7 @@ public static class ServerAllocationClient
                 {
                     case "ready":
                         Debug.Log($"[ServerAllocation] Server ready for match {matchId}: {reply.host}:{reply.port} ({reply.name})");
-                        return new Allocation(reply.host, reply.port, reply.name);
+                        return new Allocation(reply.host, reply.port, reply.name, reply.token);
 
                     case "pending":
                         status?.Invoke("PREPARING YOUR MATCH SERVER...");

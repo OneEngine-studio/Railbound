@@ -30,6 +30,9 @@ public sealed class AgonesServerLifecycle : MonoBehaviour
 
     public static string MatchId { get; private set; } = "";
 
+    /// <summary>True inside an Agones pod (the SDK sidecar announced itself). Connection approval then insists on the allocated match id.</summary>
+    public static bool InAgones => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT"));
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void AutoStart()
     {
@@ -112,6 +115,8 @@ public sealed class AgonesServerLifecycle : MonoBehaviour
     {
         shuttingDown = true;
         Debug.Log("[Agones] Shutting down: " + reason);
+        // the results of the players go to Nakama first (XP and coins are paid there); a match nobody finished is paid from what the server saw
+        yield return Railbound.Networking.ServerMatchSession.FlushBeforeShutdown();
         yield return Post("/shutdown", "shutdown");
         yield return new WaitForSecondsRealtime(0.5f);
         Application.Quit(0);

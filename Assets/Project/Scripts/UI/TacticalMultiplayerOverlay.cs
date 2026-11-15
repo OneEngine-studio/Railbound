@@ -327,6 +327,12 @@ namespace Railbound.UI
         private void UpdateTransportConfig()
         {
             if (NetworkManager.Singleton == null) return;
+            Railbound.Networking.ConnectionApprovalGate.Configure(NetworkManager.Singleton);   // client and server must agree on connection approval
+            if (!NetworkManager.Singleton.IsListening)
+            {
+                var link = Railbound.Networking.GameServerConnection.Instance;
+                if (link != null) NetworkManager.Singleton.NetworkConfig.ConnectionData = Railbound.Networking.ConnectionApprovalGate.BuildClientPayload(link.MatchId, link.JoinToken);
+            }
 
             // the lobby asked Nakama for this match's game server (Agones); a command-line -ip / -port still wins
             var server = Railbound.Networking.GameServerConnection.Instance;

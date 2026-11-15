@@ -338,6 +338,7 @@ namespace Railbound.BR
             if (NetworkActive && IsSpawned && IsServer) netWinner.Value = new FixedString64Bytes(name);
             SetState(BRMatchState.MatchEnded);
 
+            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteMatchEnd(participants, TotalCount, MatchSeconds);
             ulong winnerClient = winner != null ? winner.ClientId : ulong.MaxValue;
             if (NetworkActive && IsSpawned && IsServer) MatchEndedClientRpc(name, winnerClient);
             else RaiseMatchEnded(name, winnerClient);
@@ -588,6 +589,8 @@ namespace Railbound.BR
                 AliveAfter = localAlive
             };
 
+            // the server is the authority on who finished where: Nakama pays the rewards from what the server reports
+            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0);
             if (NetworkActive && IsSpawned && IsServer) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
             else if (!networkedClient) RaiseKill(info);
         }

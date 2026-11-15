@@ -9,7 +9,7 @@ model's own. All skins share the MIL-R5 skeleton, so the existing `CharacterSkin
 | baked skin prefabs and meshes | `Assets/Project/character/Skins/` |
 | editor tools | `Tools > Railbound > Characters`, `CharacterSkinBaker`, `CharacterSkinSetup` |
 | runtime | `Project.Character`: `CharacterSkinApplier`, `PlayerSkinNet` (players), `BRNetBot` (bots) |
-| ownership and coins | `PlayerProgression.OwnsOperator / TryBuyOperator` (saved in the player's progress record) |
+| ownership and coins | `PlayerProgression.OwnsOperator / BuyOperatorAsync`: the owned list and the price table are the server's (Nakama RPC `railbound_buy_operator`, see `docs/server-authoritative-economy.md`). **When you change a price in the catalog, change `OPERATOR_PRICES` in the Nakama module too.** |
 | lobby | `LobbyCharacterPreviewManager` (operators), `LobbyStoreScreen` (locked cards, PREVIEW, BUY) |
 
 ## Current skins

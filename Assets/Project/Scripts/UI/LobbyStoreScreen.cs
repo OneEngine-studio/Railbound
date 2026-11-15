@@ -32,6 +32,8 @@ namespace Railbound.UI
         private int tab;
         private float fade;
         private bool subscribed;
+        private bool buyBusy;
+        private string statusMessage = "";
 
         protected override void BuildContent(RectTransform c)
         {
@@ -42,6 +44,7 @@ namespace Railbound.UI
         protected override void OnOpened()
         {
             tab = 0;
+            statusMessage = "";
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null && !subscribed) { preview.OnOperatorChanged += OnOperatorChanged; subscribed = true; }
             PlayerProgression.Changed -= OnCoinsChanged; PlayerProgression.Changed += OnCoinsChanged;
@@ -105,6 +108,13 @@ namespace Railbound.UI
             int n = preview != null ? preview.TotalOperators : 0;
             if (n == 0) { BuildSoon("NO OPERATORS FOUND"); return; }
 
+            // what the player must know about their money: nothing for a normal online profile, a clear warning for the others
+            string mode = PlayerProgression.ModeLabel;
+            if (!string.IsNullOrEmpty(mode))
+                LabelC(body, mode + (PlayerProgression.IsLocalOnly ? "   -   PURCHASES ARE NOT SAVED ONLINE" : "   -   PURCHASES NEED A CONNECTION"), 14, true, new Color(1f, 0.78f, 0.25f, 1f), new Vector2(0f, 372f), new Vector2(1500f, 24f));
+            if (!string.IsNullOrEmpty(statusMessage))
+                LabelC(body, statusMessage, 16, true, Color.white, new Vector2(0f, -374f), new Vector2(1500f, 26f));
+
             const int cols = 5;
             int rows = (n + cols - 1) / cols;
             float cardW = 336f, gap = 20f;
@@ -163,6 +173,7 @@ namespace Railbound.UI
 
                     bool canAfford = coins >= price;
                     var buy = MakeButton(card, canAfford ? "BUY   " + price.ToString("N0") + " COINS" : price.ToString("N0") + " COINS", new Vector2(0f, -cardH * 0.5f + 40f), new Vector2(cardW - 40f, 48f), canAfford, () => Buy(index));
+                    if (buyBusy) { buy.interactable = false; }
                     if (!canAfford)
                     {
                         buy.interactable = false;
@@ -207,10 +218,28 @@ namespace Railbound.UI
             if (preview != null) preview.SelectOperator(index);   // raises OnOperatorChanged, which redraws the cards
         }
 
-        private void Buy(int index)
+        private async void Buy(int index)
         {
             var preview = LobbyCharacterPreviewManager.Instance;
-            if (preview != null && preview.TryBuyOperator(index)) Refresh(false);   // bought and equipped
+            if (preview == null || buyBusy) return;
+            buyBusy = true;
+            statusMessage = "BUYING...";
+            Refresh(false);
+            BuyResult result = BuyResult.Offline;
+            try { result = await preview.BuyOperatorAsync(index); }   // the server decides; bought operators are equipped
+            catch (System.Exception ex) { Debug.LogWarning("[Store] Purchase failed: " + ex.Message); }
+            finally { buyBusy = false; }
+            if (this == null) return;
+            switch (result)
+            {
+                case BuyResult.Bought: statusMessage = "PURCHASED AND EQUIPPED"; break;
+                case BuyResult.NotEnoughCoins: statusMessage = "NOT ENOUGH COINS"; break;
+                case BuyResult.AlreadyOwned: statusMessage = "ALREADY OWNED"; break;
+                case BuyResult.Busy: statusMessage = "ONE PURCHASE AT A TIME"; break;
+                case BuyResult.Offline: statusMessage = "CAN'T REACH THE SERVER - NOTHING WAS CHARGED"; break;
+                default: statusMessage = "NOT AVAILABLE"; break;
+            }
+            if (IsOpen && tab == 0) Refresh(false);
         }
 
         // ---------------- coming soon ----------------
