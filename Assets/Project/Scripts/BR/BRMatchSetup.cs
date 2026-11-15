@@ -149,12 +149,14 @@ namespace Railbound.BR
             usedLootPoints.Clear();
             playerSpawns.Clear();
             weaponTemplates.Clear();
+            BRLootSync.BeginLayout();
             BotsPlaced = PlayerSpawnsReady = WeaponsPlaced = AmmoPlaced = MedkitsPlaced = 0;
 
             // Player slots first so players always get a spot, then bots.
             if (RandomizePlayerSpawn) PreparePlayerSpawns();
             if (RandomizeBotSpawns) PlaceBots();
             if (RandomizeLoot) ScatterLoot();
+            BRLootSync.EndLayout();
 
             Debug.Log($"[BRMatchSetup] seed={ActiveSeed} bots={BotsPlaced} playerSpawns={PlayerSpawnsReady} " +
                       $"weapons={WeaponsPlaced} ammo={AmmoPlaced} medkits={MedkitsPlaced} " +
@@ -198,6 +200,8 @@ namespace Railbound.BR
         private void PlaceBots()
         {
             var agents = FindObjectsByType<JUCharacterRLAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            // FindObjects has no defined order: sort, so the server and every client walk the bots in the same order
+            System.Array.Sort(agents, CompareForLayout);
             for (int i = 0; i < agents.Length; i++)
             {
                 var agent = agents[i];
@@ -276,6 +280,19 @@ namespace Railbound.BR
                 if (w == null || w.GetComponentInParent<JUInventory>() != null) continue;
                 weaponTemplates.Add(w);
             }
+            // same order on every peer (the layout is drawn from one seed, so the order decides which weapon lands where)
+            weaponTemplates.Sort((a, b) => CompareForLayout(a, b));
+        }
+
+        private static int CompareForLayout(Component a, Component b)
+        {
+            int byName = string.CompareOrdinal(a.name, b.name);
+            if (byName != 0) return byName;
+            Vector3 pa = a.transform.position, pb = b.transform.position;
+            int c = pa.x.CompareTo(pb.x);
+            if (c != 0) return c;
+            c = pa.z.CompareTo(pb.z);
+            return c != 0 ? c : pa.y.CompareTo(pb.y);
         }
 
         private readonly List<Transform> lootPointSpots = new List<Transform>();
@@ -311,7 +328,9 @@ namespace Railbound.BR
             lootPointSpots.Clear();
             usedLootPointSpots.Clear();
             LootPointsUsed = 0;
-            foreach (var lp in FindObjectsByType<BRLootPoint>(FindObjectsSortMode.None)) lootPointSpots.Add(lp.transform);
+            var lootPointObjects = FindObjectsByType<BRLootPoint>(FindObjectsSortMode.None);
+            System.Array.Sort(lootPointObjects, (a, b) => CompareForLayout(a, b));
+            foreach (var lp in lootPointObjects) lootPointSpots.Add(lp.transform);
             LootPointsAvailable = lootPointSpots.Count;
 
             // Existing ground weapons are moved first, then extras are cloned until ScatteredWeapons is reached.
@@ -357,6 +376,7 @@ namespace Railbound.BR
                 if (ammo != null) ammo.SpawnWithImpulse(Vector3.zero, Vector3.zero);
                 var med = go.GetComponent<MedkitPickup>();
                 if (med != null) med.SpawnWithImpulse(Vector3.zero, Vector3.zero);
+                BRLootSync.Register(go);
                 placed++;
             }
             return placed;
@@ -425,6 +445,7 @@ namespace Railbound.BR
             }
             item.gameObject.SetActive(true);
             Physics.SyncTransforms();
+            BRLootSync.Register(item.gameObject);
         }
 
         private void CloneLoot(GameObject template, Vector3 groundPoint)
@@ -433,6 +454,7 @@ namespace Railbound.BR
                 Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f), lootRoot);
             clone.name = template.name + " (random loot)";
             clone.SetActive(true);
+            BRLootSync.Register(clone);
             var rb = clone.GetComponent<Rigidbody>();
             if (rb != null)
             {

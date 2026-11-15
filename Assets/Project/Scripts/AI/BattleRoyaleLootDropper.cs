@@ -142,6 +142,7 @@ namespace Railbound.AI
                     rb.angularVelocity = medkitTorque;
                 }
             }
+            Railbound.BR.BRLootSync.ServerAnnounceDrop(Railbound.BR.BRLootSync.DropKind.Medkit, medkitObj, medkitVel, medkitTorque);
         }
 
         private void DropSingleAmmoBox(Vector3 pos)
@@ -180,6 +181,7 @@ namespace Railbound.AI
                     rb.angularVelocity = ammoTorque;
                 }
             }
+            Railbound.BR.BRLootSync.ServerAnnounceDrop(Railbound.BR.BRLootSync.DropKind.AmmoBox, ammoObj, ammoVel, ammoTorque);
         }
     }
 }

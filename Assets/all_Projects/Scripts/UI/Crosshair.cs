@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -55,9 +55,11 @@ namespace JUTPS.UI
             cameraController = FindObjectOfType<JUCameraController>();
 
             //if theres no player, theres nothing to 
+            // In multiplayer the offline placeholder player is inactive here and the network player is bound later
+            // (PlayerReferenceRebinder), so a missing player must not stop the setup below.
             var playerobject = GameObject.FindGameObjectWithTag("Player");
-            player = playerobject.GetComponent<JUCharacterController>();
-            if (player == null) return;
+            player = playerobject != null ? playerobject.GetComponent<JUCharacterController>() : null;
+            if (Crosshairs == null || Crosshairs.Length == 0) return;
 
             //Save Crosshairs start positions
             CrosshairsStartPositions = GetCrosshairPositions(Crosshairs);

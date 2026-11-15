@@ -26,6 +26,13 @@ public class JUNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> rightHandItem = new NetworkVariable<int>(
         -1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+    // Aim state of the owner (firing mode, reloading, the point it looks at): remote copies use it to put the hands on the weapon,
+    // turn the spine and the head to the target and point the weapon where the owner aims.
+    private readonly NetworkVariable<Railbound.BR.PuppetPose> pose = new NetworkVariable<Railbound.BR.PuppetPose>(
+        default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private float nextPosePublish;
+    private bool isPuppet;
+
     private void Awake()
     {
         characterController = GetComponent<JUCharacterController>();
@@ -175,7 +182,10 @@ public class JUNetworkPlayer : NetworkBehaviour
             if (characterController != null)
             {
                 characterController.UseDefaultControllerInput = false;
-                characterController.enabled = false;
+                // the controller stays on as a "puppet" (no input, movement, physics or damage) so the hands, spine and head are posed
+                isPuppet = Railbound.BR.PuppetPoseSync.MakePuppet(characterController);
+                if (!isPuppet) characterController.enabled = false;
+                else ApplyRemoteItem(rightHandItem.Value);   // again, now through the controller
             }
             if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }   // NetworkTransform interpolates remote players
             if (sonarSkill != null) sonarSkill.enabled = false;
@@ -269,11 +279,44 @@ public class JUNetworkPlayer : NetworkBehaviour
                 }
             }
         }
-        inventory.SwitchToItem(id, true);
+        Railbound.BR.PuppetPoseSync.SwitchItem(characterController, inventory, id);
+    }
+
+    // ---- ground guard (owner): a player that fell through the world, or hangs far above it, is put back on the ground
+    private float nextGroundCheck, airborneSince = -1f;
+    private void GroundGuard()
+    {
+        if (Time.unscaledTime < nextGroundCheck || rb == null) return;
+        nextGroundCheck = Time.unscaledTime + 0.5f;
+        var terrain = Terrain.activeTerrain;
+        if (terrain == null || (health != null && health.IsDead)) { airborneSince = -1f; return; }
+
+        Vector3 p = transform.position;
+        float ground = terrain.SampleHeight(p) + terrain.transform.position.y;
+        float above = p.y - ground;
+        bool fell = above < -25f;
+        bool inAir = characterController != null && !characterController.IsGrounded && !characterController.IsDriving && above > 30f;
+        if (inAir) { if (airborneSince < 0f) airborneSince = Time.unscaledTime; } else airborneSince = -1f;
+        bool stuckHigh = airborneSince >= 0f && Time.unscaledTime - airborneSince > 4f;
+        if (!fell && !stuckHigh) return;
+
+        // find a solid spot straight above the terrain surface and teleport there (a teleport, so other players do not see a slide)
+        Vector3 target = new Vector3(p.x, ground + 1.2f, p.z);
+        Debug.LogWarning($"[JUNetworkPlayer] Ground guard: player {OwnerClientId} was {above:F0} m {(fell ? "below" : "above")} the ground at {p}; placing it at {target}.");
+        rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt != null && nt.CanCommitToTransform) nt.Teleport(target, transform.rotation, transform.localScale);
+        else transform.position = target;
+        rb.position = target;
+        airborneSince = -1f;
     }
 
     private void Update()
     {
+        if (IsSpawned && IsOwner) GroundGuard();
+        if (IsSpawned && IsOwner) Railbound.BR.PuppetPoseSync.Publish(characterController, pose, ref nextPosePublish);
+        if (isPuppet && IsSpawned && !IsOwner) characterController.PuppetUpdate(pose.Value.Firing, pose.Value.Reloading, pose.Value.Look);
+
         if (IsOwner && IsSpawned && inventory != null && rightHandItem.Value != inventory.CurrentRightHandItemID)
         {
             rightHandItem.Value = inventory.CurrentRightHandItemID;

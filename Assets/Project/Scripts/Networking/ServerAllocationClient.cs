@@ -38,7 +38,12 @@ public static class ServerAllocationClient
             Debug.Log("[ServerAllocation] Not signed in to Nakama: no allocation possible.");
             return null;
         }
+        return await AllocateAsync(auth.Client, auth.Session, matchId, players, timeoutSeconds, cancelled, status);
+    }
 
+    /// <summary>Same, with an explicit Nakama client and session (a build that skips the lobby signs in as a guest itself).</summary>
+    public static async Task<Allocation?> AllocateAsync(IClient client, ISession session, string matchId, int players, float timeoutSeconds, Func<bool> cancelled, Action<string> status)
+    {
         string payload = JsonUtility.ToJson(new Request { matchId = matchId, players = Mathf.Max(1, players) });
         float start = Time.realtimeSinceStartup;
         int attempt = 0;
@@ -50,7 +55,7 @@ public static class ServerAllocationClient
 
             try
             {
-                var rpc = await auth.Client.RpcAsync(auth.Session, RpcName, payload);
+                var rpc = await client.RpcAsync(session, RpcName, payload);
                 var reply = JsonUtility.FromJson<Reply>(rpc.Payload);
                 switch (reply != null ? reply.status : null)
                 {

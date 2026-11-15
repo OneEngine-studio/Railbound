@@ -269,6 +269,7 @@ namespace JUTPS.WeaponSystem
 				_bullet.Ignore(ListToIgnoreBulletCollision);
 			}
 			Destroy(bullet, 10f);
+			OnAnyBulletSpawned?.Invoke(this, ShootStart, ShootEnd, ShootDirection, FinalPointNormal);
 		}
 		/// <summary>
 		/// Call it before shooting. Creates an orientation for the shot. 
@@ -281,6 +282,18 @@ namespace JUTPS.WeaponSystem
 			CameraPosition = cameraPosition;
 			ShootDirection = shootDirection;
 		}
+		/// <summary>Raised on the peer that fires, after every shot. The network layer uses it to show a bot's muzzle flash and sound on the clients.</summary>
+		public static event System.Action<Weapon> OnAnyShot;
+		/// <summary>Raised on the peer that reloads (the network layer shows the reload sound on the other peers).</summary>
+		public static event System.Action<Weapon> OnAnyReload;
+		/// <summary>Plays the reload sound only (what other players hear when this weapon is reloaded elsewhere).</summary>
+		public void PlayReloadAudio()
+		{
+			if (ReloadAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled) mAudioSource.PlayOneShot(ReloadAudio);
+		}
+		/// <summary>Raised when a shot spawns a bullet: weapon, muzzle position, hit point (zero = hit nothing), bullet rotation, hit normal.</summary>
+		public static event System.Action<Weapon, Vector3, Vector3, Quaternion, Vector3> OnAnyBulletSpawned;
+
 		public void Shot()
 		{
 			if (CanUseItem == false)
@@ -406,6 +419,7 @@ namespace JUTPS.WeaponSystem
 						}
 
 						Destroy(bullet, 10f);
+						OnAnyBulletSpawned?.Invoke(this, Shoot_Position.position, CrosshairHit.point, Shoot_Position.rotation, CrosshairHit.normal);
 					}
 					else
 					{
@@ -424,6 +438,7 @@ namespace JUTPS.WeaponSystem
 							_bullet.Ignore(ListToIgnoreBulletCollision);
 						}
 						Destroy(bullet, 10f);
+						OnAnyBulletSpawned?.Invoke(this, Shoot_Position.position, Vector3.zero, BulletRotationPrecisionShootgun, Vector3.zero);
 					}
 				}
 
@@ -452,6 +467,8 @@ namespace JUTPS.WeaponSystem
 			//Reset Fire Rate
 			CurrentFireRateToShoot = 0;
 			CanUseItem = false;
+
+			OnAnyShot?.Invoke(this);
 
 			//Broadcast Gunshot to AI Sound Sensory System
 			Project.AI.Sensory.AISoundSensorySystem.RegisterGunshot(Shoot_Position != null ? Shoot_Position.position : transform.position, TPSControllerUser != null ? TPSControllerUser.gameObject : gameObject);
@@ -541,6 +558,7 @@ namespace JUTPS.WeaponSystem
 			}
 			//Play reloading audio
 			if (ReloadAudio != null && mAudioSource != null && mAudioSource.isActiveAndEnabled) mAudioSource.PlayOneShot(ReloadAudio);
+			OnAnyReload?.Invoke(this);
 		}
 
 #if UNITY_EDITOR
