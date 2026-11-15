@@ -18,6 +18,7 @@ public sealed class ProgressData
     public int kills;
     public long playSeconds;
     public int bestPlacement;   // best (lowest) finishing place, 0 = no match yet
+    public List<string> operators = new List<string>();   // ids of the operators bought in the lobby store (the starting one is always owned)
     public long updatedAt;      // UTC unix milliseconds of the last change
     public int version = 1;
 }
@@ -124,6 +125,7 @@ public static class PlayerProgression
         d.xp = Mathf.Max(0, d.xp);
         d.coins = Mathf.Max(0, d.coins);
         d.gems = Mathf.Max(0, d.gems);
+        if (d.operators == null) d.operators = new List<string>();
         return d;
     }
 
@@ -146,11 +148,16 @@ public static class PlayerProgression
                 var remote = string.IsNullOrWhiteSpace(o.Value) ? null : Sanitize(JsonUtility.FromJson<ProgressData>(o.Value));
                 if (remote != null && remote.totalXp >= current.totalXp)
                 {
+                    // bought operators are never lost: keep the ones of the other copy too
+                    var localOperators = current.operators;
                     current = remote;
+                    foreach (var opId in localOperators) if (!current.operators.Contains(opId)) current.operators.Add(opId);
                     WriteLocal();
+                    if (localOperators.Count > 0 && current.operators.Count > remote.operators.Count) await SaveRemoteAsync();
                 }
                 else if (remote != null)
                 {
+                    foreach (var opId in remote.operators) if (!current.operators.Contains(opId)) current.operators.Add(opId);
                     await SaveRemoteAsync();   // the device is ahead (an award that never reached the cloud)
                 }
             }
@@ -181,6 +188,33 @@ public static class PlayerProgression
         {
             Debug.LogWarning("[Progress] Could not save to the cloud (kept on this device): " + ex.Message);
         }
+    }
+
+    // ---------------- operators (character models) ----------------
+    /// <summary>True when the player may use this operator: the starting one, or one bought with coins.</summary>
+    public static bool OwnsOperator(string operatorId, bool isStarting)
+    {
+        if (isStarting) return true;
+        EnsureLocal();
+        return !string.IsNullOrEmpty(operatorId) && current.operators.Contains(operatorId);
+    }
+
+    /// <summary>
+    /// Buys an operator with coins. Returns false (and changes nothing) when there are not enough coins. Like XP and coin awards, this is
+    /// decided by the client for now: before launch the purchase should be a Nakama RPC so the server is the one that spends the coins.
+    /// </summary>
+    public static bool TryBuyOperator(string operatorId, int priceCoins)
+    {
+        EnsureLocal();
+        if (string.IsNullOrEmpty(operatorId)) return false;
+        if (current.operators.Contains(operatorId)) return true;
+        if (priceCoins < 0 || current.coins < priceCoins) return false;
+        current.coins -= priceCoins;
+        current.operators.Add(operatorId);
+        WriteLocal();
+        Changed?.Invoke();
+        var ignored = SaveRemoteAsync();
+        return true;
     }
 
     // ---------------- awards ----------------

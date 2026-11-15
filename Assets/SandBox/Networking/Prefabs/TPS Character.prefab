@@ -8021,6 +8021,9 @@ GameObject:
   - component: {fileID: 482875151155102054}
   - component: {fileID: 7823428649139308609}
   - component: {fileID: 8041777690894459671}
+  - component: {fileID: 8549610347995852103}
+  - component: {fileID: 6035421906703613847}
+  - component: {fileID: 3888769340001405660}
   m_Layer: 9
   m_Name: TPS Character
   m_TagString: Player
@@ -9907,10 +9910,20 @@ MonoBehaviour:
   maxSurvivalHealth: 100
   dangerThreshold: 0.55
   criticalThreshold: 0.3
-  heartbeatAudioSource: {fileID: 0}
-  breathingAudioSource: {fileID: 0}
   heartbeatClip: {fileID: 0}
   heavyBreathingClip: {fileID: 0}
+  tinnitusClip: {fileID: 0}
+  criticalStingClip: {fileID: 0}
+  heartbeatBedClip: {fileID: 0}
+  heartbeatLoopEnd: 31
+  bodySounds: 0
+  heartbeatVolume: 0.95
+  breathingVolume: 0.7
+  tinnitusVolume: 0.14
+  muffledCutoff: 1100
+  heartRate: {x: 68, y: 150}
+  heartbeatAudioSource: {fileID: 0}
+  breathingAudioSource: {fileID: 0}
   bloodVignetteImage: {fileID: 0}
   criticalWarningText: {fileID: 0}
 --- !u!114 &8041777690894459671
@@ -9935,6 +9948,42 @@ MonoBehaviour:
   healSuccessSfx: {fileID: 0}
   medkitPickupSfx: {fileID: 0}
   outOfMedkitsSfx: {fileID: 0}
+--- !u!114 &8549610347995852103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4372868026506870464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08822b7a60ca642498ea2804e9f01d6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6035421906703613847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4372868026506870464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9cea11b72babce43afe4c2b615199a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &3888769340001405660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4372868026506870464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1d878354c5d71646afdbe5c58410d77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4422377306144402532
 GameObject:
   m_ObjectHideFlags: 0

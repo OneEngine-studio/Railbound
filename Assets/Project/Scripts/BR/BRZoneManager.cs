@@ -50,8 +50,18 @@ namespace Railbound.BR
         [Header("Zone Configuration")]
         [SerializeField] private float initialRadius = 550f;
         [SerializeField] private Vector3 initialCenter = new Vector3(0f, 0f, 15f);
-        [SerializeField] private float wallHeight = 120f;
+        [Tooltip("Total height of the storm wall. It starts at Wall Bottom and must clear the tallest terrain inside the play area.")]
+        [SerializeField] private float wallHeight = 320f;
+        [SerializeField] private float wallBottom = -60f;
         [SerializeField] private Material stormWallMaterial;
+
+        [Header("Play area")]
+        [Tooltip("Take the circle's center and size from BRMatchSetup (Map Center / Map Radius), so spawns, loot and storm share ONE play area.")]
+        [SerializeField] private bool followMatchSetup = true;
+        [Tooltip("The first ring is this much wider than the area where spawns and loot are placed.")]
+        [SerializeField] private float outerMargin = 12f;
+        [Tooltip("The phase target radii below were designed for a ring of this size; they are scaled to the real play area.")]
+        [SerializeField] private float referenceRadius = 550f;
 
         [Header("Realistic Battle Royale Phases (Paced like Warzone / Apex)")]
         [SerializeField] private ZonePhase[] phases = new ZonePhase[]
@@ -92,6 +102,27 @@ namespace Railbound.BR
 
         public NetworkVariable<Vector3> NetTargetCenter = new NetworkVariable<Vector3>(
             new Vector3(0f, 0f, 15f), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        // phases with the target radii scaled to the real play area (the serialized ones are only a template)
+        private ZonePhase[] activePhases;
+
+        /// <summary>Radius of the opening ring (the whole play area).</summary>
+        public float InitialRadius => initialRadius;
+        public Vector3 InitialCenter => initialCenter;
+
+        /// <summary>
+        /// Zone for AI code: the circle bots must stay in. While a ring is shrinking this is the ring it is shrinking TO,
+        /// so bots start walking before the storm reaches them. Returns false when there is no zone in the scene.
+        /// </summary>
+        public static bool TryGetSafeCircle(out Vector3 center, out float radius, out bool shrinking)
+        {
+            var z = _instance;
+            if (z == null) { center = Vector3.zero; radius = 0f; shrinking = false; return false; }
+            shrinking = z.IsShrinking;
+            center = shrinking ? z.TargetCenter : z.CurrentCenter;
+            radius = shrinking ? z.TargetRadius : z.CurrentRadius;
+            return true;
+        }
 
         // Offline / Local fallback values
         private int localPhaseIndex = 0;
@@ -146,11 +177,13 @@ namespace Railbound.BR
             }
             _instance = this;
 
+            ResolvePlayArea();
+
             localStartRadius = initialRadius;
-            localTargetRadius = phases.Length > 0 ? phases[0].TargetRadius : initialRadius;
+            localTargetRadius = activePhases.Length > 0 ? activePhases[0].TargetRadius : initialRadius;
             localStartCenter = initialCenter;
             localTargetCenter = initialCenter;
-            localPhaseDuration = phases.Length > 0 ? phases[0].WaitDuration : 120f;
+            localPhaseDuration = activePhases.Length > 0 ? activePhases[0].WaitDuration : 120f;
             localTimeRemaining = localPhaseDuration;
 
             interpolatedRadius = initialRadius;
@@ -160,6 +193,29 @@ namespace Railbound.BR
 
             // the match state machine (alive count, killfeed, winner) lives next to the storm
             BRMatchCoordinator.EnsureExists(gameObject);
+        }
+
+        /// <summary>Center/size of the opening ring from the match setup, and phase radii scaled to it.</summary>
+        private void ResolvePlayArea()
+        {
+            if (followMatchSetup)
+            {
+                var setup = FindFirstObjectByType<BRMatchSetup>();
+                if (setup != null && setup.MapRadius > 1f)
+                {
+                    initialCenter = new Vector3(setup.MapCenter.x, 0f, setup.MapCenter.z);
+                    initialRadius = setup.MapRadius + Mathf.Max(0f, outerMargin);
+                }
+            }
+
+            float scale = referenceRadius > 1f ? initialRadius / referenceRadius : 1f;
+            activePhases = new ZonePhase[phases.Length];
+            for (int i = 0; i < phases.Length; i++)
+            {
+                var ph = phases[i];
+                ph.TargetRadius = ph.TargetRadius * scale;
+                activePhases[i] = ph;
+            }
         }
 
         private void Start()
@@ -247,36 +303,82 @@ namespace Railbound.BR
             }
         }
 
+        private Material ringMaterial;
+        private static readonly int UnlitColorId = Shader.PropertyToID("_UnlitColor");
+        private static readonly int UseVertexColorId = Shader.PropertyToID("_UseVertexColor");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
         private void SetupVisualBarrier()
         {
             if (ringVisualTransform != null) return;
+            // a headless server has nothing to draw
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
 
-            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            cylinder.name = "StormRingVisual";
-            cylinder.transform.SetParent(transform);
+            var go = new GameObject("StormRingVisual");
+            go.transform.SetParent(transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = BuildRingMesh(160);
+            var rend = go.AddComponent<MeshRenderer>();
+            rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            rend.receiveShadows = false;
+            rend.allowOcclusionWhenDynamic = false;
 
-            // Remove physical collider so bullets and players pass through
-            var col = cylinder.GetComponent<Collider>();
-            if (col != null) Destroy(col);
-
-            if (stormWallMaterial != null)
+            Material src = stormWallMaterial;
+            if (src == null) src = Resources.Load<Material>("Materials/M_StormRing");
+            if (src == null) src = LoadStormMaterialDirect();
+            if (src != null)
             {
-                var rend = cylinder.GetComponent<MeshRenderer>();
-                if (rend != null) rend.sharedMaterial = stormWallMaterial;
+                // own instance: the wall is tinted and pulsed per frame, the shared asset stays untouched
+                ringMaterial = new Material(src) { name = "StormRing (runtime)" };
+                if (ringMaterial.HasProperty(UseVertexColorId)) ringMaterial.SetFloat(UseVertexColorId, 1f);   // the alpha ramp comes from the mesh
+                rend.sharedMaterial = ringMaterial;
             }
-            else
+
+            ringVisualTransform = go.transform;
+            UpdateVisualBarrier();
+        }
+
+        /// <summary>
+        /// Open tube of radius 1 and height 1 (scaled at runtime). Vertex alpha: a bright band at the ground that fades
+        /// towards the sky, so the border reads from far away without hiding the sky or the terrain behind it.
+        /// Both faces are drawn (inside and outside); the tube has no collider.
+        /// </summary>
+        private static Mesh BuildRingMesh(int segments)
+        {
+            float[] ys = { 0f, 0.02f, 0.45f, 1f };
+            float[] alphas = { 0.85f, 0.6f, 0.25f, 0.05f };
+            int rings = ys.Length;
+            var verts = new Vector3[(segments + 1) * rings];
+            var cols = new Color[verts.Length];
+            var uvs = new Vector2[verts.Length];
+            for (int r = 0; r < rings; r++)
             {
-                var loadedMat = Resources.Load<Material>("Materials/M_StormRing");
-                if (loadedMat == null) loadedMat = LoadStormMaterialDirect();
-                if (loadedMat != null)
+                for (int i = 0; i <= segments; i++)
                 {
-                    var rend = cylinder.GetComponent<MeshRenderer>();
-                    if (rend != null) rend.sharedMaterial = loadedMat;
+                    float ang = (float)i / segments * Mathf.PI * 2f;
+                    int idx = r * (segments + 1) + i;
+                    verts[idx] = new Vector3(Mathf.Cos(ang), ys[r], Mathf.Sin(ang));
+                    cols[idx] = new Color(1f, 1f, 1f, alphas[r]);
+                    uvs[idx] = new Vector2((float)i / segments, ys[r]);
                 }
             }
-
-            ringVisualTransform = cylinder.transform;
-            UpdateVisualBarrier();
+            var tris = new List<int>();
+            for (int r = 0; r < rings - 1; r++)
+            {
+                for (int i = 0; i < segments; i++)
+                {
+                    int a = r * (segments + 1) + i, b = a + 1, c = a + (segments + 1), d = c + 1;
+                    tris.Add(a); tris.Add(c); tris.Add(b); tris.Add(b); tris.Add(c); tris.Add(d);   // one winding
+                    tris.Add(a); tris.Add(b); tris.Add(c); tris.Add(b); tris.Add(d); tris.Add(c);   // and the other
+                }
+            }
+            var mesh = new Mesh { name = "StormRingTube" };
+            mesh.vertices = verts;
+            mesh.colors = cols;
+            mesh.uv = uvs;
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.bounds = new Bounds(new Vector3(0f, 0.5f, 0f), new Vector3(2f, 1f, 2f));
+            return mesh;
         }
 
         private Material LoadStormMaterialDirect()
@@ -292,11 +394,23 @@ namespace Railbound.BR
         {
             if (ringVisualTransform == null) return;
 
-            float radius = CurrentRadius;
+            float radius = Mathf.Max(0.5f, CurrentRadius);
             Vector3 center = CurrentCenter;
 
-            ringVisualTransform.position = new Vector3(center.x, wallHeight * 0.5f, center.z);
-            ringVisualTransform.localScale = new Vector3(radius * 2f, wallHeight * 0.5f, radius * 2f);
+            ringVisualTransform.position = new Vector3(center.x, wallBottom, center.z);
+            ringVisualTransform.localScale = new Vector3(radius, wallHeight, radius);
+
+            if (ringMaterial != null)
+            {
+                // slow breathing, and redder while the ring is closing in
+                float pulse = 0.85f + 0.15f * Mathf.Sin(Time.time * 1.6f);
+                Color calm = new Color(0.06f, 0.34f, 0.95f, 1f);      // HDR: the wall is additive, so it glows against sky and ground alike
+                Color closing = new Color(0.95f, 0.22f, 0.06f, 1f);
+                Color c = Color.Lerp(calm, closing, IsShrinking ? 1f : 0f);
+                c.a = pulse;
+                if (ringMaterial.HasProperty(UnlitColorId)) ringMaterial.SetColor(UnlitColorId, c);
+                if (ringMaterial.HasProperty(BaseColorId)) ringMaterial.SetColor(BaseColorId, c);
+            }
         }
 
         /// <summary>True on the networked server only; offline play and clients never wait for players.</summary>
@@ -373,9 +487,9 @@ namespace Railbound.BR
 
         private IEnumerator RunRound()
         {
-            for (int p = 0; p < phases.Length; p++)
+            for (int p = 0; p < activePhases.Length; p++)
             {
-                ZonePhase phase = phases[p];
+                ZonePhase phase = activePhases[p];
 
                 // 1. Wait phase
                 SetPhaseWait(p, phase.WaitDuration);
@@ -420,7 +534,7 @@ namespace Railbound.BR
                 // 2. Shrink phase
                 SetPhaseShrink(p, phase.ShrinkDuration, currentR, phase.TargetRadius, currentC, targetC);
 
-                if (p == phases.Length - 1)
+                if (p == activePhases.Length - 1)
                 {
                     BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: FINAL COLLAPSE INITIATED - ELIMINATE ALL HOSTILES!");
                 }
@@ -447,12 +561,12 @@ namespace Railbound.BR
         private void ResetZoneToInitial()
         {
             localStartRadius = initialRadius;
-            localTargetRadius = phases.Length > 0 ? phases[0].TargetRadius : initialRadius;
+            localTargetRadius = activePhases.Length > 0 ? activePhases[0].TargetRadius : initialRadius;
             localStartCenter = initialCenter;
             localTargetCenter = initialCenter;
             localIsShrinking = false;
             localPhaseIndex = 0;
-            localPhaseDuration = phases.Length > 0 ? phases[0].WaitDuration : 120f;
+            localPhaseDuration = activePhases.Length > 0 ? activePhases[0].WaitDuration : 120f;
             localTimeRemaining = localPhaseDuration;
 
             if (IsNetworkedActive && IsServer)
@@ -582,25 +696,42 @@ namespace Railbound.BR
             }
         }
 
+        private readonly List<JUHealth> stormTargets = new List<JUHealth>();
+        private float stormScanTimer;
+
         private void ApplyStormDamage()
         {
-            int pIndex = Mathf.Clamp(CurrentPhaseIndex, 0, phases.Length - 1);
-            float dps = phases[pIndex].DamagePerSecond;
-            float radiusSq = CurrentRadius * CurrentRadius;
+            int pIndex = Mathf.Clamp(CurrentPhaseIndex, 0, activePhases.Length - 1);
+            float dps = activePhases[pIndex].DamagePerSecond;
+            float radius = CurrentRadius;
+            float radiusSq = radius * radius;
             Vector3 center = CurrentCenter;
 
-            var allHealths = FindObjectsByType<JUHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            foreach (var h in allHealths)
+            // the list of bodies is refreshed every few seconds (a scene-wide search on every tick is wasteful)
+            stormScanTimer -= 1f;
+            if (stormScanTimer <= 0f || stormTargets.Count == 0)
             {
-                if (h == null || h.IsDead) continue;
+                stormScanTimer = 3f;
+                stormTargets.Clear();
+                stormTargets.AddRange(FindObjectsByType<JUHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
+            }
+
+            for (int i = stormTargets.Count - 1; i >= 0; i--)
+            {
+                var h = stormTargets[i];
+                if (h == null) { stormTargets.RemoveAt(i); continue; }
+                if (h.IsDead) continue;
 
                 Vector3 pos = h.transform.position;
-                float distSq = (pos.x - center.x) * (pos.x - center.x) + (pos.z - center.z) * (pos.z - center.z);
+                float dx = pos.x - center.x, dz = pos.z - center.z;
+                float distSq = dx * dx + dz * dz;
+                if (distSq <= radiusSq) continue;
 
-                if (distSq > radiusSq)
-                {
-                    h.DoDamage(dps);
-                }
+                // the further out, the harder it burns: a body far outside the play area cannot linger
+                float outside = Mathf.Sqrt(distSq) - radius;
+                float mult = 1f + Mathf.Min(4f, outside / 40f);
+                JUHealth.PendingAttacker = null;   // storm damage is nobody's kill
+                h.DoDamage(dps * mult);
             }
         }
 

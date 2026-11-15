@@ -43,5 +43,25 @@ public static class DedicatedServerRuntime
         QualitySettings.vSyncCount = 0;
         Application.targetFrameRate = fps;
         Debug.Log($"[Server] Dedicated server runtime: frame rate capped at {fps} fps.");
+
+        // Scene scripts set the frame rate again after this (JU's TargetFrameRate script uses -1 = unlimited, the Reach graphics
+        // settings apply a saved value): a measured server ran at ~144 fps although this cap had been set. Keep re-applying it.
+        var go = new GameObject("[ServerFrameRateGuard]");
+        UnityEngine.Object.DontDestroyOnLoad(go);
+        go.AddComponent<FrameRateGuard>().Fps = fps;
+    }
+
+    private sealed class FrameRateGuard : MonoBehaviour
+    {
+        public int Fps = DefaultServerFrameRate;
+        private float next;
+
+        private void Update()
+        {
+            if (Time.unscaledTime < next) return;
+            next = Time.unscaledTime + 1f;
+            if (Application.targetFrameRate != Fps) Application.targetFrameRate = Fps;
+            if (QualitySettings.vSyncCount != 0) QualitySettings.vSyncCount = 0;
+        }
     }
 }

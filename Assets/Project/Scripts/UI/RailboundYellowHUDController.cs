@@ -260,7 +260,7 @@ namespace Railbound.UI
             if (instant || shownFill < 0f) shownFill = fill;
             if (headerPlayerXpFill != null) headerPlayerXpFill.fillAmount = shownFill;
             LobbyParty.Instance.SetLocal(headerPlayerName != null ? headerPlayerName.text : "OPERATOR", PlayerProgression.LevelText,
-                LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+                LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.EquippedOperatorIndex : 0);
         }
 
         // the bar glides and the coins count up; a level-up that happened in the last match is shown once the lobby is quiet
@@ -321,8 +321,32 @@ namespace Railbound.UI
             RefreshNavTabsVisual();
         }
 
+        // test builds: "-lobbytab 5,1" opens those menu tabs one after another (STORE, then OPERATORS) so they can be screenshotted
+        private int[] testTabs; private int testTabNext; private float testTabAt = -1f;
+        private void RunTestTabs()
+        {
+            if (testTabs == null)
+            {
+                testTabs = new int[0];
+                string[] a = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i < a.Length - 1; i++)
+                    if (string.Equals(a[i], "-lobbytab", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        var list = new System.Collections.Generic.List<int>();
+                        foreach (var part in a[i + 1].Split(',')) if (int.TryParse(part, out int n)) list.Add(n);
+                        testTabs = list.ToArray(); testTabAt = Time.realtimeSinceStartup + 18f;
+                    }
+            }
+            if (testTabNext < testTabs.Length && Time.realtimeSinceStartup >= testTabAt)
+            {
+                SelectNavTab(testTabs[testTabNext++]);
+                testTabAt = Time.realtimeSinceStartup + 14f;
+            }
+        }
+
         private void Update()
         {
+            RunTestTabs();
             TickProgress();
 
             // the customization screen owns the keyboard while it is open (and on the frame its Esc closed it)
@@ -465,7 +489,7 @@ namespace Railbound.UI
             if (headerPlayerLevel != null) headerPlayerLevel.text = levelStr;
             ApplyProgress(true);
 
-            LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.CurrentOperatorIndex : 0);
+            LobbyParty.Instance.SetLocal(username.ToUpper(), levelStr, LobbyCharacterPreviewManager.Instance != null ? LobbyCharacterPreviewManager.Instance.EquippedOperatorIndex : 0);
 
 
             // Also update local player squad row
@@ -492,7 +516,7 @@ namespace Railbound.UI
             if (headerPrevOperatorBtn != null) headerPrevOperatorBtn.gameObject.SetActive(localSelected);
             if (headerNextOperatorBtn != null) headerNextOperatorBtn.gameObject.SetActive(localSelected);
             if (preview != null)
-                LobbyParty.Instance.SetLocal(null, null, preview.CurrentOperatorIndex);
+                LobbyParty.Instance.SetLocal(null, null, preview.EquippedOperatorIndex);
         }
 
         // ----------------------------------------------------
