@@ -62,8 +62,9 @@ Game server settings (env of the Agones pod, set in `charts/agones-fleet`):
 
 ## Deploy order (nothing has been deployed)
 
-1. **Rotate Nakama's HTTP key.** `charts/nakama/values.yaml` still has `runtime.httpKey: defaulthttpkey`, a public default. The two game-server RPCs are only as safe as this key: with the default, anyone can report themselves a win. Choose a strong value, put it in `runtime.httpKey`, and create the matching Secret for the game servers:
-   `kubectl -n platform create secret generic railbound-nakama --from-literal=http-key='<same value>'`
+1. **Give Nakama a real HTTP key, in a Secret (never in git: the gitops repo is public).** `charts/nakama/values.yaml` keeps the public `defaulthttpkey` only as a fallback; the two game-server RPCs are only safe with a real key (with the default, anyone can report themselves a win). Generate a long random value and create the same Secret in both namespaces:
+   `kubectl -n apps create secret generic railbound-nakama --from-literal=http-key='<random>'` (Nakama starts with `--runtime.http_key` from it; the pod does not start while the Secret is missing)
+   `kubectl -n platform create secret generic railbound-nakama --from-literal=http-key='<same value>'` (read by the game servers)
 2. **Nakama module first**: merge the gitops branch `feat/server-authoritative-economy` (module + fleet env). Argo CD updates `nakama-service`. Check the log line `Railbound module loaded: RPCs railbound_allocate, railbound_validate_join, railbound_profile, ...`. Old clients keep working until the next steps, except that their own coin/XP writes no longer count.
 3. **Server image second**: build the Unity server from this commit (the CI bumps the image tag in `game-server` and `agones-fleet`), let the fleet roll. Old servers (no approval, no reporting) must be gone before clients of the new version connect, or those matches pay nothing.
 4. **Client last**: build the client from the same commit and release it. A new client against an old server cannot connect (config hash mismatch on `ConnectionApproval`), which is the intended failure.
