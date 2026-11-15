@@ -74,7 +74,7 @@ Against a local Nakama 3.37 (docker, Postgres, a mock of the Agones allocation e
 `rpc-test.js` checks, among others: price table and profile creation; buy without coins, unknown operator, `__proto__`, client-sent price ignored; a client session cannot call the server RPCs, a wrong HTTP key is refused; a client cannot overwrite `player_economy/profile`, a second player cannot read it; join tokens (same player same token, other player's token, wrong match, made-up user id, missing token); reward numbers (xp 1425 / coins 356 for a 3-kill win after 10 min, level-up with bonus), caller-sent xp/coins ignored, duplicate report, a user without ticket gets nothing, clamping; challenge counting and claim (once only, incomplete, wrong tab); five wins then a purchase; 12 parallel buys charge once; parallel reports + purchase lose no update. 40 of 40 pass.
 
 Not tested (no Unity run was possible for this worktree):
-- the C# client and server code ran only through the compiler (all of `Assembly-CSharp` compiles with Unity's Roslyn, apart from one error in `BRLookPreset.cs` about `CycleManager`, a file this change does not touch);
+- the C# client and server code ran only through the compiler (all of `Assembly-CSharp` compiles with Unity's Roslyn outside the editor; the one error it reports, `CycleManager` not found in `BRLookPreset.cs`, comes from my ad-hoc file list missing `Assets/Day & Night Cycle/...cyclemanager.cs` because of the `&` in its path, not from this change);
 - connection approval, `ServerMatchSession` reporting, the store and the results screen in a real match; the Helm template change (not rendered with `helm`);
 - network reachability of `nakama.apps.svc.cluster.local:7350` from the `platform` namespace (a NetworkPolicy could block it).
 
