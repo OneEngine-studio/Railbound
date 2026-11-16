@@ -70,9 +70,45 @@ public class AuthenticationService : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        ReadTestBackend();
         InitClient();
-        if (autoRestoreSession) _ = TryRestoreSessionAsync();
+        if (TestBackend) { IsAuthenticationReady = true; _ = LoginAsGuestAsync(); }   // test builds: straight in as a throwaway guest
+        else if (autoRestoreSession) _ = TryRestoreSessionAsync();
         else IsAuthenticationReady = true;
+    }
+
+    // ------------------------------------------------------------------ test backend (local Nakama)
+    /// <summary>
+    /// True when the client was started with "-test-nakama http://127.0.0.1:PORT" (and "-test-nakama-key KEY", "-test-device ID"):
+    /// it then talks to a Nakama on THIS machine only, signs in as a throwaway guest with that device id, and keeps no session or
+    /// device id on disk, so the player's real login is not touched. Any other host is refused.
+    /// </summary>
+    public static bool TestBackend { get; private set; }
+    private static string testDeviceId = "";
+
+    private void ReadTestBackend()
+    {
+        string url = ArgValue("-test-nakama");
+        if (string.IsNullOrEmpty(url)) return;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !(uri.IsLoopback))
+        {
+            Debug.LogWarning("[Auth] -test-nakama ignored: only a Nakama on this machine (127.0.0.1 / localhost) can be used for tests.");
+            return;
+        }
+        scheme = uri.Scheme; host = uri.Host; port = uri.Port;
+        string key = ArgValue("-test-nakama-key");
+        if (!string.IsNullOrEmpty(key)) serverKey = key;
+        testDeviceId = ArgValue("-test-device");
+        if (string.IsNullOrEmpty(testDeviceId)) testDeviceId = "test-device-" + Guid.NewGuid().ToString("N");
+        TestBackend = true;
+        Debug.Log($"[Auth] TEST BACKEND {scheme}://{host}:{port} device={testDeviceId} (nothing is saved)");
+    }
+
+    private static string ArgValue(string name)
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++) if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
+        return "";
     }
 
     private void InitClient()
@@ -236,13 +272,18 @@ public class AuthenticationService : MonoBehaviour
         InitClient();
         try
         {
-            string deviceId = SystemInfo.deviceUniqueIdentifier;
-            if (deviceId == SystemInfo.unsupportedIdentifier || string.IsNullOrEmpty(deviceId))
-                deviceId = PlayerPrefs.GetString("nakama.device.id", Guid.NewGuid().ToString());
-            PlayerPrefs.SetString("nakama.device.id", deviceId);
+            string deviceId;
+            if (TestBackend) deviceId = testDeviceId;
+            else
+            {
+                deviceId = SystemInfo.deviceUniqueIdentifier;
+                if (deviceId == SystemInfo.unsupportedIdentifier || string.IsNullOrEmpty(deviceId))
+                    deviceId = PlayerPrefs.GetString("nakama.device.id", Guid.NewGuid().ToString());
+                PlayerPrefs.SetString("nakama.device.id", deviceId);
+            }
 
             _session = await _client.AuthenticateDeviceAsync(deviceId);
-            PlayerPrefs.SetString(LoginMethodKey, "guest");   // lets the session be renewed with the device id later
+            if (!TestBackend) PlayerPrefs.SetString(LoginMethodKey, "guest");   // lets the session be renewed with the device id later
             return await HandleNewSessionAsync(_session);
         }
         catch (Exception ex)
@@ -519,6 +560,7 @@ public class AuthenticationService : MonoBehaviour
 
     private static bool SaveSession(ISession s)
     {
+        if (TestBackend) return true;   // a test session is never written over the player's real one
         return s != null && SecureSessionStore.TrySave(s.AuthToken + "\n" + (s.RefreshToken ?? ""));
     }
 
