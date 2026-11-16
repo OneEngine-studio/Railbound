@@ -50,6 +50,14 @@ public class JUNetworkPlayer : NetworkBehaviour
     {
         SuppressDummyMannequinMeshes();
 
+        // the owner's rolls, reloads, punches... are animator triggers, which the (owner-authoritative) network animator does not
+        // replicate on its own: forward them, or other players see this character slide instead of rolling
+        if (IsOwner && characterController != null)
+        {
+            ownerNetAnimator = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+            characterController.AnimatorTriggerSet += ForwardOwnerTrigger;
+        }
+
         if (!IsOwner)
         {
             rightHandItem.OnValueChanged += OnRightHandItemChanged;
@@ -335,8 +343,17 @@ public class JUNetworkPlayer : NetworkBehaviour
         }
     }
 
+    private Unity.Netcode.Components.NetworkAnimator ownerNetAnimator;
+
+    private void ForwardOwnerTrigger(string trigger)
+    {
+        if (!IsOwner || !IsSpawned || ownerNetAnimator == null || string.IsNullOrEmpty(trigger)) return;
+        ownerNetAnimator.SetTrigger(trigger);
+    }
+
     public override void OnNetworkDespawn()
     {
+        if (characterController != null) characterController.AnimatorTriggerSet -= ForwardOwnerTrigger;
         rightHandItem.OnValueChanged -= OnRightHandItemChanged;
         if (IsOwner && s_deactivatedOfflinePlayer != null)
         {

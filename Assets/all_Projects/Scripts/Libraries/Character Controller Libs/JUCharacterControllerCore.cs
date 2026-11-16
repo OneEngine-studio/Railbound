@@ -23,6 +23,15 @@ namespace JUTPS.CharacterBrain
         [HideInInspector] public Quaternion UpOrientation;
         [HideInInspector] private Quaternion ForwardOrientation = Quaternion.identity;
         [HideInInspector] public Animator anim;
+        /// <summary>Raised for every animator trigger this controller sets (roll, reload, punch, throw, melee, weapon slider). Netcode's NetworkAnimator
+        /// only replicates float, int and bool parameters it polls, never a trigger set on the Animator directly: networked characters forward
+        /// these to their NetworkAnimator, otherwise a remote peer never plays the roll and only sees the body slide.</summary>
+        public event System.Action<string> AnimatorTriggerSet;
+        protected void SetAnimatorTrigger(string trigger)
+        {
+            anim.SetTrigger(trigger);
+            AnimatorTriggerSet?.Invoke(trigger);
+        }
         [HideInInspector] public Rigidbody rb;
         [HideInInspector] public Collider coll;
         protected Camera MyCamera;
@@ -1345,7 +1354,7 @@ namespace JUTPS.CharacterBrain
 
             if (HoldableItemInUseRightHand is ThrowableItem && ShotDownInput)
             {
-                anim.SetTrigger((HoldableItemInUseRightHand as ThrowableItem).AnimationTriggerParameterName);
+                SetAnimatorTrigger((HoldableItemInUseRightHand as ThrowableItem).AnimationTriggerParameterName);
                 return;
             }
 
@@ -1409,7 +1418,7 @@ namespace JUTPS.CharacterBrain
 
             if (HoldableItemInUseLeftHand is ThrowableItem && ShotDownInput)
             {
-                anim.SetTrigger((HoldableItemInUseLeftHand as ThrowableItem).AnimationTriggerParameterName);
+                SetAnimatorTrigger((HoldableItemInUseLeftHand as ThrowableItem).AnimationTriggerParameterName);
                 return;
             }
 
@@ -1476,12 +1485,12 @@ namespace JUTPS.CharacterBrain
             {
                 if (MeleeWeaponInUseLeftHand != null && MeleeWeaponInUseRightHand == null)
                 {
-                    anim.SetTrigger(MeleeWeaponInUseLeftHand.AttackAnimatorParameterName);
+                    SetAnimatorTrigger(MeleeWeaponInUseLeftHand.AttackAnimatorParameterName);
                     IsMeleeAttacking = true;
                 }
                 if (MeleeWeaponInUseRightHand != null)
                 {
-                    anim.SetTrigger(MeleeWeaponInUseRightHand.AttackAnimatorParameterName);
+                    SetAnimatorTrigger(MeleeWeaponInUseRightHand.AttackAnimatorParameterName);
                     IsMeleeAttacking = true;
                 }
             }
@@ -1705,7 +1714,7 @@ namespace JUTPS.CharacterBrain
             if (WeaponInUseRightHand == null) return;
             if (WeaponInUseRightHand.BulletsAmounts < WeaponInUseRightHand.BulletsPerMagazine && WeaponInUseRightHand.TotalBullets > 0)
             {
-                anim.SetTrigger(AnimatorParameters.ReloadRightWeapon);
+                SetAnimatorTrigger(AnimatorParameters.ReloadRightWeapon);
                 IsReloading = true;
             }
         }
@@ -1714,7 +1723,7 @@ namespace JUTPS.CharacterBrain
             if (WeaponInUseLeftHand == null) return;
             if (WeaponInUseLeftHand.BulletsAmounts < WeaponInUseLeftHand.BulletsPerMagazine && WeaponInUseLeftHand.TotalBullets > 0)
             {
-                anim.SetTrigger(AnimatorParameters.ReloadLeftWeapon);
+                SetAnimatorTrigger(AnimatorParameters.ReloadLeftWeapon);
                 IsReloading = true;
             }
         }
@@ -1828,7 +1837,7 @@ namespace JUTPS.CharacterBrain
         public virtual void _Roll()
         {
             if (IsGrounded == false || IsRolling == true || IsProne || anim.GetBool(AnimatorParameters.Roll)) return;
-            anim.SetTrigger(AnimatorParameters.Roll);
+            SetAnimatorTrigger(AnimatorParameters.Roll);
             IsRolling = true;
             Invoke(nameof(stopRolling), 1f);
         }
@@ -1836,7 +1845,7 @@ namespace JUTPS.CharacterBrain
         {
             if (AnimatorParameters.Punch != "")
             {
-                anim.SetTrigger(AnimatorParameters.Punch);
+                SetAnimatorTrigger(AnimatorParameters.Punch);
                 IsPunching = true;
             }
         }
@@ -2336,7 +2345,7 @@ namespace JUTPS.CharacterBrain
             {
                 IsAiming = false;
 
-                anim.SetTrigger(AnimatorParameters.PullWeaponSlider);
+                SetAnimatorTrigger(AnimatorParameters.PullWeaponSlider);
             }
         }
 

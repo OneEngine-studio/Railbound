@@ -84,7 +84,7 @@ public class AuthenticationService : MonoBehaviour
 
     private async Task TryRestoreSessionAsync()
     {
-        if (!SecureSessionStore.TryLoad(out var token))
+        if (!SecureSessionStore.TryLoad(out var stored))
         {
             IsAuthenticationReady = true;
             return;
@@ -92,13 +92,22 @@ public class AuthenticationService : MonoBehaviour
         try
         {
             InitClient();
-            var restored = Nakama.Session.Restore(token);
-            if (restored.IsExpired)
+            // stored as "<auth token>\n<refresh token>" (older saves have only the auth token)
+            string[] parts = stored.Split('\n');
+            var restored = Nakama.Session.Restore(parts[0], parts.Length > 1 && parts[1].Length > 0 ? parts[1] : null);
+            if (restored.HasExpired(DateTime.UtcNow.AddMinutes(RenewMinutesBeforeExpiry)))
             {
-                Debug.Log("[Auth] Saved session expired");
-                SecureSessionStore.Delete();
-                IsAuthenticationReady = true;
-                return;
+                // a restored session that is about to run out mid-match is renewed now, not when the next request fails
+                var renewed = await RenewAsync(restored);
+                if (renewed == null)
+                {
+                    Debug.Log("[Auth] Saved session expired and could not be renewed");
+                    SecureSessionStore.Delete();
+                    IsAuthenticationReady = true;
+                    return;
+                }
+                restored = renewed;
+                SaveSession(restored);
             }
             _session = restored;
             currentUserId = _session.UserId;
@@ -138,6 +147,7 @@ public class AuthenticationService : MonoBehaviour
                 uname = email.Split('@')[0];
 
             _session = await _client.AuthenticateEmailAsync(email, password, uname, create: false);
+            PlayerPrefs.SetString(LoginMethodKey, "email");
             return await HandleNewSessionAsync(_session);
         }
         catch (ApiResponseException apiEx)
@@ -181,6 +191,7 @@ public class AuthenticationService : MonoBehaviour
             }
 
             _session = await _client.AuthenticateEmailAsync(email, password, uname, create: true);
+            PlayerPrefs.SetString(LoginMethodKey, "email");
             return await HandleNewSessionAsync(_session);
         }
         catch (ApiResponseException apiEx)
@@ -231,6 +242,7 @@ public class AuthenticationService : MonoBehaviour
             PlayerPrefs.SetString("nakama.device.id", deviceId);
 
             _session = await _client.AuthenticateDeviceAsync(deviceId);
+            PlayerPrefs.SetString(LoginMethodKey, "guest");   // lets the session be renewed with the device id later
             return await HandleNewSessionAsync(_session);
         }
         catch (Exception ex)
@@ -250,6 +262,7 @@ public class AuthenticationService : MonoBehaviour
         try
         {
             _session = await _client.AuthenticateGoogleAsync(idToken, create: true, username: null);
+            PlayerPrefs.SetString(LoginMethodKey, "google");
             return await HandleNewSessionAsync(_session);
         }
         catch (Exception ex)
@@ -434,7 +447,87 @@ public class AuthenticationService : MonoBehaviour
         try { _socket?.CloseAsync(); } catch { }
         _socket = null;
         SecureSessionStore.Delete();
+        PlayerPrefs.DeleteKey(LoginMethodKey);
         Debug.Log("[Auth] Logged out");
+    }
+
+    // ------------------------------------------------------------------ session lifetime
+    // Nakama sessions expire (token_expiry_sec, 2 h on the cluster). The client used to keep the token it got at login (or restored
+    // from disk) and never renewed it: after the expiry IsAuthenticated turned false in the middle of a play session, and the next
+    // DEPLOY silently started a LOCAL host match with its own bots instead of asking for a game server. The session is now renewed
+    // before it runs out: with the refresh token, or for a guest by signing in again with the same device id (same account).
+
+    private const int RenewMinutesBeforeExpiry = 10;
+    private const string LoginMethodKey = "auth.method";
+    private Task<bool> renewing;
+
+    /// <summary>
+    /// Makes sure the session is valid for at least the next few minutes, renewing it if needed. True when the player is signed in
+    /// afterwards. Safe to call often (it only talks to Nakama when the session is close to its expiry).
+    /// </summary>
+    public Task<bool> EnsureFreshSessionAsync()
+    {
+        if (_session == null) return Task.FromResult(false);
+        if (!_session.HasExpired(DateTime.UtcNow.AddMinutes(RenewMinutesBeforeExpiry))) return Task.FromResult(IsAuthenticated);
+        if (renewing == null || renewing.IsCompleted) renewing = RenewCurrentAsync();
+        return renewing;
+    }
+
+    private async Task<bool> RenewCurrentAsync()
+    {
+        var renewed = await RenewAsync(_session);
+        if (renewed == null) return IsAuthenticated;   // could not renew: still fine if the old token has some time left
+        bool sameUser = renewed.UserId == currentUserId || string.IsNullOrEmpty(currentUserId);
+        _session = renewed;
+        currentUserId = renewed.UserId;
+        isAuthenticated = true;
+        SaveSession(renewed);
+        Debug.Log($"[Auth] Session renewed until {renewed.ExpireTime} (unix){(sameUser ? "" : " - NOTE: a different user id")}");
+        return true;
+    }
+
+    /// <summary>A new session for the same account, or null: refresh token first, then (guests only) the device id again.</summary>
+    private async Task<ISession> RenewAsync(ISession old)
+    {
+        if (old == null) return null;
+        InitClient();
+        if (!string.IsNullOrEmpty(old.RefreshToken) && !old.HasRefreshExpired(DateTime.UtcNow.AddMinutes(1)))
+        {
+            try { return await _client.SessionRefreshAsync(old); }
+            catch (Exception ex) { Debug.LogWarning("[Auth] Session refresh failed: " + ex.Message); }
+        }
+        // guests (and saves from before the login method was recorded): the device id signs in to the same account again;
+        // the user-id check below makes sure it never switches the player to another account
+        string method = PlayerPrefs.GetString(LoginMethodKey, "");
+        if (method == "guest" || (method.Length == 0 && PlayerPrefs.HasKey("nakama.device.id")))
+        {
+            try
+            {
+                string deviceId = PlayerPrefs.GetString("nakama.device.id", "");
+                if (string.IsNullOrEmpty(deviceId)) deviceId = SystemInfo.deviceUniqueIdentifier;
+                if (!string.IsNullOrEmpty(deviceId) && deviceId != SystemInfo.unsupportedIdentifier)
+                {
+                    var s = await _client.AuthenticateDeviceAsync(deviceId, null, false);   // create:false - only the existing guest account
+                    if (s != null && (string.IsNullOrEmpty(old.UserId) || s.UserId == old.UserId)) return s;
+                    Debug.LogWarning("[Auth] Guest sign-in returned a different account; not using it.");
+                }
+            }
+            catch (Exception ex) { Debug.LogWarning("[Auth] Guest re-sign-in failed: " + ex.Message); }
+        }
+        return null;
+    }
+
+    private static bool SaveSession(ISession s)
+    {
+        return s != null && SecureSessionStore.TrySave(s.AuthToken + "\n" + (s.RefreshToken ?? ""));
+    }
+
+    private float nextSessionCheck;
+    private void Update()
+    {
+        if (Time.unscaledTime < nextSessionCheck) return;
+        nextSessionCheck = Time.unscaledTime + 60f;
+        if (isAuthenticated && _session != null) _ = EnsureFreshSessionAsync();
     }
 
     // ------------------------------------------------------------------ internals
@@ -444,7 +537,7 @@ public class AuthenticationService : MonoBehaviour
         _session = session;
         isAuthenticated = true;
         currentUserId = session.UserId;
-        if (!SecureSessionStore.TrySave(session.AuthToken))
+        if (!SaveSession(session))
             Debug.LogWarning("[Auth] Secure session storage is unavailable. The user must log in again next launch.");
         Debug.Log($"[Auth] Success user={session.UserId} username={session.Username} tokenLen={session.AuthToken?.Length}");
         await EnsureSocketAsync();
