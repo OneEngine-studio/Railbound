@@ -46,6 +46,7 @@ namespace Railbound.UI
             yield return new WaitForSecondsRealtime(2.5f);
             var weapons = FindFirstObjectByType<LobbyWeaponsScreen>(FindObjectsInactive.Include);
             yield return Shot("01_loadout_sidearm");
+            if (weapons != null) Debug.Log("[LobbyShot] " + weapons.TestDescribe());
             if (weapons != null)
             {
                 string[] names = { "02_loadout_primary", "", "03_loadout_melee", "04_loadout_lethal", "05_upgrade_sonar", "06_upgrade_medkit" };

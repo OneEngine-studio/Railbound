@@ -197,6 +197,12 @@ namespace Railbound.UI
         public void TestSetView(int v) { SetView(v); }
         public void TestUpgrade(string skill) { Upgrade(skill); }
         public void TestEquip(string slot, string id) { Equip(slot, id, "equip:" + slot + ":" + id, null); }
+        public string TestDescribe()
+        {
+            if (loPreview == null) return "no preview";
+            var r = loPreview.rectTransform;
+            return $"preview enabled={loPreview.enabled} active={loPreview.gameObject.activeInHierarchy} alpha={loPreview.color.a:0.00} tex={(loPreview.texture != null)} size={r.rect.size} id={previewId} t={previewT:0.00} capturing={capturing} groupAlpha={string.Join(",", r.parent.GetComponents<CanvasGroup>().Select(g => g.alpha.ToString("0.00")))} bigIcon={loBigIcon.enabled}";
+        }
 
         // =====================================================================================================
         // LOADOUT

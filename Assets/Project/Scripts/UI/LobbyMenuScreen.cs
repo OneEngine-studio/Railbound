@@ -249,13 +249,13 @@ namespace Railbound.UI
             {
                 bool show = Time.unscaledTime < toastUntil;
                 toastGroup.alpha = Mathf.MoveTowards(toastGroup.alpha, show ? 1f : 0f, dt * (show ? 8f : 4f));
-                toastRoot.anchoredPosition = new Vector2(0f, -446f + 14f * EaseOut(toastGroup.alpha));
+                toastRoot.anchoredPosition = new Vector2(0f, -486f + 14f * EaseOut(toastGroup.alpha));
             }
         }
 
         private void BuildToast()
         {
-            toastRoot = NewRect("Toast", root, new Vector2(0.5f, 0.5f), new Vector2(760f, 56f), new Vector2(0f, -446f));
+            toastRoot = NewRect("Toast", root, new Vector2(0.5f, 0.5f), new Vector2(760f, 52f), new Vector2(0f, -486f));
             toastGroup = toastRoot.gameObject.AddComponent<CanvasGroup>();
             toastGroup.alpha = 0f; toastGroup.blocksRaycasts = false; toastGroup.interactable = false;
             var bg = Img("Bg", toastRoot, new Color(0.04f, 0.045f, 0.055f, 0.97f)); Stretch(bg.rectTransform);
