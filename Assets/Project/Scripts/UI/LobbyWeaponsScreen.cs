@@ -83,7 +83,7 @@ namespace Railbound.UI
             ApplyView(true);
             RebuildList();
             if (thumbs.Count == 0 && catalog != null) StartCoroutine(CaptureThumbs());
-            else { SelectSlot(selectedSlot, false); RefreshLoadout(); }
+            else { RefreshLoadout(); SelectSlot(selectedSlot, false); }
         }
 
         protected override void OnClosing()
@@ -132,8 +132,8 @@ namespace Railbound.UI
             }
             stage.Show(null);
             capturing = false;
-            SelectSlot(selectedSlot, false);
             RefreshLoadout();
+            SelectSlot(selectedSlot, false);
             RefreshArmoryThumbs();
         }
 
