@@ -130,6 +130,20 @@ namespace Railbound.Networking
             _sceneLoadStarted = false;
             _startedHostHere = false;
 
+            // A signed-in player whose Nakama session ran out used to get a LOCAL host match here (its own bots, nothing online,
+            // no rewards) without being told. Renew the session first; if that is impossible, send the player to sign in again.
+            var auth = AuthenticationService.Instance;
+            if (auth != null && auth.Session != null && !await auth.EnsureFreshSessionAsync())
+            {
+                Debug.LogWarning("[LobbyMatchmaker] The Nakama session expired and could not be renewed: back to the sign-in screen.");
+                LastFailure = DeployFailure.Other;
+                UpdateStatus("SESSION EXPIRED - SIGN IN AGAIN");
+                IsDeploying = false;
+                auth.Logout();
+                Railbound.UI.SceneTransition.Go("LoginMenu", "SIGN IN AGAIN");
+                return;
+            }
+
             try
             {
                 // 0. Queue: look for other players for up to queueSeconds (skipped when Nakama is not reachable)

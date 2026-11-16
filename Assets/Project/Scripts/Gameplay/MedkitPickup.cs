@@ -47,8 +47,11 @@ namespace Railbound.Gameplay
         /// <summary>
         /// Launches the medkit with physical impulse when dropped by an enemy.
         /// </summary>
+        public bool IsPickedUp => _isPickedUp;
+
         public void SpawnWithImpulse(Vector3 velocity, Vector3 angularVelocity)
         {
+            Railbound.UI.LootMarkersHUD.Track(gameObject, Railbound.UI.LootMarkersHUD.Kind.Medkit);   // a bot's drop: show where it lies
             if (rb == null) rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
@@ -75,14 +78,12 @@ namespace Railbound.Gameplay
         {
             if (_isPickedUp) return;
 
-            // Check if collider belongs to Player
-            if (other.CompareTag("Player") || other.GetComponentInParent<PlayerMedkitSystem>() != null)
+            // only the player this machine controls collects (see PickupAuthority)
+            if (PickupAuthority.TryGetLocalCollector(other, out var collector))
             {
-                var medkitSys = other.GetComponent<PlayerMedkitSystem>() ?? other.GetComponentInParent<PlayerMedkitSystem>();
-                if (medkitSys == null)
-                {
-                    medkitSys = PlayerMedkitSystem.Instance;
-                }
+                var medkitSys = collector.GetComponentInParent<PlayerMedkitSystem>();
+                if (medkitSys == null) medkitSys = collector.GetComponentInChildren<PlayerMedkitSystem>();
+                if (medkitSys == null) medkitSys = PlayerMedkitSystem.Instance;
 
                 if (medkitSys != null)
                 {

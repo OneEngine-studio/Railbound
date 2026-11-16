@@ -73,6 +73,9 @@ namespace Railbound.BR
 
             if (IsServer)
             {
+                // rolls, reloads, punches... are animator triggers: forward them, the NetworkAnimator does not see them on its own
+                netAnimator = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+                if (controller != null) controller.AnimatorTriggerSet += ForwardTrigger;
                 JUTPS.WeaponSystem.Weapon.OnAnyShot += HandleServerShot;
                 JUTPS.WeaponSystem.Weapon.OnAnyBulletSpawned += HandleServerBullet;
                 JUTPS.WeaponSystem.Weapon.OnAnyReload += HandleServerReload;
@@ -85,8 +88,19 @@ namespace Railbound.BR
             }
         }
 
+        private Unity.Netcode.Components.NetworkAnimator netAnimator;
+        public static int TriggersForwarded;   // test counter (BRNetDebug)
+
+        private void ForwardTrigger(string trigger)
+        {
+            if (!IsServer || !IsSpawned || netAnimator == null || string.IsNullOrEmpty(trigger)) return;
+            netAnimator.SetTrigger(trigger);   // sets it here again (harmless) and sends it to every client
+            TriggersForwarded++;
+        }
+
         public override void OnNetworkDespawn()
         {
+            if (controller != null) controller.AnimatorTriggerSet -= ForwardTrigger;
             JUTPS.WeaponSystem.Weapon.OnAnyShot -= HandleServerShot;
             JUTPS.WeaponSystem.Weapon.OnAnyBulletSpawned -= HandleServerBullet;
             JUTPS.WeaponSystem.Weapon.OnAnyReload -= HandleServerReload;
@@ -270,8 +284,65 @@ namespace Railbound.BR
             PuppetPoseSync.SwitchItem(controller, inventory, id);
         }
 
+        // ---- ground guard (server): a living bot hanging in the air is put back on the ground, and the reason is logged.
+        // Players reported bots standing in the sky; the server is the authority on bot positions, so this is checked there.
+        public static int GroundGuardFixes;   // test counter (BRNetDebug)
+        private float nextGroundCheck, airborneSince = -1f;
+
+        private void GroundGuard()
+        {
+            if (Time.time < nextGroundCheck) return;
+            nextGroundCheck = Time.time + 1f;
+            var health = GetComponent<JUHealth>();
+            if (dormant || retired.Value || (health != null && health.IsDead) || (controller != null && controller.IsDriving)) { airborneSince = -1f; return; }
+
+            Vector3 p = transform.position;
+            bool hasGround = FindGround(p, out RaycastHit ground);
+            float above = hasGround ? p.y - ground.point.y : float.PositiveInfinity;
+            bool falling = body != null && !body.isKinematic && body.velocity.y < -1.5f;
+            if (above < 3f || falling) { airborneSince = -1f; return; }
+            if (airborneSince < 0f) { airborneSince = Time.time; return; }
+            if (Time.time - airborneSince < 4f) return;
+
+            Vector3 target = hasGround ? ground.point + Vector3.up * 0.05f : TerrainPoint(p);
+            Debug.LogWarning($"[BRNetBot] Ground guard: {name} hung {(hasGround ? above.ToString("F1") + " m above " + ground.collider.name : "over no ground")} at {p:F1}"
+                + $" (kinematic={(body != null && body.isKinematic)} velY={(body != null ? body.velocity.y : 0f):F2} grounded={(controller != null && controller.IsGrounded)} rolling={(controller != null && controller.IsRolling)}); moved to {target:F1}.");
+            transform.position = target;
+            if (body != null) { body.position = target; if (!body.isKinematic) body.velocity = Vector3.zero; }
+            var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null && nt.CanCommitToTransform) nt.Teleport(target, transform.rotation, transform.localScale);   // a jump, not a slide, on clients
+            airborneSince = -1f;
+            GroundGuardFixes++;
+        }
+
+        // the first solid surface below that is not part of this bot (its own capsule and ragdoll bones are skipped)
+        private bool FindGround(Vector3 p, out RaycastHit ground)
+        {
+            ground = default;
+            var hits = Physics.RaycastAll(p + Vector3.up * 0.5f, Vector3.down, 300f, ~0, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            foreach (var h in hits)
+            {
+                if (h.collider.transform.IsChildOf(transform) || h.distance >= best) continue;
+                best = h.distance; ground = h;
+            }
+            return best < float.MaxValue;
+        }
+
+        private static Vector3 TerrainPoint(Vector3 p)
+        {
+            foreach (var t in Terrain.activeTerrains)
+            {
+                Vector3 o = t.transform.position, s = t.terrainData.size;
+                if (p.x < o.x || p.z < o.z || p.x > o.x + s.x || p.z > o.z + s.z) continue;
+                return new Vector3(p.x, t.SampleHeight(p) + o.y + 0.05f, p.z);
+            }
+            return p;
+        }
+
         private void Update()
         {
+            if (IsServer && IsSpawned) GroundGuard();
             if (puppet != null && IsSpawned && !IsServer) puppet.PuppetUpdate(pose.Value.Firing, pose.Value.Reloading, pose.Value.Look);
             if (IsServer && IsSpawned) PuppetPoseSync.Publish(controller, pose, ref nextPosePublish);
             if (!IsServer || !IsSpawned || inventory == null) return;

@@ -410,6 +410,8 @@ namespace Railbound.BR
             }
             sb.Append(MotionReport());
             sb.Append(" rockColliders=").Append(Railbound.Gameplay.TerrainRockColliders.LastBuiltCount);
+            sb.Append(" botTriggersForwarded=").Append(BRNetBot.TriggersForwarded).Append(" groundGuardFixes=").Append(BRNetBot.GroundGuardFixes)
+              .Append(" lootMarkers=").Append(Railbound.UI.LootMarkersHUD.TrackedCount);
             sb.Append(" maxRemoteUp=").Append(maxRemoteUp.ToString("F1")).Append(" airborneBots=").Append(airborne).Append(airList).Append(" botsActive=").Append(active).Append(" botsDead=").Append(dead).Append(" ragdolled=").Append(ragdolled).Append(" deadNoRagdoll=").Append(deadNotRagdolled).Append(" armed=").Append(armed).Append(" |").Append(list);
             sb.Append(" shotFx=").Append(BRNetBot.ShotEffectsShown).Append(" PLAYERFX sent=").Append(PlayerCombatNet.SentShots).Append('/').Append(PlayerCombatNet.SentBullets).Append('/').Append(PlayerCombatNet.SentReloads).Append(" relayed=").Append(PlayerCombatNet.RelayedShots).Append(" received=").Append(PlayerCombatNet.ReceivedShots).Append('/').Append(PlayerCombatNet.ReceivedBullets).Append('/').Append(PlayerCombatNet.ReceivedReloads).Append(" remoteFx(shots/bullets/reloads)=").Append(RemoteWeaponFx.ShotsShown).Append('/').Append(RemoteWeaponFx.BulletsShown).Append('/').Append(RemoteWeaponFx.ReloadsShown).Append(" bulletVis=").Append(BRNetBot.BulletVisualsShown).Append(" | loot registered=").Append(BRLootSync.RegisteredCount).Append(" taken=").Append(BRLootSync.TakenCount);
             Debug.Log(sb.ToString());

@@ -78,6 +78,7 @@ namespace Railbound.Gameplay
         /// </summary>
         public void SpawnWithImpulse(Vector3 velocity, Vector3 angularVelocity)
         {
+            Railbound.UI.LootMarkersHUD.Track(gameObject, Railbound.UI.LootMarkersHUD.Kind.Ammo);   // a bot's drop: show where it lies
             if (_rb == null) _rb = GetComponent<Rigidbody>();
             _rb.isKinematic = false;
             _rb.useGravity = true;
@@ -89,9 +90,10 @@ namespace Railbound.Gameplay
         {
             if (_isOpening || _isCollected) return;
 
-            if (other.CompareTag("Player") || other.GetComponentInParent<JUCharacterController>() != null)
+            // only the player this machine controls collects: not bots (a dying bot's ragdoll used to empty its own drop at once),
+            // not another player's copy, not the dedicated server (see PickupAuthority)
+            if (PickupAuthority.TryGetLocalCollector(other, out var pl))
             {
-                var pl = other.GetComponent<JUCharacterController>() ?? other.GetComponentInParent<JUCharacterController>();
                 if (pl != null)
                 {
                     // Disable all trigger colliders immediately so it cannot be triggered again
