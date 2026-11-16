@@ -45,7 +45,7 @@ namespace Railbound.UI
         private RectTransform bannerRoot, bannerStrip, bannerSegments;
         private CanvasGroup bannerGroup;
         private TextMeshProUGUI bannerTitle, bannerTag, bannerSub;
-        private Image bannerTagFill, bannerRule;
+        private Image bannerTagFill;
         private readonly List<Image> segments = new List<Image>();
 
         private RectTransform popupRoot;
@@ -65,6 +65,8 @@ namespace Railbound.UI
         private Banner current;
         private float bannerT = -1f;
         private const float BannerIn = 0.32f, BannerHold = 3.1f, BannerOut = 0.4f;
+        // below the ALIVE / KILLS counters (they end ~180 px from the top at 1080p)
+        private const float BannerY = -300f, BannerStripY = -6f;
 
         private float popupBorn = -99f, popupXpShown;
         private int popupXpTotal;
@@ -224,13 +226,15 @@ namespace Railbound.UI
             bannerTitle.color = b.Tone == Tone.Critical ? Red : White;
             bannerTag.text = b.Tag;
             bannerTagFill.color = accent;
-            bannerRule.color = new Color(accent.r, accent.g, accent.b, 0.85f);
             bannerSub.text = b.Sub;
             bannerTag.ForceMeshUpdate();
             float tagW = Mathf.Max(120f, bannerTag.preferredWidth + 28f);
             ((RectTransform)bannerTagFill.transform).sizeDelta = new Vector2(tagW, 30f);
             bannerSegments.anchoredPosition = new Vector2(tagW + 8f, 0f);
             int count = Mathf.Clamp(b.Segments, 0, segments.Count);
+            // the tag and its segment bars are centred as one group under the title
+            float stripW = tagW + (count > 0 ? 8f + count * 34f - 6f : 0f);
+            bannerStrip.anchoredPosition = new Vector2(-stripW * 0.5f, BannerStripY);
             for (int i = 0; i < segments.Count; i++)
             {
                 bool on = i < count;
@@ -267,7 +271,7 @@ namespace Railbound.UI
                 float a, slide, strip;
                 if (bannerT < BannerIn) { float k = Ease(bannerT / BannerIn); a = k; slide = (1f - k) * -36f; strip = k; }
                 else if (bannerT < BannerIn + BannerHold) { a = 1f; slide = 0f; strip = 1f; }
-                else { float k = Mathf.Clamp01((bannerT - BannerIn - BannerHold) / BannerOut); a = 1f - k; slide = 0f; strip = 1f; bannerRoot.anchoredPosition = new Vector2(0f, -232f + k * 14f); }
+                else { float k = Mathf.Clamp01((bannerT - BannerIn - BannerHold) / BannerOut); a = 1f - k; slide = 0f; strip = 1f; bannerRoot.anchoredPosition = new Vector2(0f, BannerY + k * 14f); }
                 bannerGroup.alpha = a;
                 bannerTitle.rectTransform.anchoredPosition = new Vector2(slide, 0f);
                 bannerStrip.localScale = new Vector3(Mathf.Max(0.001f, strip), 1f, 1f);
@@ -275,7 +279,7 @@ namespace Railbound.UI
                 {
                     current = null;
                     bannerGroup.alpha = 0f;
-                    bannerRoot.anchoredPosition = new Vector2(0f, -232f);
+                    bannerRoot.anchoredPosition = new Vector2(0f, BannerY);
                 }
             }
 
@@ -287,7 +291,7 @@ namespace Railbound.UI
                 popupRoot.localScale = new Vector3(pop, pop, 1f);
                 popupGroup.alpha = age < PopupLife - 0.45f ? 1f : Mathf.Clamp01((PopupLife - age) / 0.45f);
                 popupXpShown = Mathf.MoveTowards(popupXpShown, popupXpTotal, Time.unscaledDeltaTime * 600f);   // the number counts up
-                popupXp.text = "<size=36>+" + Mathf.RoundToInt(popupXpShown) + "</size><size=20>  XP</size>";
+                popupXp.text = "<size=42>+" + Mathf.RoundToInt(popupXpShown) + "</size><size=22>  XP</size>";
             }
             else popupGroup.alpha = 0f;
 
@@ -317,39 +321,37 @@ namespace Railbound.UI
             scaler.matchWidthOrHeight = 0.5f;
             root = (RectTransform)cgo.transform;
 
-            // ---- banner (upper centre, under the compass and counters)
-            bannerRoot = Rect("Banner", root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(900f, 150f));
+            // ---- banner (upper centre, under the compass and the ALIVE / KILLS counters), centred on a soft dark band
+            bannerRoot = Rect("Banner", root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, BannerY), new Vector2(1200f, 170f));
             bannerGroup = bannerRoot.gameObject.AddComponent<CanvasGroup>();
             bannerGroup.alpha = 0f; bannerGroup.blocksRaycasts = false; bannerGroup.interactable = false;
-            bannerTitle = Text("Title", bannerRoot, "", fontBold, 52f, White, 3f, TextAlignmentOptions.Left);
-            Place(bannerTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(900f, 60f));
+            var band = NewImage("Band", bannerRoot, new Color(0f, 0f, 0f, 0.5f));
+            band.sprite = MakeBand();
+            Place((RectTransform)band.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, -4f), new Vector2(1200f, 168f));
+            bannerTitle = Text("Title", bannerRoot, "", fontBold, 54f, White, 4f, TextAlignmentOptions.Center);
+            Place(bannerTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 42f), new Vector2(1100f, 62f));
             Shadow(bannerTitle);
 
-            bannerStrip = Rect("Strip", bannerRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -64f), new Vector2(880f, 30f));
-            bannerStrip.pivot = new Vector2(0f, 1f);
+            bannerStrip = Rect("Strip", bannerRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, BannerStripY), new Vector2(600f, 30f));
+            bannerStrip.pivot = new Vector2(0f, 0.5f);
             bannerTagFill = NewImage("TagFill", bannerStrip, Amber);
             var tf = (RectTransform)bannerTagFill.transform;
-            tf.anchorMin = tf.anchorMax = tf.pivot = new Vector2(0f, 1f); tf.anchoredPosition = Vector2.zero; tf.sizeDelta = new Vector2(160f, 30f);
+            tf.anchorMin = tf.anchorMax = tf.pivot = new Vector2(0f, 0.5f); tf.anchoredPosition = Vector2.zero; tf.sizeDelta = new Vector2(160f, 30f);
             bannerTag = Text("Tag", tf, "", fontBold, 20f, new Color(0.04f, 0.04f, 0.05f, 1f), 2f, TextAlignmentOptions.Center);
             Stretch(bannerTag.rectTransform);
-            bannerSegments = Rect("Segments", bannerStrip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(168f, 0f), new Vector2(320f, 30f));
-            bannerSegments.pivot = new Vector2(0f, 1f);
+            bannerSegments = Rect("Segments", bannerStrip, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(168f, 0f), new Vector2(240f, 30f));
+            bannerSegments.pivot = new Vector2(0f, 0.5f);
             for (int i = 0; i < 7; i++)
             {
                 var seg = NewImage("Seg" + i, bannerSegments, Amber);
                 var sr = (RectTransform)seg.transform;
-                sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
+                sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
                 sr.anchoredPosition = new Vector2(i * 34f, 0f);
                 sr.sizeDelta = new Vector2(28f, 30f);
-                sr.localRotation = Quaternion.Euler(0f, 0f, 0f);
                 segments.Add(seg);
             }
-            bannerRule = NewImage("Rule", bannerRoot, Amber);
-            var rr = (RectTransform)bannerRule.transform;
-            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 1f); rr.anchoredPosition = new Vector2(0f, -100f); rr.sizeDelta = new Vector2(4f, 46f);
-            bannerSub = Text("Sub", bannerRoot, "", fontSemi, 22f, Dim, 1f, TextAlignmentOptions.TopLeft);
-            Place(bannerSub.rectTransform, new Vector2(0f, 1f), new Vector2(16f, -100f), new Vector2(760f, 56f));
-            bannerSub.enableWordWrapping = true;
+            bannerSub = Text("Sub", bannerRoot, "", fontSemi, 23f, new Color(1f, 1f, 1f, 0.9f), 1f, TextAlignmentOptions.Center);
+            Place(bannerSub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -50f), new Vector2(900f, 34f));
             Shadow(bannerSub);
 
             // ---- kill popup (right of the crosshair)
@@ -357,13 +359,16 @@ namespace Railbound.UI
             popupRoot.pivot = new Vector2(0f, 1f);
             popupGroup = popupRoot.gameObject.AddComponent<CanvasGroup>();
             popupGroup.alpha = 0f; popupGroup.blocksRaycasts = false; popupGroup.interactable = false;
+            var backing = NewImage("Backing", popupRoot, new Color(0f, 0f, 0f, 0.46f));
+            backing.sprite = MakeFade();
+            Place((RectTransform)backing.transform, new Vector2(0f, 1f), new Vector2(-14f, 8f), new Vector2(430f, 128f));
             popupXp = Text("Xp", popupRoot, "", fontBold, 36f, Gold, 1f, TextAlignmentOptions.TopLeft);
             Place(popupXp.rectTransform, new Vector2(0f, 1f), Vector2.zero, new Vector2(300f, 42f));
             Shadow(popupXp);
             for (int i = 0; i < 3; i++)
             {
-                var line = Text("Line" + i, popupRoot, "", fontSemi, 17f, White, 2.5f, TextAlignmentOptions.TopLeft);
-                Place(line.rectTransform, new Vector2(0f, 1f), new Vector2(2f, -44f - i * 22f), new Vector2(420f, 22f));
+                var line = Text("Line" + i, popupRoot, "", fontBold, 19f, White, 2.5f, TextAlignmentOptions.TopLeft);
+                Place(line.rectTransform, new Vector2(0f, 1f), new Vector2(2f, -46f - i * 25f), new Vector2(420f, 24f));
                 Shadow(line);
                 popupLines.Add(line);
             }
@@ -457,6 +462,35 @@ namespace Railbound.UI
         {
             foreach (var f in Resources.FindObjectsOfTypeAll<TMP_FontAsset>()) if (f != null && f.name.Contains(namePart)) return f;
             return null;
+        }
+
+        // horizontal band: transparent at both ends, solid in the middle (behind the centred banner)
+        private static Sprite MakeBand()
+        {
+            var tex = new Texture2D(128, 8, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var cols = new Color32[128 * 8];
+            for (int y = 0; y < 8; y++)
+                for (int x = 0; x < 128; x++)
+                {
+                    float u = x / 127f, edge = Mathf.Min(u, 1f - u) / 0.32f;
+                    float v = y / 7f, vert = Mathf.Min(v, 1f - v) / 0.5f;
+                    byte a = (byte)Mathf.RoundToInt(Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(edge)) * Mathf.SmoothStep(0.15f, 1f, Mathf.Clamp01(vert)) * 255f);
+                    cols[y * 128 + x] = new Color32(255, 255, 255, a);
+                }
+            tex.SetPixels32(cols); tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 128, 8), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        // left to right fade: solid on the left, transparent on the right (behind the kill popup)
+        private static Sprite MakeFade()
+        {
+            var tex = new Texture2D(64, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var cols = new Color32[64 * 4];
+            for (int y = 0; y < 4; y++)
+                for (int x = 0; x < 64; x++)
+                    cols[y * 64 + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.SmoothStep(1f, 0f, x / 63f) * 255f));
+            tex.SetPixels32(cols); tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 64, 4), new Vector2(0.5f, 0.5f), 100f);
         }
 
         private static Sprite MakePixel()
