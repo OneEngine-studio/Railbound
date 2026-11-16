@@ -59,6 +59,8 @@ namespace Railbound.BR
             fontSemi = FindFont("Rajdhani-SemiBold") ?? fontBold;
             px = MakePixel();
             Build();
+            // kill confirmations, XP popups and the big event banners (own canvas, just above this HUD)
+            if (GetComponent<Railbound.UI.MatchEventHUD>() == null) gameObject.AddComponent<Railbound.UI.MatchEventHUD>();
         }
 
         private void OnEnable()

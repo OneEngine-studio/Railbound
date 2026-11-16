@@ -33,6 +33,9 @@ namespace JUTPS
 		/// <summary>Who damaged this character last, and when (Time.time). Used for kill credit.</summary>
 		[System.NonSerialized] public GameObject LastAttacker;
 		[System.NonSerialized] public float LastAttackTime = -999f;
+		/// <summary>Whether the last hit THIS machine applied struck the head, and when (Time.time). The kill popup shows "HEADSHOT KILL" from it.</summary>
+		[System.NonSerialized] public bool LastHitWasHead;
+		[System.NonSerialized] public float LastHitTime = -999f;
 
 		void Start()
 		{
