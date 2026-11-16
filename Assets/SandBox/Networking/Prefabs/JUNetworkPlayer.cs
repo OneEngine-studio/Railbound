@@ -21,17 +21,21 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     private static GameObject s_deactivatedOfflinePlayer;
 
-    // Item held in the right hand (JUInventory switch ID, -1 = bare hands). Written by the owner,
-    // applied on every other peer so remote players show the weapon that player is really holding.
     private readonly NetworkVariable<int> rightHandItem = new NetworkVariable<int>(
         -1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-    // Aim state of the owner (firing mode, reloading, the point it looks at): remote copies use it to put the hands on the weapon,
-    // turn the spine and the head to the target and point the weapon where the owner aims.
     private readonly NetworkVariable<Railbound.BR.PuppetPose> pose = new NetworkVariable<Railbound.BR.PuppetPose>(
         default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private float nextPosePublish;
     private bool isPuppet;
+
+    // Cached array to avoid allocations in SuppressDummyMannequinMeshes
+    private static readonly string[] DummyNames = new string[] {
+        "Left Foot Armor", "Left Pant Amor", "Left Upper Pant Armor",
+        "Right Foot Armor", "Right Pant Amor", "Right Upper Pant Armor",
+        "Helmet Armor", "Chest Armor", "Leg Armor", "Foot Armor",
+        "Arms", "Body", "HeadGlass", "Torso"
+    };
 
     private void Awake()
     {
@@ -58,12 +62,10 @@ public class JUNetworkPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
-            // 1. Position on spawn platform or map spawn location
             JUCharacterController offlineChar = FindOfflinePlayer();
             if (Railbound.BR.BRMatchSetup.Instance != null &&
                 Railbound.BR.BRMatchSetup.Instance.TryGetPlayerSpawn((int)OwnerClientId, out Vector3 randomSpawn, out Quaternion randomRotation))
             {
-                // Random terrain spawn from the match setup (never on the train or inside buildings)
                 transform.SetPositionAndRotation(randomSpawn, randomRotation);
                 if (rb != null)
                 {
@@ -71,11 +73,10 @@ public class JUNetworkPlayer : NetworkBehaviour
                     rb.angularVelocity = Vector3.zero;
                 }
             }
-            else if (transform.position == Vector3.zero || transform.position.magnitude < 1f)
+            else if (transform.position == Vector3.zero || transform.position.sqrMagnitude < 1f)
             {
                 if (offlineChar != null)
                 {
-                    // Offset each client slightly so players don't spawn inside each other
                     float offsetX = (OwnerClientId % 4) * 2.0f;
                     float offsetZ = (OwnerClientId / 4) * 2.0f;
                     transform.position = offlineChar.transform.position + new Vector3(offsetX, 0.2f, offsetZ);
@@ -88,7 +89,6 @@ public class JUNetworkPlayer : NetworkBehaviour
                 }
             }
 
-            // Test helper: "-spawnat x,y,z" places this client at exact world coordinates (to put two test clients side by side).
             if (TryGetSpawnOverride(out Vector3 testSpawn, out float testYaw))
             {
                 transform.position = testSpawn;
@@ -96,10 +96,8 @@ public class JUNetworkPlayer : NetworkBehaviour
                 if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
 
-            // 2. Disable offline player placeholder so this networked player is primary
             CleanupOfflineSceneCharacters();
 
-            // 3. LOCAL PLAYER: Enable physics, JU TPS controller and input logic
             if (characterController != null)
             {
                 characterController.enabled = true;
@@ -113,21 +111,17 @@ public class JUNetworkPlayer : NetworkBehaviour
             {
                 rb.isKinematic = false;
                 rb.useGravity = true;
-                // Keep interpolation OFF: JU TPS turns the character by writing transform.rotation every frame, and Rigidbody
-                // interpolation overwrites that with the last physics pose, which breaks strafe / backwards (A, S, D) movement.
                 rb.interpolation = RigidbodyInterpolation.None;
             }
             if (anim != null) anim.enabled = true;
             if (sonarSkill != null) sonarSkill.enabled = true;
 
-            // Set global player reference so all subsystems recognize this active character
             JUGameManager.PlayerController = characterController;
             if (JUInput.Instance() != null)
             {
                 JUInput.Instance().enabled = true;
             }
 
-            // 4. Initialize Character Skin Retargeter for visual soldier model
             if (skinRetargeter != null)
             {
                 skinRetargeter.enabled = true;
@@ -135,7 +129,6 @@ public class JUNetworkPlayer : NetworkBehaviour
                 skinRetargeter.UpdateSkinPose();
             }
 
-            // 5. Bind TPS Camera Controller
             TPSCameraController tpsCamera = FindFirstObjectByType<TPSCameraController>(FindObjectsInactive.Include);
             if (tpsCamera != null && characterController != null)
             {
@@ -143,13 +136,11 @@ public class JUNetworkPlayer : NetworkBehaviour
                 tpsCamera.TargetToFollow = characterController.HumanoidSpine != null ? characterController.HumanoidSpine : transform;
                 tpsCamera.enabled = true;
 
-                // Explicitly assign camera references back to character controller for input orientation
                 characterController.MyPivotCamera = tpsCamera;
                 var camField = typeof(JUCharacterController).GetField("MyCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 camField?.SetValue(characterController, tpsCamera.mCamera != null ? tpsCamera.mCamera : Camera.main);
             }
 
-            // 6. Bind Inventory UI to this player
             var invUI = FindFirstObjectByType<InventoryUIManager>(FindObjectsInactive.Include);
             if (invUI != null)
             {
@@ -157,18 +148,15 @@ public class JUNetworkPlayer : NetworkBehaviour
                 invUI.Player = transform;
             }
 
-            // 6b. HUD/camera scripts cached the offline scene player at scene load: move them to this player
             if (offlineChar != null)
             {
                 int rebound = Railbound.Networking.PlayerReferenceRebinder.Rebind(offlineChar.transform, transform);
                 Debug.Log($"[JUNetworkPlayer] Rebound {rebound} HUD/system reference(s) from the offline player to the network player.");
             }
 
-            // 7. Lock cursor for gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
 
-            // 8. Register with Map1DeathRestartController for auto-restart on death
             if (Railbound.Gameplay.Map1DeathRestartController.Instance != null)
             {
                 Railbound.Gameplay.Map1DeathRestartController.Instance.RegisterPlayer(gameObject);
@@ -178,19 +166,16 @@ public class JUNetworkPlayer : NetworkBehaviour
         }
         else
         {
-            // REMOTE CLONE: Hard-disable local input and controllers to prevent input leaking
             if (characterController != null)
             {
                 characterController.UseDefaultControllerInput = false;
-                // the controller stays on as a "puppet" (no input, movement, physics or damage) so the hands, spine and head are posed
                 isPuppet = Railbound.BR.PuppetPoseSync.MakePuppet(characterController);
                 if (!isPuppet) characterController.enabled = false;
-                else ApplyRemoteItem(rightHandItem.Value);   // again, now through the controller
+                else ApplyRemoteItem(rightHandItem.Value);
             }
-            if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }   // NetworkTransform interpolates remote players
+            if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }
             if (sonarSkill != null) sonarSkill.enabled = false;
 
-            // Keep visual retargeter active so remote soldier animates smoothly with networked bones
             if (skinRetargeter != null)
             {
                 skinRetargeter.enabled = true;
@@ -225,13 +210,7 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     private void SuppressDummyMannequinMeshes()
     {
-        string[] dummyNames = new string[] {
-            "Left Foot Armor", "Left Pant Amor", "Left Upper Pant Armor",
-            "Right Foot Armor", "Right Pant Amor", "Right Upper Pant Armor",
-            "Helmet Armor", "Chest Armor", "Leg Armor", "Foot Armor",
-            "Arms", "Body", "HeadGlass", "Torso"
-        };
-        foreach (var name in dummyNames)
+        foreach (var name in DummyNames)
         {
             Transform t = FindDeepChild(transform, name);
             if (t != null)
@@ -282,7 +261,6 @@ public class JUNetworkPlayer : NetworkBehaviour
         Railbound.BR.PuppetPoseSync.SwitchItem(characterController, inventory, id);
     }
 
-    // ---- ground guard (owner): a player that fell through the world, or hangs far above it, is put back on the ground
     private float nextGroundCheck, airborneSince = -1f;
     private void GroundGuard()
     {
@@ -300,7 +278,6 @@ public class JUNetworkPlayer : NetworkBehaviour
         bool stuckHigh = airborneSince >= 0f && Time.unscaledTime - airborneSince > 4f;
         if (!fell && !stuckHigh) return;
 
-        // find a solid spot straight above the terrain surface and teleport there (a teleport, so other players do not see a slide)
         Vector3 target = new Vector3(p.x, ground + 1.2f, p.z);
         Debug.LogWarning($"[JUNetworkPlayer] Ground guard: player {OwnerClientId} was {above:F0} m {(fell ? "below" : "above")} the ground at {p}; placing it at {target}.");
         rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
@@ -324,8 +301,6 @@ public class JUNetworkPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
-            // Restore locked cursor on left click if user alt-tabbed or clicked outside
-            // (not while a menu/pause screen is open, or it swallows the first click on its buttons)
             if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked
                 && !JUTPS.JUPauseGame.IsPaused && Time.timeScale > 0f)
             {
@@ -375,7 +350,6 @@ public class JUNetworkPlayer : NetworkBehaviour
                 var netObj = ch.GetComponent<NetworkObject>();
                 if (netObj == null || !netObj.IsSpawned)
                 {
-                    // Only deactivate offline player placeholder, preserve enemy AI combatants!
                     if (ch.CompareTag("Player") || ch.gameObject.name.Equals("TPS Character", StringComparison.OrdinalIgnoreCase))
                     {
                         Debug.Log($"[JUNetworkPlayer] Deactivating offline placeholder character: {ch.gameObject.name}");
