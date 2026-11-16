@@ -275,7 +275,7 @@ namespace Railbound.UI
             var frame = Img("Preview", c, Panel); Place(frame.rectTransform, new Vector2(615f, -36f), new Vector2(530f, 720f));
             var fr = frame.rectTransform;
             StaggerIn(fr, 0.2f);
-            loPreviewGroup = fr.gameObject.AddComponent<CanvasGroup>();
+            loPreviewGroup = fr.GetComponent<CanvasGroup>();   // the one StaggerIn added (a second CanvasGroup cannot be added)
             var top = Img("Edge", fr, new Color(1f, 1f, 1f, 0.5f));
             var tr = top.rectTransform; tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f); tr.anchoredPosition = Vector2.zero; tr.sizeDelta = new Vector2(0f, 3f);
             loKind = LabelL(fr, "", 14, true, Dim, -240f, 320f, 480f);
@@ -591,7 +591,7 @@ namespace Railbound.UI
                 coinsText.text = N(Mathf.RoundToInt(shownCoins));
             }
 
-            if (previewT < 1f && loPreviewGroup != null)
+            if (previewT < 1f)
             {
                 previewT = Mathf.MoveTowards(previewT, 1f, dt * 4f);
                 float e = EaseOut(previewT);
