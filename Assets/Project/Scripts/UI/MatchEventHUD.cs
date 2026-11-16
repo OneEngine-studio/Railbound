@@ -28,7 +28,7 @@ namespace Railbound.UI
         private static readonly Color Dim = new Color(1f, 1f, 1f, 0.78f);
         private static readonly Color Gold = new Color(1f, 0.835f, 0.31f, 1f);       // #FFD54F
         private static readonly Color Amber = new Color(1f, 0.816f, 0f, 1f);         // #FFD000, as the zone warnings
-        private static readonly Color Red = new Color(1f, 0.26f, 0.22f, 1f);
+        private static readonly Color Red = new Color(1f, 0.36f, 0.3f, 1f);
         private static readonly Color Green = new Color(0.49f, 1f, 0.61f, 1f);
         private static readonly Color Plate = new Color(0.03f, 0.035f, 0.04f, 0.62f);
 
@@ -60,13 +60,13 @@ namespace Railbound.UI
         private AudioClip clipConfirm, clipThump, clipTick, clipWhoosh, clipPing;
 
         // ---- state
-        private sealed class Banner { public string Title, Tag, Sub; public Tone Tone; public int Filled, Segments; }
+        private sealed class Banner { public string Title, Tag, Sub; public Tone Tone; public int Filled, Segments; public float NotBefore; }
         private readonly List<Banner> queue = new List<Banner>();
         private Banner current;
         private float bannerT = -1f;
         private const float BannerIn = 0.32f, BannerHold = 3.1f, BannerOut = 0.4f;
         // below the ALIVE / KILLS counters (they end ~180 px from the top at 1080p)
-        private const float BannerY = -300f, BannerStripY = -6f;
+        private const float BannerY = -300f, BannerStripY = -6f, TitleY = 42f;
 
         private float popupBorn = -99f, popupXpShown;
         private int popupXpTotal;
@@ -132,7 +132,7 @@ namespace Railbound.UI
             if (s == BRMatchState.ActiveBattle && !battleAnnounced)
             {
                 battleAnnounced = true;
-                Enqueue("BATTLE STARTED", "DEPLOYED", alive + " operators in the zone. Last one standing wins.", Tone.Info, 0, 0);
+                Enqueue("BATTLE STARTED", "DEPLOYED", alive + " operators in the zone. Last one standing wins.", Tone.Info, 0, 0, false, 1.6f);   // after the countdown card of the match HUD has faded
             }
             else if (s == BRMatchState.FinalShowdown && !localDead)
             {
@@ -179,6 +179,7 @@ namespace Railbound.UI
         private void ShowKillPopup(string victim, bool head, int killNumber)
         {
             KillPopupsShown++;
+            Debug.Log("[MatchEventHUD] kill " + killNumber + ": " + victim + (head ? " (HEADSHOT)" : ""));
             bool combo = Time.unscaledTime - popupBorn < ComboWindow;
             popupXpTotal = (combo ? popupXpTotal : 0) + XpPerKill;
             if (!combo) popupXpShown = 0f;
@@ -209,9 +210,9 @@ namespace Railbound.UI
         }
 
         // ================================================================= banner
-        public void Enqueue(string title, string tag, string sub, Tone tone, int filled, int segmentCount, bool urgent = false)
+        public void Enqueue(string title, string tag, string sub, Tone tone, int filled, int segmentCount, bool urgent = false, float delay = 0f)
         {
-            var b = new Banner { Title = title, Tag = tag, Sub = sub, Tone = tone, Filled = filled, Segments = segmentCount };
+            var b = new Banner { Title = title, Tag = tag, Sub = sub, Tone = tone, Filled = filled, Segments = segmentCount, NotBefore = Time.unscaledTime + delay };
             if (urgent || tone == Tone.Critical) queue.Insert(0, b); else queue.Add(b);
             while (queue.Count > 3) queue.RemoveAt(queue.Count - 1);
         }
@@ -264,7 +265,7 @@ namespace Railbound.UI
             PollZone();
 
             // banner
-            if (current == null && queue.Count > 0) { var b = queue[0]; queue.RemoveAt(0); StartBanner(b); }
+            if (current == null && queue.Count > 0 && Time.unscaledTime >= queue[0].NotBefore) { var b = queue[0]; queue.RemoveAt(0); StartBanner(b); }
             if (current != null)
             {
                 bannerT += Time.unscaledDeltaTime;
@@ -273,7 +274,7 @@ namespace Railbound.UI
                 else if (bannerT < BannerIn + BannerHold) { a = 1f; slide = 0f; strip = 1f; }
                 else { float k = Mathf.Clamp01((bannerT - BannerIn - BannerHold) / BannerOut); a = 1f - k; slide = 0f; strip = 1f; bannerRoot.anchoredPosition = new Vector2(0f, BannerY + k * 14f); }
                 bannerGroup.alpha = a;
-                bannerTitle.rectTransform.anchoredPosition = new Vector2(slide, 0f);
+                bannerTitle.rectTransform.anchoredPosition = new Vector2(slide, TitleY);
                 bannerStrip.localScale = new Vector3(Mathf.Max(0.001f, strip), 1f, 1f);
                 if (bannerT >= BannerIn + BannerHold + BannerOut)
                 {
@@ -329,7 +330,7 @@ namespace Railbound.UI
             band.sprite = MakeBand();
             Place((RectTransform)band.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, -4f), new Vector2(1200f, 168f));
             bannerTitle = Text("Title", bannerRoot, "", fontBold, 54f, White, 4f, TextAlignmentOptions.Center);
-            Place(bannerTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 42f), new Vector2(1100f, 62f));
+            Place(bannerTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, TitleY), new Vector2(1100f, 62f));
             Shadow(bannerTitle);
 
             bannerStrip = Rect("Strip", bannerRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, BannerStripY), new Vector2(600f, 30f));
@@ -359,7 +360,7 @@ namespace Railbound.UI
             popupRoot.pivot = new Vector2(0f, 1f);
             popupGroup = popupRoot.gameObject.AddComponent<CanvasGroup>();
             popupGroup.alpha = 0f; popupGroup.blocksRaycasts = false; popupGroup.interactable = false;
-            var backing = NewImage("Backing", popupRoot, new Color(0f, 0f, 0f, 0.46f));
+            var backing = NewImage("Backing", popupRoot, new Color(0f, 0f, 0f, 0.58f));
             backing.sprite = MakeFade();
             Place((RectTransform)backing.transform, new Vector2(0f, 1f), new Vector2(-14f, 8f), new Vector2(430f, 128f));
             popupXp = Text("Xp", popupRoot, "", fontBold, 36f, Gold, 1f, TextAlignmentOptions.TopLeft);
