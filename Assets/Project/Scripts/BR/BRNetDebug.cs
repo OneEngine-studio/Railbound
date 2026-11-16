@@ -112,8 +112,26 @@ namespace Railbound.BR
 
         // -netshot <dir>: save a screenshot every 10 s.  -netfollow: put the local player next to the nearest bot that holds a gun,
         // so a client's own view can be inspected (weapons, muzzle flashes, ragdolls of bots it did not simulate itself)
+        // -nethudshot: a screenshot 0.35 s after each match banner or kill popup appears (into -netshot), to check the HUD visually
+        private int killHits, seenBanners, seenPopups, hudShotNo;
+        private float hudShotAt = -1f, nextHudShot;
+        private void HudShots()
+        {
+            if (!HasArg("-nethudshot")) return;
+            int b = Railbound.UI.MatchEventHUD.BannersShown, k = Railbound.UI.MatchEventHUD.KillPopupsShown;
+            if ((b != seenBanners || k != seenPopups) && Time.unscaledTime >= nextHudShot) { hudShotAt = Time.unscaledTime + 0.35f; nextHudShot = Time.unscaledTime + 2.5f; }
+            seenBanners = b; seenPopups = k;
+            if (hudShotAt > 0f && Time.unscaledTime >= hudShotAt)
+            {
+                hudShotAt = -1f;
+                string dir = ArgValue("-netshot");
+                if (!string.IsNullOrEmpty(dir)) { try { System.IO.Directory.CreateDirectory(dir); ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "hud_" + (hudShotNo++) + ".png")); } catch { } }
+            }
+        }
+
         private void TestAids()
         {
+            HudShots();
             string dir = ArgValue("-netshot");
             if (!string.IsNullOrEmpty(dir) && Time.unscaledTime >= nextShot && Time.realtimeSinceStartup > 12f)
             {
@@ -136,7 +154,17 @@ namespace Railbound.BR
                     float d = (b.transform.position - pc.transform.position).sqrMagnitude;
                     if (d < bestKD) { bestKD = d; bestH = h; }
                 }
-                if (bestH != null) { JUHealth.PendingAttacker = pc.gameObject; bestH.DoDamage(45f); JUHealth.PendingAttacker = null; }
+                if (bestH != null)
+                {
+                    JUHealth.PendingAttacker = pc.gameObject;
+                    // every other hit goes through the head body part (x5 damage), so the "HEADSHOT KILL" popup gets tested too
+                    JUTPS.ArmorSystem.DamageableBodyPart head = null;
+                    if ((killHits++ & 1) == 1)
+                        foreach (var part in bestH.GetComponentsInChildren<JUTPS.ArmorSystem.DamageableBodyPart>()) if (part.IsHead) { head = part; break; }
+                    if ((killHits & 1) == 0) Debug.Log("[BRNetDebug] netkill head hit on " + bestH.name + ": head part " + (head != null ? "found" : "NOT found") + " (" + bestH.GetComponentsInChildren<JUTPS.ArmorSystem.DamageableBodyPart>().Length + " parts)");
+                    if (head != null) head.DoDamage(9f); else bestH.DoDamage(45f);
+                    JUHealth.PendingAttacker = null;
+                }
             }
 
             // -netfire: the local player fires its weapon (and reloads when empty), to test what other players see and hear of it
@@ -516,6 +544,7 @@ namespace Railbound.BR
             }
             sb.Append(MotionReport());
             sb.Append(AnimationReport());
+            sb.Append(" hudEvents(banners=").Append(Railbound.UI.MatchEventHUD.BannersShown).Append(" killPopups=").Append(Railbound.UI.MatchEventHUD.KillPopupsShown).Append(')');
             var mm = FindFirstObjectByType<Railbound.UI.Map1MiniMapController>();
             var lp = Railbound.Gameplay.LocalPlayer.Transform;
             if (mm != null) sb.Append(" minimap(tracks=").Append(mm.TrackedPlayer != null ? mm.TrackedPlayer.name + (mm.TrackedPlayer.gameObject.activeInHierarchy ? "" : "/INACTIVE") : "none")
