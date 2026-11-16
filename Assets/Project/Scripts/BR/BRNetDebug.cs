@@ -231,9 +231,125 @@ namespace Railbound.BR
             Debug.Log("[BRNetDebug] experiment applied to " + bots.Length + " bots");
         }
 
+        // ---- bot motion: how evenly the living bots move on THIS peer. Stutter shows up as speed changes from frame to frame
+        // (rough = sum of |velocity change| * dt per metre travelled) and as frames in which a running bot did not move at all.
+        private sealed class MotionTrack { public JUHealth Health; public Vector3 P, V; public bool HasP, HasV; }
+        private readonly System.Collections.Generic.Dictionary<BRNetBot, MotionTrack> motion = new System.Collections.Generic.Dictionary<BRNetBot, MotionTrack>();
+        private BRNetBot[] motionBots;
+        private float motionRefresh, motionDist, motionJerk, motionMaxStep;
+        private int motionStalls, motionMovingFrames;
+
+        private void TrackBotMotion()
+        {
+            float dt = Time.deltaTime;
+            if (dt <= 0f) return;
+            if (motionBots == null || Time.unscaledTime > motionRefresh)
+            {
+                motionBots = FindObjectsByType<BRNetBot>(FindObjectsSortMode.None);
+                motionRefresh = Time.unscaledTime + 2f;
+            }
+            foreach (var b in motionBots)
+            {
+                if (b == null || !b.gameObject.activeInHierarchy) continue;
+                if (!motion.TryGetValue(b, out var s)) { s = new MotionTrack { Health = b.GetComponent<JUHealth>() }; motion[b] = s; }
+                Vector3 p = b.transform.position;
+                if (s.Health != null && s.Health.IsDead) { s.HasP = false; s.HasV = false; continue; }
+                if (s.HasP)
+                {
+                    Vector3 step = p - s.P;
+                    float d = step.magnitude;
+                    Vector3 v = step / dt;
+                    bool wasRunning = s.HasV && s.V.magnitude > 1f;
+                    if (d > 0.0005f || wasRunning)
+                    {
+                        motionMovingFrames++;
+                        motionDist += d;
+                        if (s.HasV) motionJerk += (v - s.V).magnitude * dt;
+                        if (d <= 0.0005f && wasRunning) motionStalls++;
+                        if (d > motionMaxStep) motionMaxStep = d;
+                    }
+                    s.V = v;
+                    s.HasV = true;
+                }
+                s.P = p;
+                s.HasP = true;
+            }
+        }
+
+        private string MotionReport()
+        {
+            string r = " botMotion(dist=" + motionDist.ToString("F0") + "m rough=" + (motionDist > 1f ? (motionJerk / motionDist).ToString("F3") : "-")
+                + " stalls=" + motionStalls + "/" + motionMovingFrames + " maxStep=" + motionMaxStep.ToString("F2") + "m)";
+            motionDist = motionJerk = motionMaxStep = 0f;
+            motionStalls = motionMovingFrames = 0;
+            return r;
+        }
+
+        // -netexit <seconds>: press the pause menu's EXIT after that many seconds (tests leaving a running match)
+        private bool exitPressed;
+        private void TestExit()
+        {
+            if (exitPressed || !float.TryParse(ArgValue("-netexit"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float at)) return;
+            if (Time.realtimeSinceStartup < at) return;
+            exitPressed = true;
+            var bridge = FindFirstObjectByType<Michsky.UI.Reach.ReachPauseBridge>();
+            var nm = NetworkManager.Singleton;
+            Debug.Log("[BRNetDebug] netexit: pressing EXIT (bridge=" + (bridge != null) + " listening=" + (nm != null && nm.IsListening) + ")");
+            if (bridge != null) bridge.ExitToMainMenu();
+        }
+
+        // -netrock <prototype>[,<prototype>...]: from t=40 s, every 15 s drop the local player onto a terrain rock of that prototype and
+        // take a screenshot 4 s later (into -netshot): it must stand on the visible rock, not float above it or sink into it
+        private int rockStep;
+        private float nextRock = 40f, rockShotAt = -1f;
+        private void TestRocks()
+        {
+            string list = ArgValue("-netrock");
+            var pc = JUGameManager.PlayerController;
+            if (string.IsNullOrEmpty(list) || pc == null) return;
+            if (rockShotAt > 0f && Time.realtimeSinceStartup >= rockShotAt)
+            {
+                rockShotAt = -1f;
+                string dir = ArgValue("-netshot");
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    try { System.IO.Directory.CreateDirectory(dir); ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "rock_" + rockStep + ".png")); } catch { }
+                }
+                Physics.Raycast(pc.transform.position + Vector3.up, Vector3.down, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore);
+                Debug.Log("[BRNetDebug] netrock " + rockStep + ": player at " + pc.transform.position.ToString("F2") + " standing on " + (hit.collider != null ? hit.collider.name + "/" + hit.collider.transform.parent?.name : "nothing"));
+                rockStep++;
+            }
+            string[] names = list.Split(',');
+            if (rockStep >= names.Length || rockShotAt > 0f || Time.realtimeSinceStartup < nextRock) return;
+            nextRock = Time.realtimeSinceStartup + 15f;
+            string want = names[rockStep];
+            foreach (var t in Terrain.activeTerrains)
+            {
+                var td = t.terrainData;
+                int pi = System.Array.FindIndex(td.treePrototypes, p => p.prefab != null && p.prefab.name == want);
+                if (pi < 0) continue;
+                // the biggest instance of that rock on this terrain, so the test is not decided by a pebble
+                TreeInstance best = default; bool found = false;
+                foreach (var ti in td.treeInstances) if (ti.prototypeIndex == pi && (!found || ti.heightScale > best.heightScale)) { best = ti; found = true; }
+                if (!found) continue;
+                Vector3 p = t.transform.position + Vector3.Scale(best.position, td.size);
+                var body = pc.GetComponent<Rigidbody>();
+                pc.transform.position = p + Vector3.up * 12f;
+                if (body != null) { body.position = pc.transform.position; body.velocity = Vector3.zero; }
+                Debug.Log("[BRNetDebug] netrock " + rockStep + ": dropping onto " + want + " (scale " + best.widthScale.ToString("F2") + "/" + best.heightScale.ToString("F2") + ", prefab scale " + td.treePrototypes[pi].prefab.transform.localScale.y + ") at " + p.ToString("F1"));
+                rockShotAt = Time.realtimeSinceStartup + 4f;
+                return;
+            }
+            Debug.Log("[BRNetDebug] netrock: no instance of " + want);
+            rockStep++;
+        }
+
         private void Update()
         {
             frames++;
+            TestExit();
+            TestRocks();
+            TrackBotMotion();
             TestAids();
             if (!experimentApplied && Time.realtimeSinceStartup > 20f) ApplyExperiment();
             if (Time.unscaledTime < next) return;
@@ -292,6 +408,8 @@ namespace Railbound.BR
                         .Append(" hp").Append(h != null ? h.Health.ToString("F0") : "?");
                 }
             }
+            sb.Append(MotionReport());
+            sb.Append(" rockColliders=").Append(Railbound.Gameplay.TerrainRockColliders.LastBuiltCount);
             sb.Append(" maxRemoteUp=").Append(maxRemoteUp.ToString("F1")).Append(" airborneBots=").Append(airborne).Append(airList).Append(" botsActive=").Append(active).Append(" botsDead=").Append(dead).Append(" ragdolled=").Append(ragdolled).Append(" deadNoRagdoll=").Append(deadNotRagdolled).Append(" armed=").Append(armed).Append(" |").Append(list);
             sb.Append(" shotFx=").Append(BRNetBot.ShotEffectsShown).Append(" PLAYERFX sent=").Append(PlayerCombatNet.SentShots).Append('/').Append(PlayerCombatNet.SentBullets).Append('/').Append(PlayerCombatNet.SentReloads).Append(" relayed=").Append(PlayerCombatNet.RelayedShots).Append(" received=").Append(PlayerCombatNet.ReceivedShots).Append('/').Append(PlayerCombatNet.ReceivedBullets).Append('/').Append(PlayerCombatNet.ReceivedReloads).Append(" remoteFx(shots/bullets/reloads)=").Append(RemoteWeaponFx.ShotsShown).Append('/').Append(RemoteWeaponFx.BulletsShown).Append('/').Append(RemoteWeaponFx.ReloadsShown).Append(" bulletVis=").Append(BRNetBot.BulletVisualsShown).Append(" | loot registered=").Append(BRLootSync.RegisteredCount).Append(" taken=").Append(BRLootSync.TakenCount);
             Debug.Log(sb.ToString());

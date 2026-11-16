@@ -247,14 +247,7 @@ namespace Railbound.BR
             var w = HeldWeapon;
             if (w == null) return;
             ShotEffectsShown++;
-            Vector3 muzzle = w.Shoot_Position != null ? w.Shoot_Position.position : w.transform.position;
-            if (w.MuzzleFlashParticlePrefab != null)
-            {
-                var flash = Instantiate(w.MuzzleFlashParticlePrefab, muzzle, w.Shoot_Position != null ? w.Shoot_Position.rotation : w.transform.rotation, w.transform);
-                Destroy(flash, 2f);
-            }
-            if (w.ShootAudio != null)
-                Railbound.Audio.WeaponShotAudio.PlayShot(w.ShootAudio, muzzle, Random.Range(0.92f, 1.08f), w.ItemName);
+            RemoteWeaponFx.Shot(w);   // same muzzle flash and gunshot as a remote player's shot
         }
 
         private void HandleItemChanged(int previous, int current) => ApplyItem(current);
