@@ -37,6 +37,8 @@ public class JUNetworkPlayer : NetworkBehaviour
     {
         characterController = GetComponent<JUCharacterController>();
         rb = GetComponent<Rigidbody>();
+        // saved with "Cull Update Transforms": with the rig's own mesh hidden by the skin (and always on the headless server) the bones froze
+        Project.Character.CharacterSkinApplier.KeepAnimating(gameObject);
         health = GetComponent<JUHealth>();
         inventory = GetComponent<JUInventory>();
         sonarSkill = GetComponent<PlayerSonarSkill>();

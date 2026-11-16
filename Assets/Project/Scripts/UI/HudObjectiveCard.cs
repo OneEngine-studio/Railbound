@@ -39,11 +39,8 @@ namespace Railbound.UI
             _group.alpha = Mathf.MoveTowards(_group.alpha, visible ? 1f : 0f, Time.unscaledDeltaTime * fadeSpeed);
             if (!visible) return;
 
-            if (_player == null)
-            {
-                var p = GameObject.FindGameObjectWithTag("Player");
-                if (p != null) _player = p.transform;
-            }
+            if (_player == null || !_player.gameObject.activeInHierarchy)
+                _player = Railbound.Gameplay.LocalPlayer.Transform;   // not by the "Player" tag: every player of a match has it
 
             string phase = zm.CurrentPhaseName.ToUpperInvariant();
             if (phaseText != null) phaseText.text = phase;

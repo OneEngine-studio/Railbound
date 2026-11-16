@@ -88,7 +88,7 @@ namespace Project.UI
             _playerDriveAbility = GetComponent<DriveVehicles>();
             if (_playerDriveAbility == null)
             {
-                GameObject playerGo = GameObject.FindGameObjectWithTag("Player");
+                GameObject playerGo = Railbound.Gameplay.LocalPlayer.GameObject;   // not by the "Player" tag: every player of a match has it
                 if (playerGo != null) _playerDriveAbility = playerGo.GetComponent<DriveVehicles>();
             }
 
