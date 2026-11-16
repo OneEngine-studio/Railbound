@@ -298,10 +298,57 @@ namespace Railbound.BR
             if (bridge != null) bridge.ExitToMainMenu();
         }
 
+        // -netrock <prototype>[,<prototype>...]: from t=40 s, every 15 s drop the local player onto a terrain rock of that prototype and
+        // take a screenshot 4 s later (into -netshot): it must stand on the visible rock, not float above it or sink into it
+        private int rockStep;
+        private float nextRock = 40f, rockShotAt = -1f;
+        private void TestRocks()
+        {
+            string list = ArgValue("-netrock");
+            var pc = JUGameManager.PlayerController;
+            if (string.IsNullOrEmpty(list) || pc == null) return;
+            if (rockShotAt > 0f && Time.realtimeSinceStartup >= rockShotAt)
+            {
+                rockShotAt = -1f;
+                string dir = ArgValue("-netshot");
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    try { System.IO.Directory.CreateDirectory(dir); ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "rock_" + rockStep + ".png")); } catch { }
+                }
+                Physics.Raycast(pc.transform.position + Vector3.up, Vector3.down, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore);
+                Debug.Log("[BRNetDebug] netrock " + rockStep + ": player at " + pc.transform.position.ToString("F2") + " standing on " + (hit.collider != null ? hit.collider.name + "/" + hit.collider.transform.parent?.name : "nothing"));
+                rockStep++;
+            }
+            string[] names = list.Split(',');
+            if (rockStep >= names.Length || rockShotAt > 0f || Time.realtimeSinceStartup < nextRock) return;
+            nextRock = Time.realtimeSinceStartup + 15f;
+            string want = names[rockStep];
+            foreach (var t in Terrain.activeTerrains)
+            {
+                var td = t.terrainData;
+                int pi = System.Array.FindIndex(td.treePrototypes, p => p.prefab != null && p.prefab.name == want);
+                if (pi < 0) continue;
+                // the biggest instance of that rock on this terrain, so the test is not decided by a pebble
+                TreeInstance best = default; bool found = false;
+                foreach (var ti in td.treeInstances) if (ti.prototypeIndex == pi && (!found || ti.heightScale > best.heightScale)) { best = ti; found = true; }
+                if (!found) continue;
+                Vector3 p = t.transform.position + Vector3.Scale(best.position, td.size);
+                var body = pc.GetComponent<Rigidbody>();
+                pc.transform.position = p + Vector3.up * 12f;
+                if (body != null) { body.position = pc.transform.position; body.velocity = Vector3.zero; }
+                Debug.Log("[BRNetDebug] netrock " + rockStep + ": dropping onto " + want + " (scale " + best.widthScale.ToString("F2") + "/" + best.heightScale.ToString("F2") + ", prefab scale " + td.treePrototypes[pi].prefab.transform.localScale.y + ") at " + p.ToString("F1"));
+                rockShotAt = Time.realtimeSinceStartup + 4f;
+                return;
+            }
+            Debug.Log("[BRNetDebug] netrock: no instance of " + want);
+            rockStep++;
+        }
+
         private void Update()
         {
             frames++;
             TestExit();
+            TestRocks();
             TrackBotMotion();
             TestAids();
             if (!experimentApplied && Time.realtimeSinceStartup > 20f) ApplyExperiment();
