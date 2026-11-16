@@ -286,14 +286,22 @@ namespace Railbound.BR
                 if (!smr.enabled || !smr.gameObject.activeInHierarchy) continue;
                 var b = smr.bounds;
                 if (b.size.y < 0.3f) continue;
-                if (!Physics.Raycast(new Vector3(b.center.x, b.min.y - 0.05f, b.center.z), Vector3.down, out RaycastHit hit, 500f, ~0, QueryTriggerInteraction.Ignore)) continue;
-                if (hit.distance < 5f) continue;
+                // from the middle of the model (a ray from under the feet passed through whatever the character stands on)
+                RaycastHit hit = default; bool any = false;
+                foreach (var h0 in Physics.RaycastAll(b.center, Vector3.down, 500f, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (h0.collider.transform.root == smr.transform.root) continue;   // its own capsule and ragdoll
+                    if (!any || h0.distance < hit.distance) { hit = h0; any = true; }
+                }
+                if (!any) continue;
+                float gap = hit.distance - (b.center.y - b.min.y);
+                if (gap < 5f) continue;
                 n++;
                 if (found.Length > 400) continue;
                 Transform t = smr.transform; string path = t.name;
                 for (int i = 0; i < 4 && t.parent != null; i++) { t = t.parent; path = t.name + "/" + path; }
                 var h = smr.GetComponentInParent<JUHealth>();
-                found.Append(' ').Append(path).Append(" +").Append(hit.distance.ToString("F0")).Append("m@").Append(b.center.ToString("F0"))
+                found.Append(' ').Append(path).Append(" +").Append(gap.ToString("F0")).Append("m@").Append(b.center.ToString("F0"))
                      .Append(h != null ? (h.IsDead ? " dead" : " alive") : " nohealth");
             }
             return " floatingModels=" + n + found;
