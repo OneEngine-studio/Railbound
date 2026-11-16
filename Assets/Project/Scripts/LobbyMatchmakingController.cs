@@ -69,6 +69,10 @@ namespace Railbound.Networking
         public bool CanCancel => IsDeploying && !_sceneLoadStarted;
 
         private string _queueMatchId = "";
+        private ServerAllocationClient.Allocation? _queueAssignment;   // the server queue's assignment (address + this player's join ticket)
+        private string _queueFailedReason;
+        /// <summary>What the server last said about the matchmaking session (countdown, players), for the HUD; null outside the queue.</summary>
+        public MatchmakingQueueClient.Progress QueueProgress { get; private set; }
         private int _queuePlayers = 1;
         private bool _cancelRequested;
         private bool _sceneLoadStarted;
@@ -218,17 +222,23 @@ namespace Railbound.Networking
         }
 
         /// <summary>
-        /// Puts the player into the Nakama matchmaker and waits until a lobby forms, the soft-launch window runs out, or the player cancels.
-        /// A full or partial lobby and a timeout all lead to the same next step; the match coordinator on the game server fills the
-        /// remaining slots with bots. Without a reachable Nakama backend there is nobody to wait for, so this returns at once.
+        /// Puts the player into the SERVER's matchmaking queue (Nakama module, railbound_queue) and waits for the assignment: the server
+        /// runs the countdown, locks the roster when it ends (or the session is full), creates a new match id and allocates the game
+        /// server for exactly the locked players. A player who arrives after the lock is put into the next session by the server; it is
+        /// never sent into a match that already started. Without a reachable Nakama socket there is nobody to wait for (local match).
         /// </summary>
         private async Task QueueForPlayersAsync()
         {
+            _queueAssignment = null;
+            _queueFailedReason = null;
+            QueueProgress = null;
+
+            var auth = AuthenticationService.Instance;
             ISocket socket = null;
             try
             {
-                if (AuthenticationService.Instance != null && AuthenticationService.Instance.IsAuthenticated)
-                    socket = await AuthenticationService.Instance.EnsureSocketAsync();
+                if (auth != null && auth.IsAuthenticated)
+                    socket = await auth.EnsureSocketAsync();
             }
             catch (Exception ex)
             {
@@ -240,113 +250,40 @@ namespace Railbound.Networking
                 return;
             }
 
-            // In a party of two or more the LEADER queues the whole party with one ticket; the other members do not queue, the match
-            // that the ticket finds reaches every member's socket. Everybody ends up with the same match id, so the same game server.
             var party = NakamaPartyService.InstanceIfExists;
-            bool partyMode = party != null && party.InParty && party.MemberCount > 1;
-            string partyId = partyMode ? party.PartyId : null;
-            string partyTicket = null;
+            string partyId = party != null && party.InParty && party.MemberCount > 1 ? party.PartyId : null;
+            string mode = Railbound.UI.GameModeCatalog.MatchKey;
 
-            var matched = new TaskCompletionSource<IMatchmakerMatched>();
-            Action<IMatchmakerMatched> onMatched = m => matched.TrySetResult(m);
-            socket.ReceivedMatchmakerMatched += onMatched;
-            IMatchmakerTicket ticket = null;
-            try
+            UpdateStatus("SEARCHING FOR PLAYERS");
+            var result = await MatchmakingQueueClient.QueueAsync(auth.Client, auth.Session, socket, mode, partyId, () => _cancelRequested, p =>
             {
-                // only players who chose the same mode and team size are matched together
-                string modeKey = Railbound.UI.GameModeCatalog.MatchKey;
-                string modeQuery = "+properties.mode:" + modeKey;
-                var modeProps = new System.Collections.Generic.Dictionary<string, string> { { "mode", modeKey } };
+                QueueProgress = p;
+                switch (p.Phase)
+                {
+                    case "COUNTDOWN": UpdateStatus($"SEARCHING FOR PLAYERS  {p.Countdown}s  {p.Players}/{p.Max}"); break;
+                    case "LOCKED": UpdateStatus("LOBBY FOUND"); break;
+                    case "STARTING": UpdateStatus("PREPARING A MATCH SERVER..."); break;
+                }
+            });
 
-                if (!partyMode)
-                {
-                    try
-                    {
-                        ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // the socket looked connected but never answered: retry once on a fresh connection
-                        Debug.LogWarning("[LobbyMatchmaker] The Nakama socket did not answer; reconnecting and trying once more.");
-                        socket.ReceivedMatchmakerMatched -= onMatched;
-                        var fresh = await AuthenticationService.Instance.ReconnectSocketAsync();
-                        if (fresh == null || !fresh.IsConnected) throw;
-                        socket = fresh;
-                        socket.ReceivedMatchmakerMatched += onMatched;
-                        ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
-                    }
-                }
-                else if (party.IsLeader)
-                {
-                    var pt = await socket.AddMatchmakerPartyAsync(partyId, modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
-                    partyTicket = pt.Ticket;
-                    Debug.Log($"[LobbyMatchmaker] Queued the party of {party.MemberCount} as one ticket.");
-                }
-                else
-                {
-                    Debug.Log("[LobbyMatchmaker] Party member: waiting for the leader's party ticket to find a match.");
-                }
-                float start = Time.realtimeSinceStartup;
-                while (!matched.Task.IsCompleted && !_cancelRequested)
-                {
-                    float left = queueSeconds - (Time.realtimeSinceStartup - start);
-                    if (left <= 0f) break;
-                    UpdateStatus($"SEARCHING FOR PLAYERS  {Mathf.CeilToInt(left)}s");
-                    await Task.Delay(250);
-                }
-
-                if (matched.Task.IsCompleted)
-                {
-                    // every member of a matchmaker lobby derives the same match id from the member list
-                    var ids = matched.Task.Result.Users.Select(u => u.Presence.UserId).OrderBy(x => x, StringComparer.Ordinal).ToArray();
-                    _queueMatchId = MatchIdOf(ids);
-                    _queuePlayers = ids.Length;
+            switch (result.Outcome)
+            {
+                case MatchmakingQueueClient.Outcome.Assigned:
+                    _queueMatchId = result.MatchId;   // made by the server; never derived from the player list
+                    _queuePlayers = result.Players;
+                    _queueAssignment = new ServerAllocationClient.Allocation(result.Host, result.Port, result.ServerName, result.Token);
+                    Debug.Log($"[LobbyMatchmaker] Queue session {result.SessionId} -> match {result.MatchId} with {result.Players} player(s).");
                     UpdateStatus("LOBBY FOUND");
-                    Debug.Log($"[LobbyMatchmaker] Matchmaker formed a lobby of {matched.Task.Result.Users.Count()} players.");
-                    await Task.Delay(600);
-                }
-                else if (!_cancelRequested)
-                {
-                    // Nobody else was found. A party still plays together: every member derives the same match id from the party
-                    // roster, so all of them get the same game server (a solo player keeps a private id and the bots fill the rest).
-                    if (partyMode)
-                    {
-                        _queueMatchId = MatchIdOf(party.MemberUserIds);
-                        _queuePlayers = party.MemberCount;
-                    }
-                    UpdateStatus("NO FULL LOBBY - BOTS WILL FILL THE MATCH");
-                    Debug.Log("[LobbyMatchmaker] Queue window elapsed; continuing with bot backfill.");
-                    await Task.Delay(900);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[LobbyMatchmaker] Matchmaker queue failed ({ex.Message}); continuing without it.");
-            }
-            finally
-            {
-                socket.ReceivedMatchmakerMatched -= onMatched;
-                if (ticket != null && !matched.Task.IsCompleted)
-                {
-                    try { await socket.RemoveMatchmakerAsync(ticket); }
-                    catch (Exception) { /* the ticket expires on its own */ }
-                }
-                if (partyTicket != null && !matched.Task.IsCompleted)
-                {
-                    try { await socket.RemoveMatchmakerPartyAsync(partyId, partyTicket); }
-                    catch (Exception) { /* the ticket expires on its own */ }
-                }
-            }
-        }
-
-        /// <summary>The match id all players of one match share: a hash of their sorted user ids.</summary>
-        private static string MatchIdOf(System.Collections.Generic.IEnumerable<string> userIds)
-        {
-            var ids = userIds.OrderBy(x => x, StringComparer.Ordinal).ToArray();
-            using (var sha = System.Security.Cryptography.SHA1.Create())
-            {
-                byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("|", ids)));
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant().Substring(0, 24);
+                    await Task.Delay(400);
+                    break;
+                case MatchmakingQueueClient.Outcome.Failed:
+                    _queueFailedReason = string.IsNullOrEmpty(result.Reason) ? "failed" : result.Reason;
+                    Debug.LogWarning($"[LobbyMatchmaker] Queue session {result.SessionId} failed: {_queueFailedReason}.");
+                    break;
+                case MatchmakingQueueClient.Outcome.Unavailable:
+                    // an older Nakama module without the queue: play solo (private match id, the bots fill the match)
+                    Debug.LogWarning("[LobbyMatchmaker] No server queue on this backend; continuing with a private match.");
+                    break;
             }
         }
 
@@ -362,6 +299,20 @@ namespace Railbound.Networking
                 // nobody can hand out a server without Nakama: no endpoint is set, so the match runs locally (solo / offline testing)
                 Debug.Log("[LobbyMatchmaker] Not signed in: no game server can be allocated; the match runs locally.");
                 return true;
+            }
+
+            if (_queueAssignment.HasValue)
+            {
+                var assigned = _queueAssignment.Value;
+                GameServerConnection.Instance.SetAllocation(_queueMatchId, assigned.Host, assigned.Port, assigned.ServerName, assigned.Token);
+                UpdateStatus("GAME SERVER READY");
+                await Task.Delay(300);
+                return true;
+            }
+            if (!string.IsNullOrEmpty(_queueFailedReason))
+            {
+                Debug.LogWarning($"[LobbyMatchmaker] The matchmaking session failed ({_queueFailedReason}); no match was started.");
+                return false;
             }
 
             UpdateStatus("REQUESTING GAME SERVER...");

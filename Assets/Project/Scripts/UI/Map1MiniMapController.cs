@@ -51,6 +51,7 @@ namespace Railbound.UI
 
         // ---- scene refs ----
         private Transform _player;
+        public Transform TrackedPlayer => _player;   // test aid (BRNetDebug)
         private Camera _cam;
         private float _nextResolve;
 
@@ -173,12 +174,12 @@ namespace Railbound.UI
         {
             if (!force && Time.unscaledTime < _nextResolve) return;
             _nextResolve = Time.unscaledTime + 0.5f;
-            if (_player == null)
-            {
-                var p = GameObject.FindGameObjectWithTag("Player");
-                if (p != null) _player = p.transform;
-            }
-            if (_cam == null) _cam = Camera.main;
+            // the character this machine controls, checked again every half second: the offline placeholder is replaced by the network
+            // player when that spawns, and a lookup by the "Player" tag returned any player of the match (the arrow followed somebody else)
+            var local = Railbound.Gameplay.LocalPlayer.Transform;
+            if (local != null) _player = local;
+            else if (_player != null && !_player.gameObject.activeInHierarchy) _player = null;
+            if (_cam == null || !_cam.isActiveAndEnabled) _cam = Camera.main;
         }
 
         // ------------------------------------------------------------------------------------------------ build: minimap

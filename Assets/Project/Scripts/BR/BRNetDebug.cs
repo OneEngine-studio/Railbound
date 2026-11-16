@@ -233,7 +233,81 @@ namespace Railbound.BR
 
         // ---- bot motion: how evenly the living bots move on THIS peer. Stutter shows up as speed changes from frame to frame
         // (rough = sum of |velocity change| * dt per metre travelled) and as frames in which a running bot did not move at all.
-        private sealed class MotionTrack { public JUHealth Health; public Vector3 P, V; public bool HasP, HasV; }
+        private sealed class MotionTrack
+        {
+            public JUHealth Health; public Vector3 P, V; public bool HasP, HasV;
+            // animation check: while the root moves, do the gameplay rig's leg and the visible skin's leg move too?
+            public Animator Anim; public Transform RigLeg, SkinLeg; public AdvancedRagdollController Ragdoll;
+            public Quaternion RigLegPrev, SkinLegPrev; public bool HasLegs;
+            public int MovingFrames, AnimOff, RagdollOn, SpeedZero; public float RigLegDeg, SkinLegDeg;
+        }
+
+        private static Transform FindDeep(Transform t, string n)
+        {
+            if (t.name == n) return t;
+            foreach (Transform c in t) { var r = FindDeep(c, n); if (r != null) return r; }
+            return null;
+        }
+
+        private static void TrackAnimation(BRNetBot b, MotionTrack s, float rootSpeed)
+        {
+            if (s.Anim == null)
+            {
+                s.Anim = b.GetComponent<Animator>();
+                s.Ragdoll = b.GetComponent<AdvancedRagdollController>();
+                if (s.Anim != null && s.Anim.isHuman) s.RigLeg = s.Anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            }
+            if (s.SkinLeg == null)
+            {
+                var skin = b.transform.Find(Project.Character.CharacterSkinApplier.SkinChildName);
+                if (skin != null) s.SkinLeg = FindDeep(skin, "mixamorig:LeftUpLeg");
+                s.HasLegs = false;
+            }
+            if (s.RigLeg == null) return;
+            if (rootSpeed > 1f)
+            {
+                s.MovingFrames++;
+                if (s.Anim != null && !s.Anim.enabled) s.AnimOff++;
+                if (s.Ragdoll != null && s.Ragdoll.State != AdvancedRagdollController.RagdollState.Animated) s.RagdollOn++;
+                if (s.Anim != null && s.Anim.enabled && s.Anim.GetFloat("Speed") < 0.05f) s.SpeedZero++;
+                if (s.HasLegs)
+                {
+                    s.RigLegDeg += Quaternion.Angle(s.RigLegPrev, s.RigLeg.localRotation);
+                    if (s.SkinLeg != null) s.SkinLegDeg += Quaternion.Angle(s.SkinLegPrev, s.SkinLeg.localRotation);
+                }
+            }
+            s.RigLegPrev = s.RigLeg.localRotation;
+            if (s.SkinLeg != null) s.SkinLegPrev = s.SkinLeg.localRotation;
+            s.HasLegs = true;
+        }
+
+        // bots that moved in the last report window although their legs (rig or skin) hardly did: "sliding statues"
+        private string AnimationReport()
+        {
+            int checkedBots = 0, sliding = 0;
+            var list = new StringBuilder();
+            foreach (var kv in motion)
+            {
+                var s = kv.Value;
+                if (s.MovingFrames < 20) { Reset(s); continue; }
+                checkedBots++;
+                float rigPerFrame = s.RigLegDeg / s.MovingFrames, skinPerFrame = s.SkinLegDeg / s.MovingFrames;
+                bool bad = rigPerFrame < 0.3f || (s.SkinLeg != null && skinPerFrame < 0.3f) || s.AnimOff > 0 || s.RagdollOn > 0;
+                if (bad)
+                {
+                    sliding++;
+                    if (list.Length < 600)
+                        list.Append(' ').Append(kv.Key != null ? kv.Key.name : "?").Append("(frames=").Append(s.MovingFrames)
+                            .Append(" rigLeg=").Append(rigPerFrame.ToString("F2")).Append(" skinLeg=").Append(s.SkinLeg != null ? skinPerFrame.ToString("F2") : "noskin")
+                            .Append(" animOff=").Append(s.AnimOff).Append(" ragdoll=").Append(s.RagdollOn).Append(" speed0=").Append(s.SpeedZero)
+                            .Append(" state=").Append(s.Ragdoll != null ? s.Ragdoll.State.ToString() : "-").Append(')');
+                }
+                Reset(s);
+            }
+            return " botAnim(checked=" + checkedBots + " sliding=" + sliding + list + ")";
+        }
+
+        private static void Reset(MotionTrack s) { s.MovingFrames = s.AnimOff = s.RagdollOn = s.SpeedZero = 0; s.RigLegDeg = s.SkinLegDeg = 0f; }
         private readonly System.Collections.Generic.Dictionary<BRNetBot, MotionTrack> motion = new System.Collections.Generic.Dictionary<BRNetBot, MotionTrack>();
         private BRNetBot[] motionBots;
         private float motionRefresh, motionDist, motionJerk, motionMaxStep;
@@ -268,6 +342,7 @@ namespace Railbound.BR
                         if (d <= 0.0005f && wasRunning) motionStalls++;
                         if (d > motionMaxStep) motionMaxStep = d;
                     }
+                    TrackAnimation(b, s, v.magnitude);
                     s.V = v;
                     s.HasV = true;
                 }
@@ -440,6 +515,11 @@ namespace Railbound.BR
                 }
             }
             sb.Append(MotionReport());
+            sb.Append(AnimationReport());
+            var mm = FindFirstObjectByType<Railbound.UI.Map1MiniMapController>();
+            var lp = Railbound.Gameplay.LocalPlayer.Transform;
+            if (mm != null) sb.Append(" minimap(tracks=").Append(mm.TrackedPlayer != null ? mm.TrackedPlayer.name + (mm.TrackedPlayer.gameObject.activeInHierarchy ? "" : "/INACTIVE") : "none")
+                .Append(" local=").Append(lp != null ? lp.name : "none").Append(" ok=").Append(mm.TrackedPlayer != null && mm.TrackedPlayer == lp).Append(')');
             sb.Append(FloatingModels());
             sb.Append(" rockColliders=").Append(Railbound.Gameplay.TerrainRockColliders.LastBuiltCount);
             sb.Append(" botTriggersForwarded=").Append(BRNetBot.TriggersForwarded).Append(" groundGuardFixes=").Append(BRNetBot.GroundGuardFixes)

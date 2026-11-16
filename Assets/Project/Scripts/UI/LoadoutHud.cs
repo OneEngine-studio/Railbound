@@ -102,12 +102,7 @@ namespace Railbound.UI
             if (player == null && Time.unscaledTime >= nextScan)
             {
                 nextScan = Time.unscaledTime + 0.5f;
-                player = JUGameManager.PlayerController;
-                if (player == null)
-                {
-                    var go = GameObject.FindGameObjectWithTag("Player");
-                    if (go != null) player = go.GetComponent<JUCharacterController>();
-                }
+                player = Railbound.Gameplay.LocalPlayer.Controller;   // not by the "Player" tag: every player of a match has it
                 if (player != null)
                 {
                     sonar = player.GetComponentInChildren<PlayerSonarSkill>(true);

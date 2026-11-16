@@ -143,7 +143,7 @@ namespace Railbound.Gameplay
             }
 
             // 2. Check for active scene player tagged "Player"
-            GameObject taggedPlayer = GameObject.FindGameObjectWithTag("Player");
+            GameObject taggedPlayer = Railbound.Gameplay.LocalPlayer.GameObject;   // not by the "Player" tag: every player of a match has it
             if (taggedPlayer != null && taggedPlayer.activeInHierarchy)
             {
                 RegisterPlayer(taggedPlayer);

@@ -108,7 +108,7 @@ namespace Railbound.UI
         {
             if (healthComponent == null)
             {
-                var player = GameObject.FindGameObjectWithTag("Player");
+                var player = Railbound.Gameplay.LocalPlayer.GameObject;   // not by the "Player" tag: every player of a match has it
                 if (player != null)
                 {
                     healthComponent = player.GetComponent<JUHealth>();

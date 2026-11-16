@@ -1035,8 +1035,15 @@ namespace Railbound.UI
                 // while searching, show how long the whole search window is (after it the match starts with bots)
                 if (deployStage == "SEARCHING FOR PLAYERS" && hookedMatchmaker != null)
                 {
-                    int window = Mathf.RoundToInt(hookedMatchmaker.QueueSeconds);
-                    line += $" / {window / 60}:{window % 60:00}";
+                    // the SERVER's countdown and player count (the server decides when the match locks; this only shows it)
+                    var q = hookedMatchmaker.QueueProgress;
+                    if (q != null && q.Phase == "COUNTDOWN")
+                        line = $"{deployStage}   {q.Countdown / 60}:{q.Countdown % 60:00}   {q.Players}/{q.Max} PLAYERS";
+                    else
+                    {
+                        int window = Mathf.RoundToInt(hookedMatchmaker.QueueSeconds);
+                        line += $" / {window / 60}:{window % 60:00}";
+                    }
                 }
                 if (modeSubtitleText != null) { modeSubtitleText.text = line; modeSubtitleText.color = YellowAccent; }
                 if (loadingSub != null) loadingSub.text = line;
