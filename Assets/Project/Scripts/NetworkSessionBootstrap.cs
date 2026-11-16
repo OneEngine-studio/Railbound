@@ -35,6 +35,12 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
         if (persistNetworkManager)
             DontDestroyOnLoad(gameObject);
 
+        // The scene's NetworkManager is saved at LogLevel Developer. That level reports every bot animator transition the
+        // client cannot look up (the bots' TransitionStateInfoList is empty) as a red error: 2000+ lines per match, each
+        // with a stack trace. Normal still logs real netcode warnings and errors; "-netcode-verbose" brings Developer back.
+        if (!System.Array.Exists(System.Environment.GetCommandLineArgs(), a => a == "-netcode-verbose"))
+            _networkManager.LogLevel = LogLevel.Normal;
+
         ConfigureTransport();
         Railbound.Networking.ConnectionApprovalGate.Configure(_networkManager);   // before StartServer / StartClient: both sides must agree
         SubscribeToAuthentication();
