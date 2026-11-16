@@ -22,6 +22,10 @@ public sealed class ProgressData
     public int bestPlacement;   // best (lowest) finishing place, 0 = no match yet
     public List<string> operators = new List<string>();   // ids of the operators bought in the lobby store (the starting one is always owned)
     public ServerAward lastAward;                         // the reward of the last match the game server reported (online profiles only)
+    public Dictionary<string, WeaponMastery> weapons = new Dictionary<string, WeaponMastery>();   // weapon id -> mastery (server)
+    public LoadoutData loadout = new LoadoutData();       // starting sidearm / melee / lethal (server-validated)
+    public Dictionary<string, int> skills = new Dictionary<string, int>();   // sonar / medkit upgrade levels (server)
+    public SeasonData season = new SeasonData();          // battle pass XP and claimed tiers (server)
     public long updatedAt;      // UTC unix milliseconds of the last change
     public int version = 1;
 }
@@ -33,6 +37,8 @@ public sealed class ServerAward
     public string matchId;
     public int xp, coins, levelBonusCoins, oldLevel, newLevel, placement, totalPlayers, kills, survivedSeconds;
     public long at;
+    public List<WeaponGain> weapons = new List<WeaponGain>();   // weapon mastery gained in that match
+    public int seasonTier;
     public bool LeveledUp => newLevel > oldLevel;
 }
 
@@ -171,6 +177,11 @@ public static class PlayerProgression
         d.coins = Mathf.Max(0, d.coins);
         d.gems = Mathf.Max(0, d.gems);
         if (d.operators == null) d.operators = new List<string>();
+        if (d.weapons == null) d.weapons = new Dictionary<string, WeaponMastery>();
+        if (d.loadout == null) d.loadout = new LoadoutData();
+        if (d.skills == null) d.skills = new Dictionary<string, int>();
+        if (d.season == null) d.season = new SeasonData();
+        if (d.season.claimed == null) d.season.claimed = new List<int>();
         return d;
     }
 
@@ -219,6 +230,13 @@ public static class PlayerProgression
             ServerPrices.Clear();
             foreach (var p in prices.Properties()) { if (p.Value.Type == JTokenType.Integer) ServerPrices[p.Name] = (int)p.Value; }
         }
+        var tables = reply["tables"] as JObject;
+        if (tables != null)
+        {
+            try { Tables = tables.ToObject<ProgressionTables>(); }
+            catch (Exception ex) { Debug.LogWarning("[Progress] Could not read the progression tables: " + ex.Message); }
+        }
+        if (reply["seasonTier"] != null && reply["seasonTier"].Type == JTokenType.Integer) SeasonTier = (int)reply["seasonTier"];
         var challenges = profile["challenges"];
         if (challenges != null) ChallengeService.ApplyServer(challenges.ToString(Formatting.None));
 
@@ -241,6 +259,57 @@ public static class PlayerProgression
         if (serverTime > 0 && award.at > 0 && serverTime - award.at > 6L * 3600L * 1000L) return;
         if (award.LeveledUp) Pending.Enqueue(new PendingLevelUp { from = award.oldLevel, to = award.newLevel, bonusCoins = award.levelBonusCoins });
         AwardReceived?.Invoke(award);
+    }
+
+    // ---------------- weapon mastery, loadout, ability upgrades, battle pass (all decided by the server) ----------------
+    /// <summary>The server's rule tables (unlock levels, skill effects and prices, battle pass rewards); null until the first reply.</summary>
+    public static ProgressionTables Tables { get; private set; }
+    /// <summary>The battle pass tier the server computed from the season XP.</summary>
+    public static int SeasonTier { get; private set; } = 1;
+
+    public static WeaponMastery WeaponOf(string id)
+    {
+        return Current.weapons != null && id != null && Current.weapons.TryGetValue(id, out var w) && w != null ? w : new WeaponMastery();
+    }
+
+    public static int SkillLevel(string skill) { return Current.skills != null && Current.skills.TryGetValue(skill, out int l) ? l : 0; }
+
+    public static bool TierClaimed(int tier) { return Current.season != null && Current.season.claimed != null && Current.season.claimed.Contains(tier); }
+
+    [Serializable] private sealed class LoadoutRequest { public string sidearm, melee, lethal; }
+    [Serializable] private sealed class SkillRequest { public string skill; }
+    [Serializable] private sealed class TierRequest { public int tier; }
+
+    /// <summary>Changes one loadout slot. Returns the server's status ("ok", "locked", "unknown_item", "offline").</summary>
+    public static async Task<string> SetLoadoutAsync(string slot, string item)
+    {
+        if (!UsesServer) return "offline";
+        var req = new LoadoutRequest();
+        if (slot == "sidearm") req.sidearm = item; else if (slot == "melee") req.melee = item; else if (slot == "lethal") req.lethal = item; else return "unknown_item";
+        var reply = await CallAsync("railbound_set_loadout", JsonConvert.SerializeObject(req, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
+        if (reply == null) return "offline";
+        ApplyServerReply(reply);
+        return (string)reply["status"] ?? "error";
+    }
+
+    /// <summary>Buys the next level of an ability. Returns "ok", "locked", "insufficient_coins", "max_level", "offline".</summary>
+    public static async Task<string> UpgradeSkillAsync(string skill)
+    {
+        if (!UsesServer) return "offline";
+        var reply = await CallAsync("railbound_upgrade_skill", JsonUtility.ToJson(new SkillRequest { skill = skill }));
+        if (reply == null) return "offline";
+        ApplyServerReply(reply);
+        return (string)reply["status"] ?? "error";
+    }
+
+    /// <summary>Claims the coins of a reached battle pass tier. Returns "ok", "not_reached", "already_claimed", "not_claimable", "offline".</summary>
+    public static async Task<string> ClaimTierAsync(int tier)
+    {
+        if (!UsesServer) return "offline";
+        var reply = await CallAsync("railbound_claim_tier", JsonUtility.ToJson(new TierRequest { tier = tier }));
+        if (reply == null) return "offline";
+        ApplyServerReply(reply);
+        return (string)reply["status"] ?? "error";
     }
 
     [Serializable] private sealed class BuyRequest { public string operatorId; }

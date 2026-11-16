@@ -100,11 +100,13 @@ namespace Railbound.Networking
             public bool noReward;     // left before the battle began
             public int placement, kills, total;
             public float survived;
+            public readonly Dictionary<string, int> weaponKills = new Dictionary<string, int>();   // weapon id -> kills (weapon mastery)
         }
 
         [Serializable] private sealed class ValidateRequest { public string matchId, userId, token; }
         [Serializable] private sealed class ValidateReply { public bool valid; public string reason; }
-        [Serializable] private sealed class ReportPlayer { public string userId; public int placement, totalPlayers, kills, survivedSeconds; }
+        [Serializable] private sealed class WeaponKill { public string weapon; public int kills; }
+        [Serializable] private sealed class ReportPlayer { public string userId; public int placement, totalPlayers, kills, survivedSeconds; public List<WeaponKill> weaponKills = new List<WeaponKill>(); }
         [Serializable] private sealed class ReportRequest { public string matchId; public List<ReportPlayer> players = new List<ReportPlayer>(); }
 
         private static ServerMatchSession instance;
@@ -284,14 +286,22 @@ namespace Railbound.Networking
 
         // ================================================================= results (called by BRMatchCoordinator on the server)
         /// <summary>A combatant was eliminated. The victim's place and survival time are final; the killer's kill count is updated.</summary>
-        public static void NoteElimination(ulong victimClient, int placement, int totalPlayers, float survivedSeconds, ulong killerClient, int killerKills)
+        public static void NoteElimination(ulong victimClient, int placement, int totalPlayers, float survivedSeconds, ulong killerClient, int killerKills, string killerWeapon = "")
         {
             if (instance == null) return;
             if (instance.byClient.TryGetValue(victimClient, out var v) && !v.final)
             {
                 v.final = true; v.placement = Mathf.Max(2, placement); v.total = Mathf.Max(totalPlayers, v.placement); v.survived = survivedSeconds;
             }
-            if (killerClient != ulong.MaxValue && instance.byClient.TryGetValue(killerClient, out var k)) k.kills = Mathf.Max(k.kills, killerKills);
+            if (killerClient != ulong.MaxValue && instance.byClient.TryGetValue(killerClient, out var k))
+            {
+                k.kills = Mathf.Max(k.kills, killerKills);
+                if (!string.IsNullOrEmpty(killerWeapon))
+                {
+                    k.weaponKills.TryGetValue(killerWeapon, out int n);
+                    k.weaponKills[killerWeapon] = n + 1;
+                }
+            }
         }
 
         /// <summary>The match is over: decide everybody who is still undecided (the winner) and report the results to Nakama.</summary>
@@ -335,7 +345,9 @@ namespace Railbound.Networking
             foreach (var e in byUser.Values)
             {
                 if (e.noReward || !e.final) continue;
-                request.players.Add(new ReportPlayer { userId = e.userId, placement = e.placement, totalPlayers = e.total, kills = e.kills, survivedSeconds = Mathf.RoundToInt(e.survived) });
+                var rp = new ReportPlayer { userId = e.userId, placement = e.placement, totalPlayers = e.total, kills = e.kills, survivedSeconds = Mathf.RoundToInt(e.survived) };
+                foreach (var wk in e.weaponKills) rp.weaponKills.Add(new WeaponKill { weapon = wk.Key, kills = wk.Value });
+                request.players.Add(rp);
             }
             if (request.players.Count == 0 || string.IsNullOrEmpty(matchId) || Insecure || string.IsNullOrEmpty(HttpKey))
             {
