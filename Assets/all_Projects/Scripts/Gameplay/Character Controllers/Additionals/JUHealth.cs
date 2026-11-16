@@ -36,6 +36,10 @@ namespace JUTPS
 		/// <summary>Whether the last hit THIS machine applied struck the head, and when (Time.time). The kill popup shows "HEADSHOT KILL" from it.</summary>
 		[System.NonSerialized] public bool LastHitWasHead;
 		[System.NonSerialized] public float LastHitTime = -999f;
+		/// <summary>The last body-part hit applied on this machine by anybody: who fired it (PendingAttacker), whether it hit the head, when.</summary>
+		public static GameObject LastHitAttacker;
+		public static bool LastHitAnyWasHead;
+		public static float LastHitAnyTime = -999f;
 
 		void Start()
 		{

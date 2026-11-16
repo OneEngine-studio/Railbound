@@ -43,6 +43,9 @@ namespace JUTPS.ArmorSystem
             // remembered before the damage: a lethal hit raises the kill events at once, and the HUD reads it there
             Health.LastHitWasHead = IsHead;
             Health.LastHitTime = Time.time;
+            JUHealth.LastHitAttacker = JUHealth.PendingAttacker;
+            JUHealth.LastHitAnyWasHead = IsHead;
+            JUHealth.LastHitAnyTime = Time.time;
             Health.DoDamage(DamageMultiplier * Damage);
             if (ArmorProtecting != null)
             {

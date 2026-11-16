@@ -165,14 +165,14 @@ namespace Railbound.UI
         }
 
         // the killing hit struck the head (recorded by DamageableBodyPart on this machine within the last moment)
+        // The last hit THIS player landed (bullets set the attacker; on a client only the local player's bullets deal damage locally),
+        // shortly before the kill, struck the head. Matching the victim by name does not work on a client: its roster names differ
+        // from the server's.
         private static bool WasHeadshot(string victimName)
         {
-            foreach (var p in FindObjectsByType<BRParticipant>(FindObjectsSortMode.None))
-            {
-                if (p == null || p.DisplayName != victimName || p.Health == null) continue;
-                return p.Health.LastHitWasHead && Time.time - p.Health.LastHitTime < 1.5f;
-            }
-            return false;
+            var me = Railbound.Gameplay.LocalPlayer.GameObject;
+            if (me == null || JUHealth.LastHitAttacker != me) return false;
+            return JUHealth.LastHitAnyWasHead && Time.time - JUHealth.LastHitAnyTime < 1.5f;
         }
 
         // ================================================================= kill popup
