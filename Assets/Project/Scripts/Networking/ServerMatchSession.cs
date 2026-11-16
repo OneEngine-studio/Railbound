@@ -41,7 +41,18 @@ namespace Railbound.Networking
             string user = "";
             var auth = AuthenticationService.Instance;
             if (auth != null && auth.IsAuthenticated && auth.Session != null) user = auth.Session.UserId ?? "";
-            return Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinPayload { m = matchId ?? "", u = user, t = joinToken ?? "" }));
+            // local test clients (MAP-2 only, no Nakama session, started with -ip/-port) name the match and a user on the command line.
+            // Only a server started with -insecure-join accepts them: a real server checks the join ticket with Nakama.
+            if (string.IsNullOrEmpty(matchId)) matchId = CommandLineValue("-match");
+            if (string.IsNullOrEmpty(user)) user = CommandLineValue("-test-user");
+            return Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinPayload { m = matchId ?? "", u = user ?? "", t = joinToken ?? "" }));
+        }
+
+        private static string CommandLineValue(string name)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++) if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
+            return null;
         }
 
         // makes sure every NetworkManager that appears in any scene is configured before it starts (the server's one lives in the map scene)
