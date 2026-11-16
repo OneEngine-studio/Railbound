@@ -47,11 +47,25 @@ namespace Project.Character
                 var m = character.transform.Find(n);
                 if (m != null) m.gameObject.SetActive(false);
             }
+            // With the mannequin hidden the gameplay Animator has no visible renderer of its own (the skin is a separate model the
+            // retargeter drives), so "Cull Update Transforms" stopped writing its bones: the rig froze and the skin copied the frozen pose
+            // while the body kept moving ("sliding statues"). The rig must always animate.
+            KeepAnimating(character);
 
             ForgetBones(retargeter, includeSourceBones: false);
             retargeter.AutoRebindAllBones();
             retargeter.UpdateSkinPose();
             return true;
+        }
+
+        /// <summary>
+        /// Makes the character's gameplay Animator update its bones even when none of its own renderers is visible: its look comes from a
+        /// retargeted skin, and on a headless server nothing is ever visible (the bones still place the hands, the weapon and the hit areas).
+        /// </summary>
+        public static void KeepAnimating(GameObject character)
+        {
+            var anim = character != null ? character.GetComponent<Animator>() : null;
+            if (anim != null && anim.cullingMode != AnimatorCullingMode.AlwaysAnimate) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }
 
         // A bot has no retargeter. Copy the one of the player prefab (its bone mapping and rotation offsets were authored for exactly

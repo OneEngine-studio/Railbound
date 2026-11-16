@@ -56,6 +56,9 @@ namespace Railbound.BR
             inventory = GetComponent<JUInventory>();
             controller = GetComponent<JUCharacterController>();
             body = GetComponent<Rigidbody>();
+            // the bots were saved with "Cull Update Transforms": on a client whose skin hid the rig, and on the headless server always,
+            // their bones stopped moving (frozen pose sliding over the ground; hands, weapon and hit areas frozen on the server)
+            CharacterSkinApplier.KeepAnimating(gameObject);
         }
 
         public override void OnNetworkSpawn()
