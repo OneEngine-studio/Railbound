@@ -119,7 +119,8 @@ namespace Railbound.UI
             bool first = true;
             foreach (var w in catalog.weapons)
             {
-                if (w == null || w.prefab == null || string.IsNullOrEmpty(w.id) || thumbs.ContainsKey(w.id)) continue;
+                // melee models are framed badly by the bounds fit (the bat comes out as a dot): they keep their name only
+                if (w == null || w.prefab == null || w.isMelee || string.IsNullOrEmpty(w.id) || thumbs.ContainsKey(w.id)) continue;
                 stage.Show(w.prefab);
                 // HDRP needs a frame to warm up new renderers; the first one also lets the stage camera's exposure settle
                 for (int f = first ? 8 : 2; f > 0; f--) yield return null;
@@ -374,7 +375,7 @@ namespace Railbound.UI
                 case "sonar": return "HUD/Sonar_Device";
                 case "medkit": return "HUD/Hud_Icon_Medkit";
                 case "primary": return "UI/Lobby/Icon_TabLoadout";
-                case "none": return "";
+                case "none": case "bat": return "";
                 default: return "UI/Lobby/Icon_TabLoadout";
             }
         }
@@ -515,8 +516,8 @@ namespace Railbound.UI
             previewId = id;
             if (changed) previewT = 0f;
             var entry = CatalogEntry(id);
-            if (stage != null) stage.Show(entry != null ? entry.prefab : null);
-            bool model = entry != null && entry.prefab != null;
+            bool model = entry != null && entry.prefab != null && !entry.isMelee;   // melee models do not frame well (see CaptureThumbs)
+            if (stage != null) stage.Show(model ? entry.prefab : null);
             loPreview.enabled = model;
             if (model) loBigIcon.enabled = false; else SetIcon(loBigIcon, IconFor(id));
             FillPreviewText(id);
