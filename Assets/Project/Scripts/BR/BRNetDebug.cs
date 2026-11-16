@@ -276,6 +276,29 @@ namespace Railbound.BR
             }
         }
 
+        // every visible character mesh whose lowest point is more than 5 m above the ground below it (any model, alive or dead), with its path
+        private static string FloatingModels()
+        {
+            var found = new StringBuilder();
+            int n = 0;
+            foreach (var smr in FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None))
+            {
+                if (!smr.enabled || !smr.gameObject.activeInHierarchy) continue;
+                var b = smr.bounds;
+                if (b.size.y < 0.3f) continue;
+                if (!Physics.Raycast(new Vector3(b.center.x, b.min.y - 0.05f, b.center.z), Vector3.down, out RaycastHit hit, 500f, ~0, QueryTriggerInteraction.Ignore)) continue;
+                if (hit.distance < 5f) continue;
+                n++;
+                if (found.Length > 400) continue;
+                Transform t = smr.transform; string path = t.name;
+                for (int i = 0; i < 4 && t.parent != null; i++) { t = t.parent; path = t.name + "/" + path; }
+                var h = smr.GetComponentInParent<JUHealth>();
+                found.Append(' ').Append(path).Append(" +").Append(hit.distance.ToString("F0")).Append("m@").Append(b.center.ToString("F0"))
+                     .Append(h != null ? (h.IsDead ? " dead" : " alive") : " nohealth");
+            }
+            return " floatingModels=" + n + found;
+        }
+
         private string MotionReport()
         {
             string r = " botMotion(dist=" + motionDist.ToString("F0") + "m rough=" + (motionDist > 1f ? (motionJerk / motionDist).ToString("F3") : "-")
@@ -409,6 +432,7 @@ namespace Railbound.BR
                 }
             }
             sb.Append(MotionReport());
+            sb.Append(FloatingModels());
             sb.Append(" rockColliders=").Append(Railbound.Gameplay.TerrainRockColliders.LastBuiltCount);
             sb.Append(" botTriggersForwarded=").Append(BRNetBot.TriggersForwarded).Append(" groundGuardFixes=").Append(BRNetBot.GroundGuardFixes)
               .Append(" lootMarkers=").Append(Railbound.UI.LootMarkersHUD.TrackedCount);
