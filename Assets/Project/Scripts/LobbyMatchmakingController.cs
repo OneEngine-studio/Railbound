@@ -246,7 +246,21 @@ namespace Railbound.Networking
 
                 if (!partyMode)
                 {
-                    ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
+                    try
+                    {
+                        ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // the socket looked connected but never answered: retry once on a fresh connection
+                        Debug.LogWarning("[LobbyMatchmaker] The Nakama socket did not answer; reconnecting and trying once more.");
+                        socket.ReceivedMatchmakerMatched -= onMatched;
+                        var fresh = await AuthenticationService.Instance.ReconnectSocketAsync();
+                        if (fresh == null || !fresh.IsConnected) throw;
+                        socket = fresh;
+                        socket.ReceivedMatchmakerMatched += onMatched;
+                        ticket = await socket.AddMatchmakerAsync(modeQuery, queueMinPlayers, queueMaxPlayers, modeProps);
+                    }
                 }
                 else if (party.IsLeader)
                 {

@@ -476,6 +476,21 @@ public class AuthenticationService : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Drops the current websocket and opens a new one. A socket can look connected while its messages go unanswered
+    /// (calls end in "A task was canceled"); the lobby uses this to retry once on a fresh connection.
+    /// </summary>
+    public async Task<ISocket> ReconnectSocketAsync()
+    {
+        if (_session == null || _session.IsExpired) return null;
+        if (_socket != null)
+        {
+            try { await _socket.CloseAsync(); } catch { }
+            _socket = null;
+        }
+        return await EnsureSocketAsync();
+    }
+
     private void LoadLobby()
     {
         if (string.IsNullOrEmpty(lobbySceneName)) return;
