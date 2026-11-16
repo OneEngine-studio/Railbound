@@ -485,13 +485,17 @@ namespace Railbound.UI
         // left to right fade: solid on the left, transparent on the right (behind the kill popup)
         private static Sprite MakeFade()
         {
-            var tex = new Texture2D(64, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            var cols = new Color32[64 * 4];
-            for (int y = 0; y < 4; y++)
+            // also soft at the top and the bottom, so it reads as a shadow behind the text, not as a box
+            var tex = new Texture2D(64, 32, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var cols = new Color32[64 * 32];
+            for (int y = 0; y < 32; y++)
                 for (int x = 0; x < 64; x++)
-                    cols[y * 64 + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.SmoothStep(1f, 0f, x / 63f) * 255f));
+                {
+                    float vertical = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Min(y, 31 - y) / 9f));
+                    cols[y * 64 + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.SmoothStep(1f, 0f, x / 63f) * vertical * 255f));
+                }
             tex.SetPixels32(cols); tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, 64, 4), new Vector2(0.5f, 0.5f), 100f);
+            return Sprite.Create(tex, new Rect(0, 0, 64, 32), new Vector2(0.5f, 0.5f), 100f);
         }
 
         private static Sprite MakePixel()

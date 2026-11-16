@@ -161,6 +161,7 @@ namespace Railbound.BR
                     JUTPS.ArmorSystem.DamageableBodyPart head = null;
                     if ((killHits++ & 1) == 1)
                         foreach (var part in bestH.GetComponentsInChildren<JUTPS.ArmorSystem.DamageableBodyPart>()) if (part.IsHead) { head = part; break; }
+                    if ((killHits & 1) == 0) Debug.Log("[BRNetDebug] netkill head hit on " + bestH.name + ": head part " + (head != null ? "found" : "NOT found") + " (" + bestH.GetComponentsInChildren<JUTPS.ArmorSystem.DamageableBodyPart>().Length + " parts)");
                     if (head != null) head.DoDamage(9f); else bestH.DoDamage(45f);
                     JUHealth.PendingAttacker = null;
                 }
