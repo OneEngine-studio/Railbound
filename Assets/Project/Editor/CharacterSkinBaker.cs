@@ -264,8 +264,8 @@ namespace Railbound.Editor
                 int rigid = 0;
                 foreach (var mr in src.GetComponentsInChildren<MeshRenderer>(true))
                 {
-                    Transform p = mr.transform.parent; Transform target = null;
-                    while (p != null) { if (milBone.TryGetValue(Norm(p.name), out var mb2) && Norm(p.name).StartsWith("mixamorig:")) { target = mb2; break; } p = p.parent; }
+                    Transform p = mr.transform.parent; Transform target = null; Transform sourceBone = null;
+                    while (p != null) { if (milBone.TryGetValue(Norm(p.name), out var mb2) && Norm(p.name).StartsWith("mixamorig:")) { target = mb2; sourceBone = p; break; } p = p.parent; }
                     if (target == null)
                     {
                         // not parented to a bone (hair, a prop): hang it on the bone nearest to it
@@ -276,10 +276,24 @@ namespace Railbound.Editor
                     var mf = mr.GetComponent<MeshFilter>(); if (mf == null || mf.sharedMesh == null) continue;
                     var go = new GameObject(mr.name);
                     go.transform.SetParent(target, false);
-                    Matrix4x4 world = align * mr.transform.localToWorldMatrix;   // a loose mesh stands where it stands in the bind pose
-                    go.transform.position = world.GetColumn(3);
-                    go.transform.rotation = world.rotation;
-                    go.transform.localScale = Vector3.one * (mr.transform.lossyScale.x * scale) / Mathf.Max(0.0001f, target.lossyScale.x);
+                    float toTarget = scale / Mathf.Max(0.0001f, target.lossyScale.x);
+                    if (sourceBone != null)
+                    {
+                        // a mesh that hangs on a bone in the source (hair on the head) keeps its pose RELATIVE TO THAT BONE. Taking its world
+                        // bind pose instead added the small difference between the two skeletons' bone rotations: Cammy's hair mesh has its
+                        // pivot at her feet, so a 6 degree tilt of the head put the hair about 20 cm beside the head.
+                        Matrix4x4 rel = sourceBone.worldToLocalMatrix * mr.transform.localToWorldMatrix;
+                        go.transform.localPosition = (Vector3)rel.GetColumn(3) * (sourceBone.lossyScale.x * toTarget);
+                        go.transform.localRotation = rel.rotation;
+                        go.transform.localScale = Vector3.one * (mr.transform.lossyScale.x * toTarget);
+                    }
+                    else
+                    {
+                        Matrix4x4 world = align * mr.transform.localToWorldMatrix;   // not on a bone: it stands where it stands in the bind pose
+                        go.transform.position = world.GetColumn(3);
+                        go.transform.rotation = world.rotation;
+                        go.transform.localScale = Vector3.one * (mr.transform.lossyScale.x * toTarget);
+                    }
                     go.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
                     var rmats = mr.sharedMaterials;
                     if (materialOverrides != null) for (int mi = 0; mi < rmats.Length; mi++) if (rmats[mi] != null && materialOverrides.TryGetValue(rmats[mi].name, out var om2) && om2 != null) rmats[mi] = om2;

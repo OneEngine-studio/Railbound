@@ -49,6 +49,7 @@ namespace Railbound.UI
             public TextMeshProUGUI Label;
             public float Born;
             public bool Near;
+            public float Distance;
         }
 
         private readonly List<Marker> markers = new List<Marker>();
@@ -154,6 +155,34 @@ namespace Railbound.UI
                 string name = m.Kind == Kind.Medkit ? "MEDKIT" : "AMMO";
                 string text = near ? "WALK OVER TO PICK UP" : name + "  ·  " + Mathf.RoundToInt(distance) + " M";
                 if (m.Near != near || m.Label.text != text) { m.Label.text = text; m.Near = near; }
+                m.Distance = distance;
+            }
+            Declutter();
+        }
+
+        // A bot often drops a medkit and an ammo box side by side: their markers landed on top of each other. The nearer marker keeps
+        // its place; any marker that would overlap an already placed one moves up one row.
+        private readonly List<Marker> placed = new List<Marker>();
+        private void Declutter()
+        {
+            placed.Clear();
+            foreach (var m in markers) if (m.Group.alpha > 0.01f) placed.Add(m);
+            placed.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+            for (int i = 1; i < placed.Count; i++)
+            {
+                var pos = placed[i].Root.anchoredPosition;
+                for (int guard = 0; guard < 6; guard++)
+                {
+                    bool overlaps = false;
+                    for (int j = 0; j < i; j++)
+                    {
+                        Vector2 d = placed[j].Root.anchoredPosition - pos;
+                        if (Mathf.Abs(d.x) < 150f && Mathf.Abs(d.y) < 52f) { overlaps = true; break; }
+                    }
+                    if (!overlaps) break;
+                    pos.y += 54f;
+                }
+                placed[i].Root.anchoredPosition = pos;
             }
         }
 
