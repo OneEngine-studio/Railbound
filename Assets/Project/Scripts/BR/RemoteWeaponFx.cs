@@ -52,7 +52,23 @@ namespace Railbound.BR
         {
             if (w == null || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
             BulletsShown++;
-            BRBulletVisual.Spawn(w.BulletPrefab, start, end, rotation, normal);
+            BRBulletVisual.Spawn(w.BulletPrefab, LocalMuzzle(w, start), end, LocalAim(w, start, end, rotation), normal);
+        }
+
+        // The shooter's machine reports where ITS muzzle was. This peer draws the shooter a little behind in time (network
+        // interpolation), so that point is off the gun shown here: up to a metre for a running bot, which made tracers start
+        // beside the weapon. The tracer starts at the muzzle shown on this peer instead and still ends where the real bullet hit.
+        private static Vector3 LocalMuzzle(Weapon w, Vector3 reported)
+        {
+            if (w.Shoot_Position != null && w.Shoot_Position.gameObject.activeInHierarchy) return w.Shoot_Position.position;
+            return w.gameObject.activeInHierarchy ? w.transform.position : reported;
+        }
+
+        private static Quaternion LocalAim(Weapon w, Vector3 reported, Vector3 end, Quaternion rotation)
+        {
+            if (end == Vector3.zero) return rotation;   // no hit point: keep the reported direction
+            Vector3 dir = end - LocalMuzzle(w, reported);
+            return dir.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(dir) : rotation;
         }
 
         public static void Reload(Weapon w)
