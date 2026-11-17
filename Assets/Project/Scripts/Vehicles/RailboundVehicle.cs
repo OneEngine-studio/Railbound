@@ -246,6 +246,16 @@ namespace Railbound.Vehicles
                     if (!any) { localBounds = new Bounds(local, Vector3.zero); any = true; } else localBounds.Encapsulate(local);
                 }
             }
+            // the wheels are ray-cast (no colliders) but stand out past the body on some vehicles: they belong to the footprint
+            foreach (var w in GetComponentsInChildren<NWH.Common.Vehicles.WheelUAPI>(true))
+            {
+                Vector3 c = transform.InverseTransformPoint(w.transform.position);
+                float r = Mathf.Max(0.25f, w.Radius), half = Mathf.Max(0.12f, w.Width * 0.5f);
+                foreach (var corner in new[] { c + new Vector3(-half, -r * 2f, -r), c + new Vector3(half, 0f, r) })
+                {
+                    if (!any) { localBounds = new Bounds(corner, Vector3.zero); any = true; } else localBounds.Encapsulate(corner);
+                }
+            }
             bodyColliders = list.ToArray();
             if (!any) localBounds = new Bounds(new Vector3(0f, 0.8f, 0f), new Vector3(2f, 1.6f, 4.4f));
         }

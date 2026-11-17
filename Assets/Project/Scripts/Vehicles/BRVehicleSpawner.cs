@@ -232,7 +232,8 @@ namespace Railbound.Vehicles
                 return false;
             }
 
-            spot = new Vector3(centerHit.point.x, maxY + 0.15f, centerHit.point.z);
+            // the vehicle's origin is not always at the bottom of its wheels (the monster truck's is at the axles)
+            spot = new Vector3(centerHit.point.x, maxY + 0.15f - Mathf.Min(0f, b.min.y), centerHit.point.z);
             return true;
         }
 
