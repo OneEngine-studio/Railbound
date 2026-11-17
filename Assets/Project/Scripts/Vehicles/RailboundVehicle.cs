@@ -184,7 +184,9 @@ namespace Railbound.Vehicles
         public float SteeringWheelRadius => steeringWheelRadius;
         public IReadOnlyList<Collider> BodyColliders => bodyColliders;
         public VehicleSeats Seats => IsSpawned ? seats.Value : localSeats;
-        public float SpeedKmh => body != null ? (IsSimulating ? body.velocity.magnitude : observedSpeed) * 3.6f : 0f;
+        public float SpeedKmh => body != null ? (IsSimulating ? body.velocity.magnitude : RemoteSpeed) * 3.6f : 0f;
+        // a copy that follows the network: the speed the simulating peer reported (frame-to-frame motion is too jumpy at low fps)
+        private float RemoteSpeed => IsSpawned && poseBuffer.Count > 0 ? poseBuffer[poseBuffer.Count - 1].Velocity.magnitude : observedSpeed;
         public int DriverSeat { get { for (int i = 0; i < SeatCount; i++) if (seatDefs[i].Driver) return i; return 0; } }
         public bool HasDriver => Seats[DriverSeat] != 0;
 
