@@ -121,11 +121,13 @@ namespace Railbound.Vehicles
             Shot("1_seated");
             // seats: move to the passenger seat and back
             v.RequestMove(Me, 1);
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return WaitSeat(v, 1);
             Debug.Log($"[VehicleTest] after move to seat 1: seat={v.SeatOf(Me)} simulating={v.IsSimulating} owner={(v.IsSpawned ? v.OwnerClientId : 0)}");
             Shot("6_passenger_seat");
             v.RequestMove(Me, v.DriverSeat);
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return WaitSeat(v, v.DriverSeat);
+            while (!v.IsSimulating) yield return null;
+            yield return new WaitForSecondsRealtime(0.5f);
             Debug.Log($"[VehicleTest] back at the wheel: seat={v.SeatOf(Me)} simulating={v.IsSimulating}");
 
             Vector3 start = v.transform.position;
@@ -156,7 +158,8 @@ namespace Railbound.Vehicles
             Brake = 0f; Handbrake = 1f;
 
             v.RequestExit(Me);
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return WaitSeat(v, -1);
+            yield return new WaitForSecondsRealtime(1f);
             Throttle = Brake = Steer = Handbrake = null;
             var rbMe = Me.GetComponent<Rigidbody>();
             Debug.Log($"[VehicleTest] out: seat={v.SeatOf(Me)} pos={Me.transform.position:F2} distToBody={v.DistanceTo(Me.transform.position):F2} kin={(rbMe != null && rbMe.isKinematic)} owner={(v.IsSpawned ? v.OwnerClientId : 0)} {v.DebugLine()}");
@@ -177,7 +180,7 @@ namespace Railbound.Vehicles
                 var c = Nearest(Me.transform.position, true);
                 if (c != v) { v = c; firstSeen = c != null ? c.transform.position : Vector3.zero; stableSince = -1f; }
                 bool parked = v != null && v.Seats.Count == 1 && v.SeatOf(v.Driver) == v.DriverSeat && v.SpeedKmh < 3f
-                              && Vector3.Distance(firstSeen, v.transform.position) > 15f;
+                              && Vector3.Distance(firstSeen, v.transform.position) > 8f;
                 if (!parked) stableSince = -1f;
                 else if (stableSince < 0f) stableSince = Time.realtimeSinceStartup;
                 else if (Time.realtimeSinceStartup - stableSince > 4f) break;
@@ -196,10 +199,18 @@ namespace Railbound.Vehicles
             Shot("r2_riding_end");
             yield return new WaitForSecondsRealtime(2f);
             v.RequestExit(Me);
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return WaitSeat(v, -1);
+            yield return new WaitForSecondsRealtime(1f);
             Debug.Log($"[VehicleTest] ride out: seat={v.SeatOf(Me)} pos={Me.transform.position:F2} distToBody={v.DistanceTo(Me.transform.position):F2}");
             Shot("r3_out");
             Debug.Log("[VehicleTest] DONE ride");
+        }
+
+        private IEnumerator WaitSeat(RailboundVehicle v, int seat)
+        {
+            float t0 = Time.realtimeSinceStartup;
+            while (v.SeatOf(Me) != seat && Time.realtimeSinceStartup - t0 < 8f) yield return null;
+            Debug.Log($"[VehicleTest] seat {v.SeatOf(Me)} (wanted {seat}) after {Time.realtimeSinceStartup - t0:F2}s");
         }
 
         private IEnumerator Hold(float seconds, string shot)
