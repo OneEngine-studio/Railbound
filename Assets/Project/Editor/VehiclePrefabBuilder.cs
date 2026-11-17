@@ -9,7 +9,7 @@ namespace Railbound.Editor
 {
     /// <summary>
     /// Builds the match's network vehicles from the NWH Vehicle Physics 2 prefabs: a standalone copy (the NWH cameras, mirror
-    /// cameras, audio listeners and reflection probes removed), with a NetworkObject, an owner-authoritative transform and
+    /// cameras, audio listeners and reflection probes removed), with a NetworkObject and
     /// <see cref="RailboundVehicle"/> (seats, steering wheel, spawn weight), saved to Resources/Vehicles and registered in the
     /// default network prefab list. Run it again after changing a seat or after an NWH update.
     /// </summary>
@@ -250,10 +250,8 @@ namespace Railbound.Editor
                 var no = inst.GetComponent<NetworkObject>() ?? inst.AddComponent<NetworkObject>();
                 no.DontDestroyWithOwner = true;
                 no.AutoObjectParentSync = false;
-                var nt = inst.GetComponent<ClientNetworkTransform>() ?? inst.AddComponent<ClientNetworkTransform>();
-                nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false;
-                nt.Interpolate = true;
-                nt.InLocalSpace = false;
+                // the pose is synced by RailboundVehicle (NGO 1.7's owner-authoritative NetworkTransform stops after an ownership change)
+                foreach (var oldNt in inst.GetComponents<Unity.Netcode.Components.NetworkTransform>()) Object.DestroyImmediate(oldNt, true);
 
                 var wheel = inst.transform.Find(spec.Wheel);
                 var rv = inst.GetComponent<RailboundVehicle>() ?? inst.AddComponent<RailboundVehicle>();

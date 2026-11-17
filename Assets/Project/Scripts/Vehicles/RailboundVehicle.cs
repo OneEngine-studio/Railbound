@@ -48,6 +48,23 @@ namespace Railbound.Vehicles
         public override int GetHashCode() { return (S0 ^ (S1 << 8) ^ (S2 << 16) ^ (S3 << 24)).GetHashCode(); }
     }
 
+    /// <summary>Where the simulating peer has the vehicle (server time of the sample), for every other copy to play back.</summary>
+    public struct VehiclePose : INetworkSerializable, IEquatable<VehiclePose>
+    {
+        public Vector3 Position, Velocity, Angular;
+        public Quaternion Rotation;
+        public double Time;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+        {
+            s.SerializeValue(ref Position); s.SerializeValue(ref Rotation); s.SerializeValue(ref Velocity); s.SerializeValue(ref Angular); s.SerializeValue(ref Time);
+        }
+
+        public bool Equals(VehiclePose o) { return Position == o.Position && Rotation == o.Rotation && Velocity == o.Velocity && Angular == o.Angular && Time == o.Time; }
+        public override bool Equals(object obj) { return obj is VehiclePose o && Equals(o); }
+        public override int GetHashCode() { return Position.GetHashCode() ^ Time.GetHashCode(); }
+    }
+
     /// <summary>What the simulating peer's driver is doing, for every other copy (wheels, steering wheel, engine sound, lights).</summary>
     public struct VehicleDriveState : INetworkSerializable, IEquatable<VehicleDriveState>
     {
@@ -87,8 +104,9 @@ namespace Railbound.Vehicles
     ///
     /// Physics authority follows the driver: an empty vehicle belongs to the server, which simulates it (it rolls, settles, gets
     /// pushed); when a player takes the driver's seat the server hands the NetworkObject to that player's client, which simulates it
-    /// with no input lag, and every other copy follows through the owner-authoritative <see cref="ClientNetworkTransform"/> with a
-    /// kinematic body. When the driver leaves (exit, death, disconnect) the server takes it back and keeps the vehicle's momentum.
+    /// with no input lag, and every other copy follows its published <see cref="VehiclePose"/> (interpolated from a short snapshot
+    /// buffer) with a kinematic body. NGO 1.7's owner-authoritative NetworkTransform stops syncing after an ownership change, so
+    /// the pose travels in an owner-write network variable, which follows the owner. When the driver leaves (exit, death, disconnect) the server takes it back and keeps the vehicle's momentum.
     ///
     /// Seats are server-authoritative (<see cref="seats"/>): a client asks, the server checks (own character, alive, close, slow
     /// enough, seat free) and publishes. Every peer then places the occupants with <see cref="VehicleOccupant"/>.
@@ -125,6 +143,13 @@ namespace Railbound.Vehicles
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<VehicleDriveState> drive = new NetworkVariable<VehicleDriveState>(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        private readonly NetworkVariable<VehiclePose> pose = new NetworkVariable<VehiclePose>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        private readonly List<VehiclePose> poseBuffer = new List<VehiclePose>();
+        private VehiclePose lastPoseSent;
+        private float nextPoseSend;
+        private const double InterpolationDelay = 0.12;   // seconds behind the newest sample: two or three samples to blend between
 
         private VehicleSeats localSeats;   // offline
         private VehicleController vc;
@@ -347,12 +372,16 @@ namespace Railbound.Vehicles
         public override void OnNetworkSpawn()
         {
             if (IsServer) seats.Value = default;
+            pose.OnValueChanged += OnPose;
+            if (IsOwner) pose.Value = CapturePose();
+            else if (pose.Value.Time > 0) { poseBuffer.Add(pose.Value); ApplyPose(pose.Value.Position, pose.Value.Rotation); }
             ApplyAuthority();
             VehicleLocalPlayer.Ensure();
         }
 
         public override void OnNetworkDespawn()
         {
+            pose.OnValueChanged -= OnPose;
             // everyone inside gets out where they are
             for (int i = 0; i < VehicleSeats.Max; i++)
             {
@@ -375,7 +404,13 @@ namespace Railbound.Vehicles
             if (sim && wasKinematic) body.velocity = Vector3.ClampMagnitude(observedVelocity, 70f);
             body.interpolation = sim ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
             if (vc != null && initialized) vc.MultiplayerIsRemote = !sim;
-            if (sim) lastSent = default;
+            if (sim) { lastSent = default; lastPoseSent = default; }
+            else if (IsSpawned)
+            {
+                // following someone else from now on: start from where it is on this screen (no snap back to old samples)
+                poseBuffer.Clear();
+                poseBuffer.Add(CapturePose());
+            }
         }
 
         // ---------------------------------------------------------------- occupants
@@ -635,10 +670,82 @@ namespace Railbound.Vehicles
                 occ.Sit(this, i);
             }
 
+            if (IsSpawned)
+            {
+                if (IsSimulating) PublishPose();
+                else PlayBackPose();
+            }
+
             if (!initialized) return;
             if (IsSimulating) SimulateInput();
             else ApplyRemoteState(IsSpawned ? drive.Value : default);
             ExpireIgnoredVictims();
+        }
+
+        // ---------------------------------------------------------------- pose sync
+        private VehiclePose CapturePose()
+        {
+            bool dyn = body != null && !body.isKinematic;
+            return new VehiclePose
+            {
+                Position = transform.position, Rotation = transform.rotation,
+                Velocity = dyn ? body.velocity : observedVelocity, Angular = dyn ? body.angularVelocity : Vector3.zero,
+                Time = NetworkManager != null ? NetworkManager.ServerTime.Time : 0
+            };
+        }
+
+        /// <summary>Simulating peer: up to 30 samples a second while the vehicle moves, nothing while it stands still.</summary>
+        private void PublishPose()
+        {
+            if (Time.unscaledTime < nextPoseSend) return;
+            var now = CapturePose();
+            bool moved = (now.Position - lastPoseSent.Position).sqrMagnitude > 0.0004f || Quaternion.Angle(now.Rotation, lastPoseSent.Rotation) > 0.3f
+                         || (now.Velocity - lastPoseSent.Velocity).sqrMagnitude > 0.01f;
+            if (!moved) return;
+            nextPoseSend = Time.unscaledTime + 1f / 30f;
+            lastPoseSent = now;
+            pose.Value = now;
+        }
+
+        private void OnPose(VehiclePose previous, VehiclePose current)
+        {
+            if (IsSimulating) return;
+            if (poseBuffer.Count > 0)
+            {
+                var last = poseBuffer[poseBuffer.Count - 1];
+                if (current.Time <= last.Time) return;   // out of order
+                if ((current.Position - last.Position).sqrMagnitude > 30f * 30f) poseBuffer.Clear();   // a teleport
+            }
+            poseBuffer.Add(current);
+            while (poseBuffer.Count > 32) poseBuffer.RemoveAt(0);
+        }
+
+        /// <summary>Every other copy: the pose InterpolationDelay ago, blended between samples (extrapolated briefly when late).</summary>
+        private void PlayBackPose()
+        {
+            if (poseBuffer.Count == 0) return;
+            double renderTime = NetworkManager.ServerTime.Time - InterpolationDelay;
+            while (poseBuffer.Count >= 2 && poseBuffer[1].Time <= renderTime) poseBuffer.RemoveAt(0);
+            var a = poseBuffer[0];
+            if (poseBuffer.Count >= 2 && renderTime >= a.Time)
+            {
+                var b = poseBuffer[1];
+                float t = Mathf.Clamp01((float)((renderTime - a.Time) / Math.Max(1e-4, b.Time - a.Time)));
+                ApplyPose(Vector3.Lerp(a.Position, b.Position, t), Quaternion.Slerp(a.Rotation, b.Rotation, t));
+            }
+            else if (renderTime > a.Time)
+            {
+                float ahead = (float)Math.Min(renderTime - a.Time, 0.25);   // no newer sample yet: keep moving a little
+                Quaternion spin = a.Angular.sqrMagnitude > 1e-6f ? Quaternion.AngleAxis(a.Angular.magnitude * Mathf.Rad2Deg * ahead, a.Angular.normalized) : Quaternion.identity;
+                ApplyPose(a.Position + a.Velocity * ahead, spin * a.Rotation);
+            }
+            else ApplyPose(a.Position, a.Rotation);
+        }
+
+        private void ApplyPose(Vector3 position, Quaternion rotation)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            if (body != null && body.isKinematic) { body.position = position; body.rotation = rotation; }
         }
 
         /// <summary>Authority: a seat whose character is gone or dead is freed, and the physics owner always matches the driver.</summary>
