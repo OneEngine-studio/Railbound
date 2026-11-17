@@ -49,6 +49,14 @@ namespace Railbound.Gameplay
         public int CurrentMedkits => currentMedkits;
         public int MaxMedkits => maxMedkits;
         public float HealAmount => healAmount;
+
+        /// <summary>Ability upgrade from the player's profile (server table): heal per medkit, how many can be carried, how many at spawn.</summary>
+        public void ApplyUpgrade(float heal, int carry, int starting)
+        {
+            healAmount = Mathf.Max(1f, heal);
+            maxMedkits = Mathf.Max(1, carry);
+            currentMedkits = Mathf.Clamp(Mathf.Max(currentMedkits, starting), 0, maxMedkits);
+        }
         public JUHealth HealthComponent => _juHealth;
 
         private void Awake()

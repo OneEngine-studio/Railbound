@@ -590,7 +590,8 @@ namespace Railbound.BR
             };
 
             // the server is the authority on who finished where: Nakama pays the rewards from what the server reports
-            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0);
+            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0,
+                killer != null && h != null ? h.LastAttackWeapon : "");
             if (NetworkActive && IsSpawned && IsServer) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
             else if (!networkedClient) RaiseKill(info);
         }

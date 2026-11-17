@@ -252,14 +252,12 @@ namespace Railbound.UI
 
         public void PlayClickSound()
         {
-            if (audioSource != null && clickSound != null)
-                audioSource.PlayOneShot(clickSound, 0.75f);
+            UISfx.Play(UISfx.Kind.Click, clickSound);
         }
 
         public void PlayHoverSound()
         {
-            if (audioSource != null && hoverSound != null)
-                audioSource.PlayOneShot(hoverSound, 0.5f);
+            UISfx.Play(UISfx.Kind.Hover, hoverSound);
         }
 
         public void PlayDeploySound()

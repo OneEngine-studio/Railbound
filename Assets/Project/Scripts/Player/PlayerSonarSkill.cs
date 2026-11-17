@@ -59,6 +59,16 @@ namespace Railbound.Gameplay
 
         public int Charges => _charges;
         public int MaxCharges => maxCharges;
+
+        /// <summary>Ability upgrade from the player's profile (server table): scan radius, cooldown and charges.</summary>
+        public void ApplyUpgrade(float radius, float cooldownSeconds, int charges)
+        {
+            scanRadius = Mathf.Max(10f, radius);
+            cooldown = Mathf.Max(1f, cooldownSeconds);
+            maxCharges = Mathf.Max(1, charges);
+            startingCharges = maxCharges;
+            _charges = Mathf.Max(_charges, maxCharges);
+        }
         public event System.Action<int> ChargesChanged;
         private Coroutine _scanWaveRoutine;
 

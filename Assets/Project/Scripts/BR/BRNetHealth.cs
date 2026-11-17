@@ -93,11 +93,13 @@ namespace Railbound.BR
             if (attacker != null && attacker.TryGetComponent(out NetworkObject attackerObject) && attackerObject.IsSpawned)
                 attackerId = attackerObject.NetworkObjectId;
 
-            ReportDamageServerRpc(Mathf.Min(damage, MaxDamagePerReport), attackerId);
+            // and with what: the weapon in the shooter's hand (weapon mastery is paid for the weapon that got the kill)
+            string weapon = attacker != null ? Railbound.Gameplay.WeaponIds.HeldBy(attacker.GetComponent<JUTPS.JUCharacterController>()) : "";
+            ReportDamageServerRpc(Mathf.Min(damage, MaxDamagePerReport), attackerId, new Unity.Collections.FixedString32Bytes(weapon));
         }
 
         [ServerRpc(RequireOwnership = false)]
-        private void ReportDamageServerRpc(float damage, ulong attackerId, ServerRpcParams rpcParams = default)
+        private void ReportDamageServerRpc(float damage, ulong attackerId, Unity.Collections.FixedString32Bytes weapon, ServerRpcParams rpcParams = default)
         {
             if (health == null || health.IsDead) return;
 
@@ -108,8 +110,12 @@ namespace Railbound.BR
                 attacker = attackerObject.gameObject;
 
             JUHealth.PendingAttacker = attacker;
+            // only a known weapon id is kept (Nakama ignores anything else anyway)
+            string weaponId = Railbound.Gameplay.WeaponIds.IsKnown(weapon.ToString()) ? weapon.ToString() : "";
+            JUHealth.PendingAttackWeapon = attacker != null ? weaponId : "";
             health.DoDamage(Mathf.Clamp(damage, 0f, MaxDamagePerReport));
             JUHealth.PendingAttacker = null;
+            JUHealth.PendingAttackWeapon = "";
         }
 
         [ServerRpc]

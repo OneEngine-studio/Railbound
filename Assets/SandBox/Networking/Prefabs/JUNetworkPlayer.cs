@@ -174,6 +174,9 @@ public class JUNetworkPlayer : NetworkBehaviour
                 Debug.Log($"[JUNetworkPlayer] Rebound {rebound} HUD/system reference(s) from the offline player to the network player.");
             }
 
+            // 6c. The battle royale loadout and ability upgrades of the player's profile (sidearm, melee, lethal, Sonar, Medkit)
+            if (characterController != null) Railbound.Gameplay.LoadoutApplier.ApplyWhenReady(this, characterController);
+
             // 7. Lock cursor for gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
