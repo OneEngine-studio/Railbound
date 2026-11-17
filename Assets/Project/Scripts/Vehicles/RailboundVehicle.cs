@@ -164,7 +164,7 @@ namespace Railbound.Vehicles
 
         // remote copies have a kinematic body: their speed comes from how far the transform moved
         private float observedSpeed;
-        private Vector3 lastObservedPos;
+        private Vector3 observedVelocity, lastObservedPos;
 
         // ---------------------------------------------------------------- lifecycle
         private void Awake()
@@ -183,6 +183,8 @@ namespace Railbound.Vehicles
             CacheColliders();
             lastObservedPos = transform.position;
         }
+
+        private void Start() { if (!IsSpawned) VehicleLocalPlayer.Ensure(); }   // offline map
 
         private void OnEnable() { if (!All.Contains(this)) All.Add(this); }
         private void OnDisable() { All.Remove(this); }
@@ -235,16 +237,32 @@ namespace Railbound.Vehicles
                 if (c.isTrigger) continue;
                 list.Add(c);
                 if (c.attachedRigidbody != null && c.attachedRigidbody != body) continue;   // loose interior props
-                var b = c.bounds;
+                // from the collider's own geometry: Collider.bounds is stale until the physics scene syncs (and in the editor)
+                if (!ColliderLocalBox(c, out Bounds b)) continue;
                 for (int i = 0; i < 8; i++)
                 {
                     var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
-                    var local = transform.InverseTransformPoint(corner);
+                    var local = transform.InverseTransformPoint(c.transform.TransformPoint(corner));
                     if (!any) { localBounds = new Bounds(local, Vector3.zero); any = true; } else localBounds.Encapsulate(local);
                 }
             }
             bodyColliders = list.ToArray();
             if (!any) localBounds = new Bounds(new Vector3(0f, 0.8f, 0f), new Vector3(2f, 1.6f, 4.4f));
+        }
+
+        private static bool ColliderLocalBox(Collider c, out Bounds b)
+        {
+            switch (c)
+            {
+                case BoxCollider box: b = new Bounds(box.center, box.size); return true;
+                case MeshCollider mesh when mesh.sharedMesh != null: b = mesh.sharedMesh.bounds; return true;
+                case SphereCollider sph: b = new Bounds(sph.center, Vector3.one * sph.radius * 2f); return true;
+                case CapsuleCollider cap:
+                    var size = Vector3.one * cap.radius * 2f;
+                    size[cap.direction] = Mathf.Max(cap.height, cap.radius * 2f);
+                    b = new Bounds(cap.center, size); return true;
+                default: b = default; return false;
+            }
         }
 
         private void OnVehicleInitialized()
@@ -279,7 +297,10 @@ namespace Railbound.Vehicles
         {
             if (body == null) return;
             bool sim = IsSimulating;
+            bool wasKinematic = body.isKinematic;
             body.isKinematic = !sim;
+            // taking over a moving vehicle (the driver got in or left, or disconnected): keep the motion it had on this screen
+            if (sim && wasKinematic) body.velocity = Vector3.ClampMagnitude(observedVelocity, 70f);
             body.interpolation = sim ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
             if (vc != null && initialized) vc.MultiplayerIsRemote = !sim;
             if (sim) lastSent = default;
@@ -522,7 +543,10 @@ namespace Railbound.Vehicles
 
             // speed of a kinematic copy, for the HUD and the server's checks
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
-            observedSpeed = Mathf.Lerp(observedSpeed, (transform.position - lastObservedPos).magnitude / dt, 8f * dt);
+            Vector3 moved = (transform.position - lastObservedPos) / dt;
+            if (moved.sqrMagnitude > 90f * 90f) moved = observedVelocity;   // a teleport, not motion
+            observedVelocity = Vector3.Lerp(observedVelocity, moved, Mathf.Clamp01(8f * dt));
+            observedSpeed = observedVelocity.magnitude;
             lastObservedPos = transform.position;
 
             if (IsAuthority && Time.unscaledTime >= nextWatch) { nextWatch = Time.unscaledTime + 0.25f; WatchOccupants(); }
@@ -560,7 +584,7 @@ namespace Railbound.Vehicles
                     Debug.Log($"[Vehicle] {name}: seat {i} freed ({(go == null ? "character gone" : "character dead")}).");
                     s[i] = 0;
                     changed = true;
-                    if (i == DriverSeat) ReturnToServer(lastVelocity, lastAngular);
+                    if (i == DriverSeat) ReturnToServer(IsSimulating ? lastVelocity : observedVelocity, IsSimulating ? lastAngular : Vector3.zero);
                 }
             }
             if (changed) Publish(s);
@@ -570,7 +594,7 @@ namespace Railbound.Vehicles
             ulong want = driver != null && driver.TryGetComponent(out NetworkObject dno) ? dno.OwnerClientId : NetworkManager.ServerClientId;
             if (NetworkObject.OwnerClientId != want)
             {
-                if (want == NetworkManager.ServerClientId) ReturnToServer(Vector3.zero, Vector3.zero);
+                if (want == NetworkManager.ServerClientId) ReturnToServer(observedVelocity, Vector3.zero);
                 else NetworkObject.ChangeOwnership(want);
             }
         }
