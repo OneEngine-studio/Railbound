@@ -181,6 +181,7 @@ namespace Railbound.UI
             // leaderboards (a full-screen menu without a nav tab) and the social layer: chat, inbox, live notifications
             leaderboardScreen = LobbyMenuScreen.Create<LobbyLeaderboardScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             socialHub = LobbySocialHub.Create(transform, plateFont, OpenLeaderboards, () => SelectNavTab(3), SocialIdle);
+            socialHub.openParty = () => { if (partyPanel != null && !partyPanel.IsOpen) partyPanel.Show(); };
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
             // Hook operator change
@@ -194,6 +195,9 @@ namespace Railbound.UI
         private LobbyLeaderboardScreen leaderboardScreen;
         private LobbySocialHub socialHub;
         public LobbySocialHub SocialHub => socialHub;
+        public LobbyPartyPanel PartyPanel => partyPanel;
+        /// <summary>Test aid: DEPLOY as the button does it (in a party, the leader's deploy starts the whole party).</summary>
+        public void TestDeploy() { OnDeployClicked(); }
         public LobbyLeaderboardScreen LeaderboardScreen => leaderboardScreen;
 
         /// <summary>Opens LEADERBOARDS (from the social strip, the footer chip or L).</summary>
@@ -793,6 +797,14 @@ namespace Railbound.UI
         private Color deployIdleColor = Color.white;
         private Color deployIdleLabelColor = Color.white;
         private string idleSubtitle = "";
+
+        // a party deploys as one squad: the card says so instead of the solo line
+        private string SquadSubtitle()
+        {
+            var party = NakamaPartyService.InstanceIfExists;
+            if (party == null || !party.InParty || party.MemberCount <= 1) return null;
+            return (party.MemberCount == 2 ? "DUO" : "SQUAD OF " + party.MemberCount) + "  |  " + GameModeCatalog.Selected.Players + " PLAYERS";
+        }
         private Color idleSubtitleColor = Color.white;
         private CanvasGroup lockTags, lockMap, lockFill;
         private TextMeshProUGUI keyHintText;
@@ -1063,7 +1075,7 @@ namespace Railbound.UI
 
             if (modeSubtitleText != null)
             {
-                if (deployState == DeployState.Idle) { modeSubtitleText.text = idleSubtitle; modeSubtitleText.color = idleSubtitleColor; }
+                if (deployState == DeployState.Idle) { modeSubtitleText.text = SquadSubtitle() ?? idleSubtitle; modeSubtitleText.color = idleSubtitleColor; }
                 else if (deployState == DeployState.Failed) { modeSubtitleText.text = deployStage; modeSubtitleText.color = RedWarning; }
             }
         }
@@ -1278,6 +1290,7 @@ namespace Railbound.UI
             }
 
             RefreshPartyChip();
+            if (deployState == DeployState.Idle) RefreshDeployVisuals();   // the card's squad line follows the party
             if (squadCountText != null) squadCountText.text = $"{members.Count} / {LobbyParty.MaxMembers} PLAYERS";
             if (invitePlayerBtn != null) invitePlayerBtn.gameObject.SetActive(!party.IsFull);
 

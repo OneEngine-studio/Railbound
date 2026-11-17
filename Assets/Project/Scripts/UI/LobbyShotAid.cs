@@ -15,12 +15,22 @@ namespace Railbound.UI
     {
         private string dir;
         private bool social;
+        private string partyRole = "";   // -partyflow lead|join
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
             string d = Arg("-lobbyshot");
             string sd = Arg("-socialshot");
+            string pf = Arg("-partyflow");
+            if (!string.IsNullOrEmpty(pf) && !Application.isBatchMode)
+            {
+                var pgo = new GameObject("[Test] Party Flow");
+                DontDestroyOnLoad(pgo);
+                var paid = pgo.AddComponent<LobbyShotAid>();
+                paid.partyRole = pf; paid.dir = Arg("-partyshots");
+                return;
+            }
             if ((string.IsNullOrEmpty(d) && string.IsNullOrEmpty(sd)) || Application.isBatchMode) return;
             var go = new GameObject("[Test] Lobby Shots");
             DontDestroyOnLoad(go);
@@ -38,6 +48,7 @@ namespace Railbound.UI
 
         private IEnumerator Start()
         {
+            if (!string.IsNullOrEmpty(partyRole)) { yield return PartyFlow(); yield break; }
             Directory.CreateDirectory(dir);
             float t = 0f;
             while (t < 90f && RailboundYellowHUDController.Instance == null) { t += Time.unscaledDeltaTime; yield return null; }
@@ -96,6 +107,67 @@ namespace Railbound.UI
             Debug.Log("[LobbyShot] done: loadout " + JsonUtility.ToJson(PlayerProgression.Current.loadout) + " sonar " + PlayerProgression.SkillLevel("sonar") + " coins " + PlayerProgression.Current.coins);
             yield return new WaitForSecondsRealtime(0.5f);
             Application.Quit(0);
+        }
+
+        // -partyflow lead: opens SOCIAL, invites the online friend, waits for them and deploys the party
+        // -partyflow join: waits for the invite, accepts it from the toast and follows the leader's deploy
+        private IEnumerator PartyFlow()
+        {
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            float t = 0f;
+            while (t < 90f && RailboundYellowHUDController.Instance == null) { t += Time.unscaledDeltaTime; yield return null; }
+            var hud = RailboundYellowHUDController.Instance;
+            if (hud == null) { Debug.LogError("[PartyFlow] The lobby never loaded."); yield break; }
+            var svc = Railbound.Social.SocialService.Instance;
+            var party = Railbound.Networking.NakamaPartyService.Instance;
+            t = 0f;
+            while (t < 30f && !svc.Online) { t += Time.unscaledDeltaTime; yield return null; }
+            yield return new WaitForSecondsRealtime(5f);
+            Debug.Log("[PartyFlow] " + partyRole + " ready as " + svc.MyUsername);
+
+            if (partyRole == "lead")
+            {
+                hud.PartyPanel.Show();
+                t = 0f; while (t < 20f && !party.InParty) { t += 0.25f; yield return new WaitForSecondsRealtime(0.25f); }
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return PartyShot("40_social_alone");
+                t = 0f;
+                while (t < 90f && !System.Linq.Enumerable.Any(FriendsService.All, f => f.relation == FriendsService.Relation.Friend && f.online)) { t += 1f; _ = FriendsService.RefreshAsync(); yield return new WaitForSecondsRealtime(1f); }
+                hud.PartyPanel.TestInviteFirstOnline();
+                yield return new WaitForSecondsRealtime(1f);
+                yield return PartyShot("41_social_invited");
+                t = 0f; while (t < 90f && party.MemberCount < 2) { t += 0.5f; yield return new WaitForSecondsRealtime(0.5f); }
+                Debug.Log("[PartyFlow] party has " + party.MemberCount + " member(s), leader=" + party.IsLeader);
+                yield return new WaitForSecondsRealtime(3f);
+                yield return PartyShot("42_social_squad");
+                hud.PartyPanel.Hide();
+                yield return new WaitForSecondsRealtime(2.5f);
+                yield return PartyShot("43_lobby_squad");
+                Debug.Log("[PartyFlow] leader deploys");
+                hud.TestDeploy();
+            }
+            else
+            {
+                Railbound.Social.InboxItem invite = null;
+                t = 0f;
+                while (t < 150f && invite == null) { t += 0.25f; yield return new WaitForSecondsRealtime(0.25f); invite = hud.SocialHub.TestFirstInvite(); }
+                if (invite == null) { Debug.LogError("[PartyFlow] No party invite arrived."); yield break; }
+                yield return new WaitForSecondsRealtime(1f);
+                yield return PartyShot("44_invite_toast");
+                Debug.Log("[PartyFlow] accepting the invite from " + invite.Str("fromName"));
+                hud.SocialHub.AcceptInvite(invite);
+                t = 0f; while (t < 30f && party.MemberCount < 2) { t += 0.25f; yield return new WaitForSecondsRealtime(0.25f); }
+                Debug.Log("[PartyFlow] joined: party has " + party.MemberCount + " member(s), leader=" + party.IsLeader);
+                yield return new WaitForSecondsRealtime(3f);
+                yield return PartyShot("45_social_joined");
+                hud.PartyPanel.Hide();
+            }
+        }
+
+        private IEnumerator PartyShot(string name)
+        {
+            if (string.IsNullOrEmpty(dir)) yield break;
+            yield return Shot(name);
         }
 
         private IEnumerator SocialFlow()

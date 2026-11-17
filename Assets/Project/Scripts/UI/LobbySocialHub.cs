@@ -36,6 +36,8 @@ namespace Railbound.UI
         private CanvasGroup rootGroup;
         private Action openLeaderboards, openBattlePass;
         private Func<bool> lobbyIdle;
+        /// <summary>Opens the party window (set by the lobby).</summary>
+        public Action openParty;
         private SocialService svc;
 
         public static LobbySocialHub Create(Transform hudRoot, TMP_FontAsset font, Action openLeaderboards, Action openBattlePass, Func<bool> lobbyIdle)
@@ -741,7 +743,7 @@ namespace Railbound.UI
                     var hr = h.rectTransform; hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f); hr.anchoredPosition = new Vector2(8f, -y - 6f); hr.sizeDelta = new Vector2(-16f, 22f);
                     y += 30f;
                 }
-                float hgt = item.IsGift || item.code == SocialService.NoteTierReached || item.code == SocialService.NoteLeaderboardReward ? 118f : 96f;
+                float hgt = item.IsGift || item.code == SocialService.NoteTierReached || item.code == SocialService.NoteLeaderboardReward || item.code == SocialService.NotePartyInvite ? 118f : 96f;
                 BuildCard(item, y, hgt, item.createTime.Ticks > seen);
                 y += hgt + 8f;
             }
@@ -797,6 +799,11 @@ namespace Railbound.UI
                 ActionChip(cr, "OPEN BATTLE PASS", true, Color.black, _ => { SetInbox(false); openBattlePass?.Invoke(); });
             else if (item.code == SocialService.NoteLeaderboardReward)
                 ActionChip(cr, "VIEW LEADERBOARD", true, Color.black, _ => { SetInbox(false); openLeaderboards?.Invoke(); });
+            else if (item.code == SocialService.NotePartyInvite)
+            {
+                if (SocialService.InviteUsable(item)) ActionChip(cr, "JOIN PARTY", true, Color.black, _ => { SetInbox(false); AcceptInvite(item); });
+                else ActionChip(cr, "EXPIRED", false, Faint, null);
+            }
 
             // dismiss (a gift that can still be claimed stays)
             bool canDismiss = !(item.IsGift && !item.claimed && !item.expired);
@@ -835,6 +842,19 @@ namespace Railbound.UI
         }
 
         private readonly List<Image> glows = new List<Image>();
+
+        /// <summary>Joins the party of an invite (leaves the current one), then shows the party window.</summary>
+        public async void AcceptInvite(InboxItem item)
+        {
+            if (!SocialService.InviteUsable(item)) { UISfx.Play(UISfx.Kind.Error); return; }
+            var party = Railbound.Networking.NakamaPartyService.Instance;
+            if (party == null) return;
+            UISfx.Play(UISfx.Kind.Confirm);
+            await party.JoinAsync(item.Str("partyId"));
+            if (this == null) return;
+            if (party.InParty && party.PartyId == item.Str("partyId")) await svc.DismissAsync(new[] { item });
+            openParty?.Invoke();
+        }
 
         private async void ClaimGift(InboxItem item, TextMeshProUGUI label)
         {
@@ -938,11 +958,19 @@ namespace Railbound.UI
             var timer = Img("Timer", r, new Color(accent.r, accent.g, accent.b, 0.7f));
             var tr = timer.rectTransform; tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 0f); tr.pivot = new Vector2(0f, 0f); tr.sizeDelta = new Vector2(0f, 2f); tr.anchoredPosition = Vector2.zero;
             var b = bg.gameObject.AddComponent<Button>(); b.targetGraphic = bg; b.transition = Selectable.Transition.None;
-            var toast = new Toast { rect = r, group = bg.gameObject.AddComponent<CanvasGroup>(), timer = timer, born = Time.unscaledTime, life = 6f, item = item };
+            var toast = new Toast { rect = r, group = bg.gameObject.AddComponent<CanvasGroup>(), timer = timer, born = Time.unscaledTime, life = item.code == SocialService.NotePartyInvite ? 12f : 6f, item = item };
+            if (item.code == SocialService.NotePartyInvite)
+            {
+                var join = Img("Join", r, Color.white);
+                var jr = join.rectTransform; jr.anchorMin = jr.anchorMax = new Vector2(1f, 0.5f); jr.pivot = new Vector2(1f, 0.5f); jr.anchoredPosition = new Vector2(-12f, 0f); jr.sizeDelta = new Vector2(70f, 30f);
+                var jt = Txt("Label", jr, "JOIN", 13, Color.black, TextAlignmentOptions.Center); jt.fontStyle = FontStyles.Bold; jt.characterSpacing = 3f; Stretch(jt.rectTransform);
+                d.rectTransform.sizeDelta = new Vector2(230f, 20f); s.rectTransform.sizeDelta = new Vector2(230f, 22f);
+            }
             b.onClick.AddListener(() =>
             {
                 toast.closing = true;
                 if (item.code == SocialService.NoteChatMention) FocusChat();
+                else if (item.code == SocialService.NotePartyInvite) AcceptInvite(item);
                 else if (lobbyIdle == null || lobbyIdle()) SetInbox(true);
             });
             UIFeedback.Attach(bg.gameObject, 1.02f).silentClick = true;
@@ -990,7 +1018,7 @@ namespace Railbound.UI
                 case SocialService.NoteAnnouncement: return Cyan;
                 case SocialService.NoteChatMuted: return Bad;
                 case SocialService.NoteChatMention: return Gold;
-                case SocialService.NoteFriendRequest: case SocialService.NoteFriendAccepted: return Cyan;
+                case SocialService.NoteFriendRequest: case SocialService.NoteFriendAccepted: case SocialService.NotePartyInvite: return Cyan;
                 default: return Color.white;
             }
         }
@@ -1009,6 +1037,7 @@ namespace Railbound.UI
                 case SocialService.NoteChatMuted: return "UI/Lobby/Icon_Warning";
                 case SocialService.NoteChatMention: return "UI/Lobby/Icon_ChatShield";
                 case SocialService.NoteFriendRequest: case SocialService.NoteFriendAccepted: return "UI/Lobby/Icon_FriendAdd";
+                case SocialService.NotePartyInvite: return "UI/Lobby/Icon_SquadPeople";
                 default: return "UI/Lobby/Icon_Mail";
             }
         }
@@ -1028,6 +1057,7 @@ namespace Railbound.UI
                 case SocialService.NoteChatMention: return "MENTION";
                 case SocialService.NoteFriendRequest: return "FRIEND REQUEST";
                 case SocialService.NoteFriendAccepted: return "FRIENDS";
+                case SocialService.NotePartyInvite: return "PARTY INVITE";
                 default: return "NOTIFICATION";
             }
         }
@@ -1071,6 +1101,7 @@ namespace Railbound.UI
                 case SocialService.NoteChatMention: return i.Str("from") + ": " + i.Str("message");
                 case SocialService.NoteFriendRequest: return "Wants to add you as a friend";
                 case SocialService.NoteFriendAccepted: return "You are now friends: you can message each other and compare scores";
+                case SocialService.NotePartyInvite: return SocialService.InviteUsable(i) ? "Join to deploy together as a squad" : "This invite has expired";
                 default: return "";
             }
         }
@@ -1100,6 +1131,7 @@ namespace Railbound.UI
         public void TestReport(ChatLine l) { if (l != null) Report(l, Txt("x", root, "", 1, Color.clear, TextAlignmentOptions.Center)); }
         public void TestHoverChat(bool on) { chatHovered = on; }
         public string TestError => chatError != null ? chatError.text : "";
+        public InboxItem TestFirstInvite() { return svc.Inbox.Find(i => SocialService.InviteUsable(i)); }
 
         // ================================================================= tiny UI kit
         private Image Img(string name, RectTransform parent, Color c)

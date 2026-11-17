@@ -33,7 +33,7 @@ namespace Railbound.Networking
         /// <summary>What the server last said about the session (for the HUD).</summary>
         public sealed class Progress { public string Phase; public int Countdown, Players, Max; }
 
-        [Serializable] private class JoinRequest { public string mode; public string partyId; public bool newMatch; }
+        [Serializable] private class JoinRequest { public string mode; public string partyId; public string[] party; public bool newMatch; }
         [Serializable] private class JoinReply { public string status; public string sessionId; public bool locked; public string matchId; public string host; public int port; public string name; public string token; public int players; }
         [Serializable] private class StateMsg { public string sessionId; public string phase; public int countdown; public int players; public int max; }
         [Serializable] private class AssignedMsg { public string sessionId; public string matchId; public string host; public int port; public string name; public string token; public int players; }
@@ -44,7 +44,7 @@ namespace Railbound.Networking
         /// thread whenever the server reports the session state (once a second while counting down).
         /// </summary>
         public static async Task<Result> QueueAsync(IClient client, ISession session, ISocket socket, string mode, string partyId,
-            Func<bool> cancelled, Action<Progress> progress, float timeoutSeconds = 180f)
+            Func<bool> cancelled, Action<Progress> progress, float timeoutSeconds = 180f, string[] partyMembers = null)
         {
             var inbox = new ConcurrentQueue<IMatchState>();
             Action<IMatchState> onState = s => inbox.Enqueue(s);   // socket callbacks may come from a background thread
@@ -58,7 +58,8 @@ namespace Railbound.Networking
                     JoinReply reply;
                     try
                     {
-                        var rpc = await client.RpcAsync(session, RpcName, JsonUtility.ToJson(new JoinRequest { mode = mode, partyId = partyId ?? "" }));
+                        // a party sends its roster: the server seats every member in one session, as one squad
+                        var rpc = await client.RpcAsync(session, RpcName, JsonUtility.ToJson(new JoinRequest { mode = mode, partyId = partyId ?? "", party = partyMembers ?? Array.Empty<string>() }));
                         reply = JsonUtility.FromJson<JoinReply>(rpc.Payload);
                     }
                     catch (ApiResponseException ex) when (ex.StatusCode == 404 || (ex.Message ?? "").IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0)

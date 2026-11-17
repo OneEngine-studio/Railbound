@@ -28,6 +28,12 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     // Aim state of the owner (firing mode, reloading, the point it looks at): remote copies use it to put the hands on the weapon,
     // turn the spine and the head to the target and point the weapon where the owner aims.
+    // the squad (set by the server from Nakama's ticket check; -1 = a team of one) and the place in it
+    private readonly NetworkVariable<int> teamId = new NetworkVariable<int>(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private readonly NetworkVariable<int> teamSlot = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public int TeamId => IsSpawned ? teamId.Value : -1;
+    public int TeamSlot => IsSpawned ? teamSlot.Value : 0;
+
     private readonly NetworkVariable<Railbound.BR.PuppetPose> pose = new NetworkVariable<Railbound.BR.PuppetPose>(
         default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private float nextPosePublish;
@@ -50,6 +56,11 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (IsServer && Railbound.Networking.ServerMatchSession.TryGetTeam(OwnerClientId, out int squad, out int squadSlot))
+        {
+            teamId.Value = squad; teamSlot.Value = squadSlot;
+            Debug.Log($"[JUNetworkPlayer] Client {OwnerClientId} is in squad {squad} (slot {squadSlot}).");
+        }
         SuppressDummyMannequinMeshes();
 
         // the owner's rolls, reloads, punches... are animator triggers, which the (owner-authoritative) network animator does not
@@ -71,10 +82,10 @@ public class JUNetworkPlayer : NetworkBehaviour
             // 1. Position on spawn platform or map spawn location
             JUCharacterController offlineChar = FindOfflinePlayer();
             if (Railbound.BR.BRMatchSetup.Instance != null &&
-                Railbound.BR.BRMatchSetup.Instance.TryGetPlayerSpawn((int)OwnerClientId, out Vector3 randomSpawn, out Quaternion randomRotation))
+                Railbound.BR.BRMatchSetup.Instance.TryGetPlayerSpawn(SpawnIndex(), out Vector3 randomSpawn, out Quaternion randomRotation))
             {
-                // Random terrain spawn from the match setup (never on the train or inside buildings)
-                transform.SetPositionAndRotation(randomSpawn, randomRotation);
+                // Random terrain spawn from the match setup (never on the train or inside buildings); a squad shares its team's spot
+                transform.SetPositionAndRotation(Railbound.BR.BRTeams.SquadOffset(randomSpawn, randomRotation, TeamSlot), randomRotation);
                 if (rb != null)
                 {
                     rb.velocity = Vector3.zero;
@@ -177,6 +188,10 @@ public class JUNetworkPlayer : NetworkBehaviour
             // 6c. The battle royale loadout and ability upgrades of the player's profile (sidearm, melee, lethal, Sonar, Medkit)
             if (characterController != null) Railbound.Gameplay.LoadoutApplier.ApplyWhenReady(this, characterController);
 
+            // 6d. Squads: markers over the teammates, and the squad's spawn spot when the team arrives after the first frame
+            Railbound.BR.TeammateMarkers.Ensure();
+            teamId.OnValueChanged += OnOwnTeamChanged;
+
             // 7. Lock cursor for gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -210,6 +225,20 @@ public class JUNetworkPlayer : NetworkBehaviour
                 skinRetargeter.AutoRebindAllBones();
             }
         }
+    }
+
+    // a squad shares its team's spawn spot; a player without a team uses its client id as before
+    private int SpawnIndex() { return TeamId >= 0 ? TeamId : (int)OwnerClientId; }
+
+    private void OnOwnTeamChanged(int previous, int current)
+    {
+        // only before the battle: once it runs, nobody is moved
+        var c = Railbound.BR.BRMatchCoordinator.Instance;
+        if (current < 0 || (c != null && c.State >= Railbound.BR.BRMatchState.ActiveBattle)) return;
+        if (Railbound.BR.BRMatchSetup.Instance == null || !Railbound.BR.BRMatchSetup.Instance.TryGetPlayerSpawn(current, out Vector3 spawn, out Quaternion rot)) return;
+        transform.SetPositionAndRotation(Railbound.BR.BRTeams.SquadOffset(spawn, rot, TeamSlot), rot);
+        if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        Debug.Log($"[JUNetworkPlayer] Moved to squad {current}'s spawn (slot {TeamSlot}).");
     }
 
     private static bool TryGetSpawnOverride(out Vector3 position, out float yaw)
@@ -358,6 +387,7 @@ public class JUNetworkPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        teamId.OnValueChanged -= OnOwnTeamChanged;
         if (characterController != null) characterController.AnimatorTriggerSet -= ForwardOwnerTrigger;
         rightHandItem.OnValueChanged -= OnRightHandItemChanged;
         if (IsOwner && s_deactivatedOfflinePlayer != null)

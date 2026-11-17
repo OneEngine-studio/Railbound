@@ -69,7 +69,7 @@ namespace Railbound.Social
         // notification codes of the module (Nakama's own are negative: -2 friend request ...)
         public const int NoteMatchResult = 100, NoteLevelUp = 101, NoteWeaponLevelUp = 102, NoteTierReached = 103,
                          NoteLeaderboardReward = 110, NoteGift = 120, NoteAnnouncement = 130, NoteChatMuted = 140, NoteChatMention = 141,
-                         NoteFriendRequest = -2, NoteFriendAccepted = -3;
+                         NoteFriendRequest = -2, NoteFriendAccepted = -3, NotePartyInvite = 150;
         public static readonly string[] Rooms = { "global", "lfg", "help" };
         public const int ChatMaxLength = 200;
         private const int MaxLinesPerRoom = 120;
@@ -326,6 +326,22 @@ namespace Railbound.Social
             if (item.code == NoteLeaderboardReward || item.code == NoteLevelUp) _ = PlayerProgression.LoadAsync();
             InboxChanged?.Invoke();
             LiveNotification?.Invoke(item);
+        }
+
+        // ================================================================= party invites
+        /// <summary>Invites a friend to the party (the server checks the friendship). Returns "ok", "not_friends", "rate_limited", "offline".</summary>
+        public async Task<string> InviteToPartyAsync(string userId, string partyId)
+        {
+            var r = await RpcAsync("railbound_party_invite", new { userId, partyId });
+            return r != null ? (string)r["status"] ?? "error" : "offline";
+        }
+
+        /// <summary>An invite that can still be accepted (the party id and who sent it), or null.</summary>
+        public static bool InviteUsable(InboxItem i)
+        {
+            if (i == null || i.code != NotePartyInvite || string.IsNullOrEmpty(i.Str("partyId"))) return false;
+            long exp = i.content["expiresAt"] != null ? (long)i.content["expiresAt"] : 0;
+            return exp <= 0 || DateTimeOffset.FromUnixTimeMilliseconds(exp).UtcDateTime > DateTime.UtcNow;
         }
 
         // ================================================================= chat
