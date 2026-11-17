@@ -121,6 +121,8 @@ namespace Railbound.Networking
         private static string ResolveHost(string allocatedHost)
         {
             bool configured = !string.IsNullOrWhiteSpace(ServerConfig.GameServerAddress);
+            // a client in local test mode (-test-nakama, loopback only) plays on a game server on this machine: keep 127.0.0.1
+            if (AuthenticationService.TestBackend && allocatedHost == "127.0.0.1") return allocatedHost;
             if (configured && (ServerConfig.UseConfiguredGameServerHost || string.IsNullOrWhiteSpace(allocatedHost) || IsPrivateAddress(allocatedHost)))
                 return ServerConfig.GameServerAddress;
             return allocatedHost ?? "";
