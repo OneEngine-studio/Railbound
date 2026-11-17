@@ -843,7 +843,7 @@ namespace Railbound.UI
             if (this == null) return;
             switch (status)
             {
-                case "ok": UISfx.Play(UISfx.Kind.Reward); ShowToast(new InboxItem { code = SocialService.NoteGift, subject = "+" + item.Int("coins").ToString("N0") + " COINS CLAIMED", content = item.content, createTime = DateTime.UtcNow }, false); break;
+                case "ok": UISfx.Play(UISfx.Kind.Reward); break;   // the card turns CLAIMED and the header coins count up
                 case "already_claimed": UISfx.Play(UISfx.Kind.Error); break;
                 case "expired": UISfx.Play(UISfx.Kind.Error); break;
                 default: UISfx.Play(UISfx.Kind.Error); if (label != null) label.text = "TRY AGAIN"; break;
@@ -891,7 +891,7 @@ namespace Railbound.UI
         // ================================================================= live toasts
         private sealed class Toast { public RectTransform rect; public CanvasGroup group; public Image timer; public float born, life; public InboxItem item; public bool closing; }
         private readonly List<Toast> toasts = new List<Toast>();
-        private const float ToastTop = -172f;   // under the header strip and the menus' BACK button
+        private const float ToastTop = -166f;   // under the header strip and the menus' BACK button
 
         private void BuildToasts()
         {
@@ -910,6 +910,8 @@ namespace Railbound.UI
         {
             // a mention while the chat is in front of the player is enough as the highlighted line
             if (item.code == SocialService.NoteChatMention && (Typing || chatHovered)) return;
+            // the open inbox shows the new card itself
+            if (inboxOpen) { UISfx.Play(item.code == SocialService.NoteGift ? UISfx.Kind.Reward : UISfx.Kind.Open); return; }
             ShowToast(item, true);
         }
 
@@ -919,20 +921,20 @@ namespace Railbound.UI
             while (toasts.Count >= 3) { CloseToast(toasts[0]); toasts.RemoveAt(0); }
             Color accent = AccentOf(item.code);
             var bg = Img("Toast", toastRoot, new Color(0.04f, 0.045f, 0.055f, 0.97f));
-            var r = bg.rectTransform; r.anchorMin = r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(1f, 1f); r.sizeDelta = new Vector2(440f, 86f);
+            var r = bg.rectTransform; r.anchorMin = r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(1f, 1f); r.sizeDelta = new Vector2(440f, 76f);
             r.anchoredPosition = new Vector2(480f, ToastTop);
             bg.raycastTarget = true;
             var acc = Img("Accent", r, accent);
             var ar = acc.rectTransform; ar.anchorMin = Vector2.zero; ar.anchorMax = new Vector2(0f, 1f); ar.pivot = new Vector2(0f, 0.5f); ar.sizeDelta = new Vector2(5f, 0f); ar.anchoredPosition = Vector2.zero;
             var tile = Img("Tile", r, new Color(accent.r, accent.g, accent.b, 0.14f));
-            Place(tile.rectTransform, new Vector2(-180f, 0f), new Vector2(52f, 52f));
+            Place(tile.rectTransform, new Vector2(-180f, 0f), new Vector2(48f, 48f));
             Icon(tile.rectTransform, IconOf(item.code), Vector2.zero, new Vector2(30f, 30f), accent);
             var kind = Txt("Kind", r, KindOf(item.code), 11, accent, TextAlignmentOptions.TopLeft); kind.fontStyle = FontStyles.Bold; kind.characterSpacing = 4f;
-            Place(kind.rectTransform, new Vector2(42f, 26f), new Vector2(300f, 16f));
+            Place(kind.rectTransform, new Vector2(42f, 22f), new Vector2(300f, 16f));
             var s = Txt("Subject", r, item.subject, 16, Color.white, TextAlignmentOptions.TopLeft); s.fontStyle = FontStyles.Bold; s.characterSpacing = 1.5f; s.overflowMode = TextOverflowModes.Ellipsis;
-            Place(s.rectTransform, new Vector2(42f, 6f), new Vector2(300f, 22f));
+            Place(s.rectTransform, new Vector2(42f, 3f), new Vector2(300f, 22f));
             var d = Txt("Detail", r, Detail(item), 13, Dim, TextAlignmentOptions.TopLeft); d.overflowMode = TextOverflowModes.Ellipsis;
-            Place(d.rectTransform, new Vector2(42f, -18f), new Vector2(300f, 20f));
+            Place(d.rectTransform, new Vector2(42f, -19f), new Vector2(300f, 20f));
             var timer = Img("Timer", r, new Color(accent.r, accent.g, accent.b, 0.7f));
             var tr = timer.rectTransform; tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 0f); tr.pivot = new Vector2(0f, 0f); tr.sizeDelta = new Vector2(0f, 2f); tr.anchoredPosition = Vector2.zero;
             var b = bg.gameObject.AddComponent<Button>(); b.targetGraphic = bg; b.transition = Selectable.Transition.None;
@@ -974,7 +976,7 @@ namespace Railbound.UI
                 t.timer.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(1f - age / t.life), 0f);
                 t.timer.rectTransform.sizeDelta = new Vector2(0f, 2f);
                 if (t.closing && t.group.alpha <= 0.01f) { CloseToast(t); toasts.RemoveAt(i--); continue; }
-                if (!t.closing) y -= 94f;
+                if (!t.closing) y -= 84f;
             }
         }
 
