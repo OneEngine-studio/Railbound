@@ -43,9 +43,13 @@ namespace Railbound.Vehicles
 
         private IEnumerator LogLoop()
         {
+            int lastFrame = Time.frameCount; float lastReal = Time.realtimeSinceStartup;
             while (true)
             {
                 yield return new WaitForSecondsRealtime(1f);
+                float span = Mathf.Max(0.001f, Time.realtimeSinceStartup - lastReal);
+                Debug.Log($"[VehicleNet] fps={(Time.frameCount - lastFrame) / span:F1} timeScale={Time.timeScale:F2} dt={Time.deltaTime:F3} udt={Time.unscaledDeltaTime:F3} gameTime={Time.time:F1} vehicles={RailboundVehicle.All.Count}");
+                lastFrame = Time.frameCount; lastReal = Time.realtimeSinceStartup;
                 foreach (var v in RailboundVehicle.All)
                 {
                     if (v == null) continue;
