@@ -139,7 +139,7 @@ namespace Railbound.Vehicles
 
             // a second leg for the other client to ride along
             Handbrake = 0f; Throttle = 0f;
-            yield return new WaitForSecondsRealtime(8f);   // the rider gets in
+            yield return new WaitForSecondsRealtime(12f);   // the rider gets in
             Throttle = 0.8f; Steer = 0.2f;
             yield return Hold(5f, "7_with_passenger");
             Throttle = 0f; Brake = 1f; Steer = 0f;
@@ -159,17 +159,23 @@ namespace Railbound.Vehicles
         private IEnumerator Ride()
         {
             yield return WaitForPlayerAndVehicles();
+            // wait until another player has driven a vehicle somewhere and parked it with only the driver inside for 4 s
             RailboundVehicle v = null;
-            float t0 = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - t0 < 90f)
+            Vector3 firstSeen = Vector3.zero;
+            float stableSince = -1f, t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < 120f)
             {
-                v = Nearest(Me.transform.position, true);
-                if (v != null && v.Driver != null && v.SpeedKmh < 3f && v.Seats[v.DriverSeat] != 0 && Time.realtimeSinceStartup - t0 > 1f && v.Seats.Count == 1 && v.SeatOf(v.Driver) == v.DriverSeat) break;
-                v = null;
-                yield return new WaitForSecondsRealtime(0.25f);
+                var c = Nearest(Me.transform.position, true);
+                if (c != v) { v = c; firstSeen = c != null ? c.transform.position : Vector3.zero; stableSince = -1f; }
+                bool parked = v != null && v.Seats.Count == 1 && v.SeatOf(v.Driver) == v.DriverSeat && v.SpeedKmh < 3f
+                              && Vector3.Distance(firstSeen, v.transform.position) > 15f;
+                if (!parked) stableSince = -1f;
+                else if (stableSince < 0f) stableSince = Time.realtimeSinceStartup;
+                else if (Time.realtimeSinceStartup - stableSince > 4f) break;
+                yield return new WaitForSecondsRealtime(0.2f);
             }
-            if (v == null) { Debug.Log("[VehicleTest] ride: no driven vehicle found"); yield break; }
-            yield return new WaitForSecondsRealtime(4f);   // after the driver's seat test
+            if (v == null || stableSince < 0f) { Debug.Log("[VehicleTest] ride: no driven vehicle found"); yield break; }
+            Debug.Log("[VehicleTest] ride: joining " + v.DebugLine());
             Shot("r0_watch_driver");
             WalkTo(v, 1);
             yield return new WaitForSecondsRealtime(1f);
