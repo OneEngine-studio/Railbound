@@ -150,6 +150,12 @@ namespace Railbound.Vehicles
         private VehiclePose lastPoseSent;
         private float nextPoseSend;
         private const double InterpolationDelay = 0.12;   // seconds behind the newest sample: two or three samples to blend between
+        // the sender's clock relative to ours (sample time - our time when it arrived): the smallest seen, so playback never runs
+        // ahead of the samples; it creeps up slowly in case the network got faster. Machines' "server time" estimates differ by
+        // more than the interpolation delay, so samples are never compared with this machine's own server time.
+        private double clockOffset;
+        private bool hasClockOffset;
+        private static double Now => Time.realtimeSinceStartupAsDouble;
 
         private VehicleSeats localSeats;   // offline
         private VehicleController vc;
@@ -374,7 +380,7 @@ namespace Railbound.Vehicles
             if (IsServer) seats.Value = default;
             pose.OnValueChanged += OnPose;
             if (IsOwner) pose.Value = CapturePose();
-            else if (pose.Value.Time > 0) { poseBuffer.Add(pose.Value); ApplyPose(pose.Value.Position, pose.Value.Rotation); }
+            else if (pose.Value.Time > 0) { OnPose(default, pose.Value); ApplyPose(pose.Value.Position, pose.Value.Rotation); }
             ApplyAuthority();
             VehicleLocalPlayer.Ensure();
         }
@@ -407,9 +413,9 @@ namespace Railbound.Vehicles
             if (sim) { lastSent = default; lastPoseSent = default; }
             else if (IsSpawned)
             {
-                // following someone else from now on: start from where it is on this screen (no snap back to old samples)
+                // following someone else from now on (a new sender, a new clock): hold still until its samples arrive
                 poseBuffer.Clear();
-                poseBuffer.Add(CapturePose());
+                hasClockOffset = false;
             }
         }
 
@@ -713,9 +719,16 @@ namespace Railbound.Vehicles
             if (poseBuffer.Count > 0)
             {
                 var last = poseBuffer[poseBuffer.Count - 1];
-                if (current.Time <= last.Time) return;   // out of order
-                if ((current.Position - last.Position).sqrMagnitude > 30f * 30f) poseBuffer.Clear();   // a teleport
+                if (current.Time <= last.Time)
+                {
+                    if (last.Time - current.Time < 1.0) return;   // out of order
+                    poseBuffer.Clear(); hasClockOffset = false;    // the sender's clock restarted (a new owner)
+                }
+                else if ((current.Position - last.Position).sqrMagnitude > 30f * 30f) poseBuffer.Clear();   // a teleport
             }
+            double offset = current.Time - Now;
+            if (!hasClockOffset || offset < clockOffset) { clockOffset = offset; hasClockOffset = true; }
+            else clockOffset += (offset - clockOffset) * 0.02;
             poseBuffer.Add(current);
             while (poseBuffer.Count > 32) poseBuffer.RemoveAt(0);
         }
@@ -724,7 +737,7 @@ namespace Railbound.Vehicles
         private void PlayBackPose()
         {
             if (poseBuffer.Count == 0) return;
-            double renderTime = NetworkManager.ServerTime.Time - InterpolationDelay;
+            double renderTime = Now + clockOffset - InterpolationDelay;
             while (poseBuffer.Count >= 2 && poseBuffer[1].Time <= renderTime) poseBuffer.RemoveAt(0);
             var a = poseBuffer[0];
             if (poseBuffer.Count >= 2 && renderTime >= a.Time)
