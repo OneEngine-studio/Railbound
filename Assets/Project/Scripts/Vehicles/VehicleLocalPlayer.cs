@@ -219,8 +219,8 @@ namespace Railbound.Vehicles
 
             tps.transform.SetPositionAndRotation(pivot, Quaternion.Euler(0f, yaw, 0f));
             cam.transform.position = pivot - dir * d;
-            // aim a little above the roof line so the vehicle sits just below the centre of the screen (clear of the speed panel)
-            cam.transform.rotation = Quaternion.LookRotation((pivot + Vector3.up * 0.9f) - cam.transform.position);
+            // aim just below the roof line so the whole vehicle sits around the centre of the screen (clear of the speed panel)
+            cam.transform.rotation = Quaternion.LookRotation((pivot - Vector3.up * 0.35f) - cam.transform.position);
 
             // a little wider at speed
             fov = Mathf.Lerp(fov, baseFov + Mathf.Clamp01(kmh / 170f) * 12f, 1f - Mathf.Exp(-3f * dt));
