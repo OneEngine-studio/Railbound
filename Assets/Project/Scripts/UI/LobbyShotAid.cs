@@ -7,20 +7,26 @@ namespace Railbound.UI
 {
     /// <summary>
     /// Test aid for builds: "-lobbyshot DIR" walks through the WEAPONS (loadout slots, an equip, an upgrade, the armory) and BATTLE PASS
-    /// screens of the lobby, saves a screenshot of each step into DIR and quits. Does nothing without the argument.
+    /// screens of the lobby, saves a screenshot of each step into DIR and quits. "-socialshot DIR" does the same for the social layer:
+    /// leaderboards (every board and view), the inbox (claim, filter) and the chat (send, mention, rate limit, report).
+    /// Does nothing without the arguments.
     /// </summary>
     public sealed class LobbyShotAid : MonoBehaviour
     {
         private string dir;
+        private bool social;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
             string d = Arg("-lobbyshot");
-            if (string.IsNullOrEmpty(d) || Application.isBatchMode) return;
+            string sd = Arg("-socialshot");
+            if ((string.IsNullOrEmpty(d) && string.IsNullOrEmpty(sd)) || Application.isBatchMode) return;
             var go = new GameObject("[Test] Lobby Shots");
             DontDestroyOnLoad(go);
-            go.AddComponent<LobbyShotAid>().dir = d;
+            var aid = go.AddComponent<LobbyShotAid>();
+            aid.social = !string.IsNullOrEmpty(sd);
+            aid.dir = aid.social ? sd : d;
         }
 
         private static string Arg(string name)
@@ -38,6 +44,7 @@ namespace Railbound.UI
             if (RailboundYellowHUDController.Instance == null) { Debug.LogError("[LobbyShot] The lobby never loaded."); Application.Quit(2); yield break; }
             var load = PlayerProgression.LoadAsync();
             while (!load.IsCompleted) yield return null;
+            if (social) { yield return SocialFlow(); yield break; }
             Debug.Log("[LobbyShot] profile: level " + PlayerProgression.Current.level + ", coins " + PlayerProgression.Current.coins + ", tables " + (PlayerProgression.Tables != null) + ", tier " + PlayerProgression.SeasonTier);
             yield return new WaitForSecondsRealtime(5f);   // the lobby finishes loading characters and its own data
             var hud = RailboundYellowHUDController.Instance;
@@ -87,6 +94,77 @@ namespace Railbound.UI
                 yield return Shot("12_battlepass_claimed");
             }
             Debug.Log("[LobbyShot] done: loadout " + JsonUtility.ToJson(PlayerProgression.Current.loadout) + " sonar " + PlayerProgression.SkillLevel("sonar") + " coins " + PlayerProgression.Current.coins);
+            yield return new WaitForSecondsRealtime(0.5f);
+            Application.Quit(0);
+        }
+
+        private IEnumerator SocialFlow()
+        {
+            var hud = RailboundYellowHUDController.Instance;
+            var svc = Railbound.Social.SocialService.Instance;
+            float t = 0f;
+            while (t < 40f && (hud.SocialHub == null || !svc.InboxLoaded || !svc.ChatConnected)) { t += Time.unscaledDeltaTime; yield return null; }
+            Debug.Log("[SocialShot] ready: inbox " + svc.Inbox.Count + " (unread " + svc.UnreadCount + "), chat " + svc.ChatConnected + ", global lines " + svc.Lines("global").Count);
+            yield return new WaitForSecondsRealtime(4f);
+            var hub = hud.SocialHub;
+            yield return Shot("20_lobby_social");
+
+            hud.OpenLeaderboards();
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shot("21_lb_weekly_kills_global");
+            var lb = hud.LeaderboardScreen;
+            string[] names = { "22_lb_alltime_global", "23_lb_weekly_kills_friends", "24_lb_season_xp_around_me", "25_lb_weekly_wins_global" };
+            int[][] sets = { new[] { 3, 0 }, new[] { 0, 2 }, new[] { 2, 1 }, new[] { 1, 0 } };
+            for (int i = 0; i < sets.Length; i++)
+            {
+                lb.TestSet(sets[i][0], sets[i][1]);
+                yield return new WaitForSecondsRealtime(2f);
+                yield return Shot(names[i]);
+            }
+            hud.SelectNavTab(0);
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            hub.SetInbox(true);
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return Shot("26_inbox");
+            var gift = hub.TestFirstGift();
+            int coinsBefore = PlayerProgression.Current.coins;
+            hub.TestClaim(gift);
+            yield return new WaitForSecondsRealtime(2.5f);
+            Debug.Log("[SocialShot] gift " + (gift != null ? gift.GiftId : "none") + " claimed=" + (gift != null && gift.claimed) + " coins " + coinsBefore + " -> " + PlayerProgression.Current.coins);
+            yield return Shot("27_inbox_gift_claimed");
+            hub.TestFilter(1);
+            yield return new WaitForSecondsRealtime(1.2f);
+            yield return Shot("28_inbox_rewards");
+            hub.TestFilter(0);
+            hub.SetInbox(false);
+            yield return new WaitForSecondsRealtime(1.2f);
+
+            hub.TestHoverChat(true);
+            hub.TestSend("hello from the test client, gl hf");
+            yield return new WaitForSecondsRealtime(1.5f);
+            hub.TestHoverChat(true);
+            yield return Shot("29_chat_sent");
+            float w = 0f; bool mention = false;
+            while (w < 10f && !mention) { w += 0.25f; yield return new WaitForSecondsRealtime(0.25f); foreach (var l in svc.Lines("global")) if (l.mentionsMe) mention = true; }
+            yield return new WaitForSecondsRealtime(0.6f);
+            Debug.Log("[SocialShot] mention received: " + mention);
+            yield return Shot("30_chat_mention");
+
+            for (int i = 0; i < 7; i++) { hub.TestSend("spam test " + i); yield return new WaitForSecondsRealtime(0.35f); }
+            hub.TestHoverChat(true);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Debug.Log("[SocialShot] after the burst: error='" + hub.TestError + "'");
+            yield return Shot("31_chat_rate_limited");
+
+            var other = hub.TestFirstOtherLine();
+            hub.TestReport(other);
+            yield return new WaitForSecondsRealtime(2f);
+            hub.TestHoverChat(true);
+            Debug.Log("[SocialShot] reported " + (other != null ? other.username + ": " + other.text : "nothing") + " -> " + (other != null && other.reported));
+            yield return Shot("32_chat_reported");
+
+            Debug.Log("[SocialShot] done: inbox " + svc.Inbox.Count + ", unclaimed gifts " + svc.UnclaimedGifts + ", global lines " + svc.Lines("global").Count + ", coins " + PlayerProgression.Current.coins);
             yield return new WaitForSecondsRealtime(0.5f);
             Application.Quit(0);
         }
