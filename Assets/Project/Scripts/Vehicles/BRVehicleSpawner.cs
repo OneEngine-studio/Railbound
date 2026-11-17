@@ -97,7 +97,9 @@ namespace Railbound.Vehicles
 
         public static List<RailboundVehicle> LoadCatalog()
         {
-            var list = new List<RailboundVehicle>(Resources.LoadAll<RailboundVehicle>("Vehicles"));
+            var list = new List<RailboundVehicle>();
+            foreach (var go in Resources.LoadAll<GameObject>("Vehicles"))   // LoadAll does not filter prefabs by component type
+                if (go != null && go.TryGetComponent(out RailboundVehicle v)) list.Add(v);
             list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
             return list;
         }
