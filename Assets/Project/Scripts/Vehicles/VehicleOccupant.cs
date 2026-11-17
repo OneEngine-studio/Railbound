@@ -32,6 +32,7 @@ namespace Railbound.Vehicles
         private bool kinematicWas, gravityWas;
         private Vector3 hipsOffset = new Vector3(0f, 0.55f, 0f);   // pelvis relative to the root in the sitting pose (measured)
         private bool hipsMeasured;
+        private float nextIgnoreRefresh;
 
         private void Awake()
         {
@@ -124,6 +125,14 @@ namespace Railbound.Vehicles
             int now = Vehicle.SeatOf(gameObject);
             if (now < 0) { Leave(true); return; }
             Seat = now;
+
+            // Unity forgets an ignored pair when either collider is switched off and on (JU toggles hitboxes and ragdoll parts)
+            if (Time.time >= nextIgnoreRefresh)
+            {
+                nextIgnoreRefresh = Time.time + 0.5f;
+                colliders = GetComponentsInChildren<Collider>(true);
+                Vehicle.IgnoreOccupant(colliders, true);
+            }
 
             if (cc != null)
             {

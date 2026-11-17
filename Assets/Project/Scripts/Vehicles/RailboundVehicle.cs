@@ -826,8 +826,21 @@ namespace Railbound.Vehicles
             }
         }
 
-        /// <summary>Occupants never collide with the vehicle they sit in (or the car would be pushed by its own passengers).</summary>
-        public void IgnoreOccupant(Collider[] occupantColliders, bool ignore) { SetIgnore(occupantColliders, ignore); }
+        /// <summary>
+        /// Occupants never collide with the vehicle they sit in, or the car drags its own driver (a kinematic body pinned inside it).
+        /// The vehicle's colliders are read again each time: NWH adds some at runtime (the wheel colliders).
+        /// </summary>
+        public void IgnoreOccupant(Collider[] occupantColliders, bool ignore)
+        {
+            var now = GetComponentsInChildren<Collider>(true);
+            if (now.Length != bodyColliders.Length)
+            {
+                var list = new List<Collider>();
+                foreach (var c in now) if (!c.isTrigger) list.Add(c);
+                bodyColliders = list.ToArray();
+            }
+            SetIgnore(occupantColliders, ignore);
+        }
 
         // ---------------------------------------------------------------- getting out
         /// <summary>A free standing spot next to <paramref name="seat"/>: its side first, then the other side, the back, the front, the roof.</summary>
