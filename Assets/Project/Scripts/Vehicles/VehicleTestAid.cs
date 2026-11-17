@@ -119,6 +119,14 @@ namespace Railbound.Vehicles
             Debug.Log($"[VehicleTest] seated={v.SeatOf(Me)} simulating={v.IsSimulating} after {Time.realtimeSinceStartup - t0:F2}s");
             yield return new WaitForSecondsRealtime(2f);
             Shot("1_seated");
+            // seats: move to the passenger seat and back
+            v.RequestMove(Me, 1);
+            yield return new WaitForSecondsRealtime(1.5f);
+            Debug.Log($"[VehicleTest] after move to seat 1: seat={v.SeatOf(Me)} simulating={v.IsSimulating} owner={(v.IsSpawned ? v.OwnerClientId : 0)}");
+            Shot("6_passenger_seat");
+            v.RequestMove(Me, v.DriverSeat);
+            yield return new WaitForSecondsRealtime(1.5f);
+            Debug.Log($"[VehicleTest] back at the wheel: seat={v.SeatOf(Me)} simulating={v.IsSimulating}");
 
             Vector3 start = v.transform.position;
             Throttle = 1f; Steer = 0f;
@@ -135,14 +143,6 @@ namespace Railbound.Vehicles
             yield return new WaitForSecondsRealtime(1f);
             Debug.Log($"[VehicleTest] drove {Vector3.Distance(start, v.transform.position):F1} m; {v.DebugLine()}");
 
-            // seats: move to the passenger seat and back
-            v.RequestMove(Me, 1);
-            yield return new WaitForSecondsRealtime(1.5f);
-            Debug.Log($"[VehicleTest] after move to seat 1: seat={v.SeatOf(Me)} simulating={v.IsSimulating} owner={(v.IsSpawned ? v.OwnerClientId : 0)}");
-            Shot("6_passenger_seat");
-            v.RequestMove(Me, v.DriverSeat);
-            yield return new WaitForSecondsRealtime(1.5f);
-            Debug.Log($"[VehicleTest] back at the wheel: seat={v.SeatOf(Me)} simulating={v.IsSimulating}");
 
             // a second leg for the other client to ride along
             Handbrake = 0f; Throttle = 0f;
@@ -188,7 +188,7 @@ namespace Railbound.Vehicles
             Shot("r0_watch_driver");
             WalkTo(v, 1);
             yield return new WaitForSecondsRealtime(1f);
-            v.RequestEnter(Me);
+            v.RequestEnter(Me, 1);
             t0 = Time.realtimeSinceStartup;
             while (v.SeatOf(Me) < 0 && Time.realtimeSinceStartup - t0 < 8f) yield return null;
             Debug.Log($"[VehicleTest] ride: seat={v.SeatOf(Me)} after {Time.realtimeSinceStartup - t0:F2}s; {v.DebugLine()}");
