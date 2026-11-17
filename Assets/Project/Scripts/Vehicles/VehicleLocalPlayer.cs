@@ -328,7 +328,7 @@ namespace Railbound.Vehicles
             var root = cgo.GetComponent<CanvasGroup>(); root.blocksRaycasts = false; root.interactable = false;
 
             // prompt: [F]  DRIVE  NIVA, bottom centre above the hotbar
-            var prompt = Rect("Prompt", cgo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 250f), new Vector2(420f, 44f));
+            var prompt = Rect("Prompt", cgo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 230f), new Vector2(420f, 44f));
             promptGroup = prompt.gameObject.AddComponent<CanvasGroup>(); promptGroup.alpha = 0f;
             var row = prompt.gameObject.AddComponent<HorizontalLayoutGroup>();
             row.childAlignment = TextAnchor.MiddleCenter; row.spacing = 14f; row.childControlWidth = true; row.childControlHeight = true; row.childForceExpandWidth = false;
@@ -340,8 +340,8 @@ namespace Railbound.Vehicles
             promptName = Text("Name", prompt, "", 26f, fontSemi, Dim, 6f, TextAlignmentOptions.MidlineLeft);
             foreach (var t in new[] { promptVerb, promptName }) { var le = t.gameObject.AddComponent<LayoutElement>(); le.preferredHeight = 34f; }
 
-            // driving panel, bottom right
-            var panel = Rect("Drive", cgo.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-48f, 48f), new Vector2(380f, 150f), new Vector2(1f, 0f));
+            // driving panel, bottom centre (the weapon and ability HUD has the bottom right)
+            var panel = Rect("Drive", cgo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 46f), new Vector2(380f, 150f), new Vector2(0.5f, 0f));
             driveGroup = panel.gameObject.AddComponent<CanvasGroup>(); driveGroup.alpha = 0f;
             var bg = panel.gameObject.AddComponent<Image>(); bg.sprite = px; bg.color = Panel;
             var accent = Rect("Accent", panel, new Vector2(0f, 0f), new Vector2(0f, 1f), Vector2.zero, new Vector2(4f, 0f), new Vector2(0f, 0.5f));
@@ -375,10 +375,10 @@ namespace Railbound.Vehicles
             keysText = Text("Keys", panel, "", 14f, fontSemi, Dim, 2f, TextAlignmentOptions.MidlineLeft);
             Place(keysText.rectTransform, new Vector2(0f, 0f), new Vector2(22f, 10f), new Vector2(560f, 18f), new Vector2(0f, 0.5f));
             keysText.enableWordWrapping = false;
-            keysText.rectTransform.anchorMin = keysText.rectTransform.anchorMax = new Vector2(1f, 0f);
-            keysText.rectTransform.pivot = new Vector2(1f, 0.5f);
-            keysText.rectTransform.anchoredPosition = new Vector2(-22f, -18f);
-            keysText.alignment = TextAlignmentOptions.MidlineRight;
+            keysText.rectTransform.anchorMin = keysText.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            keysText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            keysText.rectTransform.anchoredPosition = new Vector2(0f, -20f);
+            keysText.alignment = TextAlignmentOptions.Center;
 
             // toast, centre
             var toast = Rect("Toast", cgo.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 310f), new Vector2(600f, 40f));
