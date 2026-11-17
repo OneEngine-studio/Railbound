@@ -236,7 +236,7 @@ namespace Railbound.Vehicles
             {
                 if (c.isTrigger) continue;
                 list.Add(c);
-                if (c.attachedRigidbody != null && c.attachedRigidbody != body) continue;   // loose interior props
+                if (c.GetComponentInParent<Rigidbody>() != body) continue;   // loose interior props (attachedRigidbody is null in the editor)
                 // from the collider's own geometry: Collider.bounds is stale until the physics scene syncs (and in the editor)
                 if (!ColliderLocalBox(c, out Bounds b)) continue;
                 for (int i = 0; i < 8; i++)
