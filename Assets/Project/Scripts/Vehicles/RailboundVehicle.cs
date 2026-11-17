@@ -178,6 +178,7 @@ namespace Railbound.Vehicles
                 vc.input.autoSetInput = false;
                 vc.onVehicleInitialized.AddListener(OnVehicleInitialized);
             }
+            if (vc != null) UseMatchGround(vc);
             if (steeringWheel == null && vc != null) steeringWheel = vc.steering.steeringWheel;
             CacheGripAxes();   // before NWH turns the wheel
             CacheColliders();
@@ -208,6 +209,36 @@ namespace Railbound.Vehicles
             CacheColliders();
         }
 #endif
+
+        private static NWH.VehiclePhysics2.GroundDetection.GroundDetectionPreset matchGround;
+
+        /// <summary>
+        /// NWH picks a tyre grip per terrain texture INDEX, mapped for its own demo terrain (0 = sand, 5 = ice): on our maps that
+        /// put every car on sand (44% grip, 4x rolling resistance), so it crawled and spun its wheels. Match vehicles use one
+        /// surface everywhere: the generic tyre grip with the grass dust and skid marks.
+        /// </summary>
+        private static void UseMatchGround(VehicleController controller)
+        {
+            var gd = controller.groundDetection;
+            if (gd == null || gd.groundDetectionPreset == null) return;
+            if (matchGround == null)
+            {
+                var original = gd.groundDetectionPreset;
+                matchGround = Instantiate(original);
+                matchGround.name = "Railbound Match Ground";
+                NWH.VehiclePhysics2.GroundDetection.SurfacePreset look = original.fallbackSurfacePreset;
+                foreach (var map in original.surfaceMaps)
+                    if (map != null && map.surfacePreset != null && map.name == "Grass") look = map.surfacePreset;
+                var surface = Instantiate(look != null ? look : original.fallbackSurfacePreset);
+                surface.name = "Railbound Ground";
+                if (original.fallbackSurfacePreset != null && original.fallbackSurfacePreset.frictionPreset != null)
+                    surface.frictionPreset = original.fallbackSurfacePreset.frictionPreset;
+                surface.rollingResistanceMaxMultiplier = 1.15f;
+                matchGround.surfaceMaps = new List<NWH.VehiclePhysics2.GroundDetection.SurfaceMap>();
+                matchGround.fallbackSurfacePreset = surface;
+            }
+            gd.groundDetectionPreset = matchGround;
+        }
 
         /// <summary>The NWH prefab is built for single player: its own cameras, audio listener, mirror cameras and reflection probe
         /// would take over the player's view (and cost a camera render each). The match camera is the player's.</summary>
