@@ -785,6 +785,26 @@ namespace Railbound.Vehicles
             Debug.Log($"[Vehicle] {name} ran over {victim.name} at {speed * 3.6f:F0} km/h: {damage:F0} damage.");
         }
 
+        // test aid: what the body is touching (anything but the ground resists the car)
+        private readonly Dictionary<string, int> contacts = new Dictionary<string, int>();
+        private void OnCollisionStay(Collision c)
+        {
+            if (!IsSimulating || c.collider == null || c.collider is TerrainCollider) return;
+            string key = c.collider.name + (c.collider.GetComponentInParent<JUCharacterController>() != null ? "(character " + c.collider.GetComponentInParent<JUCharacterController>().name + ")" : "")
+                       + " via " + (c.GetContact(0).thisCollider != null ? c.GetContact(0).thisCollider.name : "?");
+            contacts.TryGetValue(key, out int n);
+            contacts[key] = n + 1;
+        }
+
+        public string TakeContacts()
+        {
+            if (contacts.Count == 0) return "none";
+            var sb = new System.Text.StringBuilder();
+            foreach (var kv in contacts) sb.Append(kv.Key).Append(" x").Append(kv.Value).Append("; ");
+            contacts.Clear();
+            return sb.ToString();
+        }
+
         private void SetIgnore(Collider[] others, bool ignore)
         {
             if (others == null) return;
@@ -867,6 +887,7 @@ namespace Railbound.Vehicles
         {
             if (vc == null || !initialized) return "";
             var sb = new System.Text.StringBuilder();
+            sb.Append($"contacts=[{TakeContacts()}] ");
             sb.Append($"gear={vc.powertrain.transmission.Gear} rpm={vc.powertrain.engine.OutputRPM:F0} steerAngle={vc.steering.angle:F1} hb={vc.input.states.handbrake:F1} br={vc.input.states.brakes:F1} com={body.centerOfMass:F2} mass={body.mass:F0}");
             foreach (var w in vc.powertrain.wheels)
             {
