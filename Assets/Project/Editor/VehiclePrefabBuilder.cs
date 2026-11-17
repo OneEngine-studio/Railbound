@@ -148,8 +148,50 @@ namespace Railbound.Editor
                 ConvertByHand(m, sn, lit, unlit);
                 byHand++;
             }
+            ConvertEffects();
             AssetDatabase.SaveAssets();
             Debug.Log($"[VehiclePrefabBuilder] Materials: {byUpgrader} upgraded by HDRP, {byHand} mapped by hand, {mats.Count} checked (upgrader {(upgrade != null ? "found" : "MISSING")}).");
+        }
+
+        private const string Fx = "Assets/NWH/Vehicle Physics 2/Effects/";
+
+        /// <summary>
+        /// Skid marks, exhaust smoke, dust and dirt: the project's vertex-colour particle shader (HDRP/Particles/Unlit, which the
+        /// weapon smoke uses), NWH's own textures and a tint. Vertex colour carries the particles' fade and the skid marks' strength;
+        /// without it they were flat white quads and stripes.
+        /// </summary>
+        private static void ConvertEffects()
+        {
+            var particle = Shader.Find("HDRP/Particles/Unlit");
+            if (particle == null) { Debug.LogError("[VehiclePrefabBuilder] HDRP/Particles/Unlit is missing"); return; }
+            Effect(particle, Fx + "Materials/SkidmarkGrass.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.16f, 0.13f, 0.08f, 0.75f));
+            Effect(particle, Fx + "Materials/SkidmarkGravel.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.22f, 0.19f, 0.15f, 0.7f));
+            Effect(particle, Fx + "Materials/SkidmarkSand.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.35f, 0.29f, 0.2f, 0.6f));
+            Effect(particle, Fx + "Materials/SkidmarkAsphalt.mat", Fx + "Textures/SkidmarkHard_Albedo.png", new Color(0.05f, 0.05f, 0.05f, 0.8f));
+            Effect(particle, "Assets/NWH/Vehicle Physics 2/Resources/NWH Vehicle Physics 2/Defaults/Materials/DefaultSkidmarkMaterial.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.12f, 0.11f, 0.09f, 0.75f));
+            Effect(particle, Fx + "Materials/ExhaustSmoke.mat", Fx + "Textures/SmokeTextureSheet.png", new Color(0.72f, 0.72f, 0.72f, 0.28f));
+            Effect(particle, Fx + "Materials/DustCloud.mat", Fx + "Textures/SmokeTextureSheet.png", new Color(0.58f, 0.5f, 0.38f, 0.42f));
+            Effect(particle, Fx + "Materials/DirtChunks.mat", Fx + "Textures/PebbleTextureSheet.png", new Color(0.35f, 0.3f, 0.24f, 1f));
+            Effect(particle, Fx + "Materials/ExhaustFlash.mat", Fx + "Textures/ExhaustFlash6.png", new Color(1f, 0.6f, 0.25f, 0.9f));
+        }
+
+        private static void Effect(Shader shader, string matPath, string texPath, Color tint)
+        {
+            var m = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            var tex = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
+            if (m == null || tex == null) { Debug.LogWarning($"[VehiclePrefabBuilder] effect material skipped: {matPath} / {texPath}"); return; }
+            m.shader = shader;
+            m.SetTexture("_UnlitColorMap", tex);
+            m.SetColor("_UnlitColor", tint);
+            m.SetFloat("_UseVertexColor", 1f);
+            m.SetFloat("_SurfaceType", 1f);
+            m.SetFloat("_BlendMode", 0f);
+            m.SetFloat("_AlphaCutoffEnable", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            try { UnityEditor.Rendering.HighDefinition.HDShaderUtils.ResetMaterialKeywords(m); } catch (System.Exception) { /* custom shader without HDRP keywords */ }
+            EditorUtility.SetDirty(m);
+            Debug.Log($"[VehiclePrefabBuilder] effect {matPath}: {shader.name} + {tex.name}");
         }
 
         private static void ConvertByHand(Material m, string shaderName, Shader lit, Shader unlit)
