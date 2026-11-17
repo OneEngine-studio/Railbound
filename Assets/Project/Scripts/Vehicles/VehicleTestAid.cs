@@ -54,6 +54,7 @@ namespace Railbound.Vehicles
                 {
                     if (v == null) continue;
                     Debug.Log("[VehicleNet] t=" + Time.realtimeSinceStartup.ToString("F1") + " " + v.DebugLine());
+                    if (v.IsSimulating && v.HasDriver) Debug.Log("[VehicleNet]   drive " + v.DebugDrive());
                     var s = v.Seats;
                     for (int i = 0; i < v.SeatCount; i++)
                     {

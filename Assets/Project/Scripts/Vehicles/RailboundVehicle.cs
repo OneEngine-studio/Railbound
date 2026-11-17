@@ -800,6 +800,21 @@ namespace Railbound.Vehicles
         }
 
         // ---------------------------------------------------------------- test aid
+        /// <summary>Drivetrain and wheel state (gear, revs, steering, per wheel: grounded / drive / brake / slip / what the ray hits).</summary>
+        public string DebugDrive()
+        {
+            if (vc == null || !initialized) return "";
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"gear={vc.powertrain.transmission.Gear} rpm={vc.powertrain.engine.OutputRPM:F0} steerAngle={vc.steering.angle:F1} hb={vc.input.states.handbrake:F1} br={vc.input.states.brakes:F1} com={body.centerOfMass:F2} mass={body.mass:F0}");
+            foreach (var w in vc.powertrain.wheels)
+            {
+                var u = w.wheelUAPI;
+                if (u == null) continue;
+                sb.Append($" | {u.name}: g={(u.IsGrounded ? 1 : 0)} mt={u.MotorTorque:F0} bt={u.BrakeTorque:F0} sa={u.SteerAngle:F1} ls={u.LongitudinalSlip:F2} lat={u.LateralSlip:F2} hit={(u.HitCollider != null ? u.HitCollider.name : "-")}");
+            }
+            return sb.ToString();
+        }
+
         public string DebugLine()
         {
             var s = Seats;
