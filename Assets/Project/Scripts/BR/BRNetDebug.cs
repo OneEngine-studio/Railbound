@@ -129,9 +129,37 @@ namespace Railbound.BR
             }
         }
 
+        // -netff: shoots the nearest squadmate twice (tests that friendly fire is blocked): once normally (the client's own filter must drop
+        // it), once with the client's filter switched off like a modified client would do (the server must drop it)
+        private float nextFf = -1f; private int ffStep;
+        private void FriendlyFireTest()
+        {
+            if (!HasArg("-netff") || ffStep >= 2 || Time.realtimeSinceStartup < 45f || Time.unscaledTime < nextFf) return;
+            var nm = NetworkManager.Singleton;
+            var me = Railbound.BR.BRTeams.LocalPlayer;
+            if (nm == null || !nm.IsClient || me == null || me.TeamId < 0) return;
+            nextFf = Time.unscaledTime + 6f;
+            JUNetworkPlayer mate = null;
+            foreach (var np in FindObjectsByType<JUNetworkPlayer>(FindObjectsSortMode.None)) if (np != me && np.TeamId == me.TeamId) { mate = np; break; }
+            if (mate == null) { Debug.Log("[BRNetDebug] netff: no squadmate found (my squad " + me.TeamId + ")"); return; }
+            var h = mate.GetComponent<JUHealth>();
+            if (h == null) return;
+            float before = h.Health;
+            var savedFilter = JUHealth.DamageFilter;
+            if (ffStep == 1) JUHealth.DamageFilter = null;   // the "modified client": only the server can stop it now
+            JUHealth.PendingAttacker = me.gameObject;
+            h.DoDamage(30f);
+            JUHealth.PendingAttacker = null;
+            JUHealth.DamageFilter = savedFilter;
+            Debug.Log("[BRNetDebug] netff " + (ffStep == 0 ? "with the client filter" : "WITHOUT the client filter (server must block)") + ": squadmate " + mate.OwnerClientId + " health " + before + " -> " + h.Health
+                + "  (distance " + Vector3.Distance(me.transform.position, mate.transform.position).ToString("0.0") + " m, squad " + me.TeamId + ")");
+            ffStep++;
+        }
+
         private void TestAids()
         {
             HudShots();
+            FriendlyFireTest();
             string dir = ArgValue("-netshot");
             if (!string.IsNullOrEmpty(dir) && Time.unscaledTime >= nextShot && Time.realtimeSinceStartup > 12f)
             {

@@ -18,6 +18,8 @@ namespace Railbound.BR
         /// <summary>1 = winner. Otherwise the place this combatant finished in (e.g. 12 = eliminated when 12 were alive).</summary>
         public int Placement;
         public bool Eliminated;
+        /// <summary>The squad (a party that queued together); -1 = a team of one (bots, solo players).</summary>
+        public int TeamId = -1;
         public float EliminatedAtTime;
 
         public JUHealth Health { get; internal set; }

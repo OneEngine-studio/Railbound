@@ -35,6 +35,9 @@ namespace JUTPS
 		[System.NonSerialized] public float LastAttackTime = -999f;
 		/// <summary>Set next to PendingAttacker: the weapon id (Railbound WeaponIds) that deals this damage, "" when unknown.</summary>
 		public static string PendingAttackWeapon = "";
+
+		/// <summary>Railbound: false drops the damage (victim, attacker), e.g. a squadmate's shot. Null = every hit counts.</summary>
+		public static System.Func<JUHealth, GameObject, bool> DamageFilter;
 		/// <summary>The weapon of the last attack (credited for weapon mastery when it kills).</summary>
 		[System.NonSerialized] public string LastAttackWeapon = "";
 		/// <summary>Whether the last hit THIS machine applied struck the head, and when (Time.time). The kill popup shows "HEADSHOT KILL" from it.</summary>
@@ -60,6 +63,7 @@ namespace JUTPS
 		}
 		public void DoDamage(float damage, Vector3 hitPosition = default(Vector3))
 		{
+			if (DamageFilter != null && PendingAttacker != null && PendingAttacker != gameObject && !DamageFilter(this, PendingAttacker)) return;
 			if (PendingAttacker != null && PendingAttacker != gameObject)
 			{
 				LastAttacker = PendingAttacker;

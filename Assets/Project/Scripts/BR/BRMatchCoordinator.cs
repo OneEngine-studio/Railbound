@@ -164,7 +164,8 @@ namespace Railbound.BR
         /// </summary>
         private void WatchServerConnection()
         {
-            if (lostServer) return;
+            // the player left (pause menu EXIT, LEAVE MATCH, the end of the match): the connection ends because we closed it
+            if (lostServer || leaving) return;
             var nm = NetworkManager.Singleton;
             bool asClient = nm != null && nm.IsListening && nm.IsClient && !nm.IsServer;
             if (asClient && nm.IsConnectedClient)
@@ -226,7 +227,7 @@ namespace Railbound.BR
             if (State == BRMatchState.ActiveBattle || State == BRMatchState.FinalShowdown)
             {
                 MatchSeconds += Time.deltaTime;
-                if (rosterBuilt && localAlive <= 1 && !endHandled) EndMatch();
+                if (rosterBuilt && AliveSides() <= 1 && !endHandled) EndMatch();
             }
         }
 
@@ -280,7 +281,7 @@ namespace Railbound.BR
                 case BRMatchState.FinalShowdown:
                     MatchSeconds += Time.deltaTime;
                     if (State == BRMatchState.ActiveBattle && localAlive <= FinalShowdownAlive && localAlive > 1) SetState(BRMatchState.FinalShowdown);
-                    if (localAlive <= 1 && !endHandled) EndMatch();
+                    if (AliveSides() <= 1 && !endHandled) EndMatch();
                     break;
             }
         }
@@ -334,14 +335,22 @@ namespace Railbound.BR
 
             string name = winner != null ? winner.DisplayName : "NOBODY";
             if (winner != null) { winner.Placement = 1; winner.Eliminated = false; }
+            int winnerTeam = winner != null ? winner.TeamId : -1;
+            if (winnerTeam >= 0)
+            {
+                // the whole squad wins, also the members who fell on the way
+                int size = 0;
+                foreach (var p in participants) if (p != null && p.TeamId == winnerTeam) { p.Placement = 1; size++; }
+                if (size > 1) name = winner.DisplayName + "'S SQUAD";
+            }
             localWinner = name;
             if (NetworkActive && IsSpawned && IsServer) netWinner.Value = new FixedString64Bytes(name);
             SetState(BRMatchState.MatchEnded);
 
             if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteMatchEnd(participants, TotalCount, MatchSeconds);
             ulong winnerClient = winner != null ? winner.ClientId : ulong.MaxValue;
-            if (NetworkActive && IsSpawned && IsServer) MatchEndedClientRpc(name, winnerClient);
-            else RaiseMatchEnded(name, winnerClient);
+            if (NetworkActive && IsSpawned && IsServer) MatchEndedClientRpc(name, winnerClient, winnerTeam);
+            else RaiseMatchEnded(name, winnerClient, winnerTeam);
         }
 
         // ================================================================= participants
@@ -368,6 +377,7 @@ namespace Railbound.BR
                     p.IsBot = isBot;
                     var no = c.GetComponent<NetworkObject>();
                     if (!p.IsBot && no != null && no.IsSpawned) p.ClientId = no.OwnerClientId;
+                    if (!p.IsBot) p.TeamId = BRTeams.TeamOf(c.gameObject);
                     p.DisplayName = p.IsBot ? BRIdentityPool.Take(usedNames, rng) : HumanName(c, p.ClientId);
                     participants.Add(p);
                     if (State < BRMatchState.ActiveBattle && p.IsBot) HoldBot(c);
@@ -376,6 +386,7 @@ namespace Railbound.BR
                 {
                     p.ClientId = no.OwnerClientId;
                 }
+                if (p != null && !p.IsBot && p.TeamId < 0) p.TeamId = BRTeams.TeamOf(c.gameObject);   // the team arrives with the player's network state
             }
 
             // destroyed bots stay listed on purpose: their elimination was already counted
@@ -397,6 +408,27 @@ namespace Railbound.BR
             int n = 0;
             foreach (var p in participants) if (p != null && !p.IsBot && p.IsAlive) n++;
             return n;
+        }
+
+        /// <summary>How many sides are still in the match: a squad with anybody alive counts once, every other player or bot once.</summary>
+        public int AliveSides()
+        {
+            int sides = 0;
+            var teams = new HashSet<int>();
+            foreach (var p in participants)
+            {
+                if (p == null || !p.IsAlive) continue;
+                if (p.TeamId >= 0) { if (teams.Add(p.TeamId)) sides++; }
+                else sides++;
+            }
+            return sides;
+        }
+
+        private bool TeamStillAlive(BRParticipant who)
+        {
+            if (who == null || who.TeamId < 0) return false;
+            foreach (var p in participants) if (p != null && p != who && p.TeamId == who.TeamId && p.IsAlive) return true;
+            return false;
         }
 
         private void RecountAlive()
@@ -549,14 +581,16 @@ namespace Railbound.BR
         {
             if (victim.Eliminated) return;
 
-            int aliveBefore = 0;
-            foreach (var p in participants) if (p != null && p.IsAlive) aliveBefore++;
-            // a participant already flagged dead by Health is no longer "alive" in IsAlive: make sure the victim itself is counted
-            if (!victim.IsAlive) aliveBefore++;
+            // the place is counted in SIDES (a squad counts once): a squad member who falls while the squad fights on gets the squad's
+            // place when the squad is out (or 1 when it wins)
+            bool victimWasAlive = victim.IsAlive;
+            int sidesBefore = AliveSides();
+            if (!victimWasAlive && !TeamStillAlive(victim)) sidesBefore++;   // already flagged dead by Health: count its side again
+            bool squadFightsOn = TeamStillAlive(victim);
 
             victim.Eliminated = true;
             victim.EliminatedAtTime = Time.time;
-            victim.Placement = Mathf.Max(2, aliveBefore);
+            victim.Placement = Mathf.Max(2, sidesBefore);
 
             // kill credit: whoever damaged the victim last, if recently
             BRParticipant killer = null;
@@ -590,8 +624,19 @@ namespace Railbound.BR
             };
 
             // the server is the authority on who finished where: Nakama pays the rewards from what the server reports
-            if (NetworkActive && IsSpawned && IsServer) Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0,
-                killer != null && h != null ? h.LastAttackWeapon : "");
+            if (NetworkActive && IsSpawned && IsServer)
+            {
+                Railbound.Networking.ServerMatchSession.NoteElimination(victim.ClientId, victim.Placement, TotalCount, MatchSeconds, killer != null ? killer.ClientId : ulong.MaxValue, killer != null ? killer.Kills : 0,
+                    killer != null && h != null ? h.LastAttackWeapon : "", !squadFightsOn);
+                // the squad is out: its members who fell earlier finish in the squad's place
+                if (!squadFightsOn && victim.TeamId >= 0)
+                    foreach (var mate in participants)
+                        if (mate != null && mate != victim && mate.TeamId == victim.TeamId)
+                        {
+                            mate.Placement = victim.Placement;
+                            Railbound.Networking.ServerMatchSession.NoteSquadPlacement(mate.ClientId, victim.Placement, TotalCount);
+                        }
+            }
             if (NetworkActive && IsSpawned && IsServer) KillClientRpc(info.Killer, info.Victim, info.VictimClientId, info.KillerClientId, info.Placement, info.AliveAfter);
             else if (!networkedClient) RaiseKill(info);
         }
@@ -611,12 +656,12 @@ namespace Railbound.BR
         }
 
         [ClientRpc]
-        private void MatchEndedClientRpc(string winner, ulong winnerClient)
+        private void MatchEndedClientRpc(string winner, ulong winnerClient, int winnerTeam)
         {
             // The server decides when the match is over. (Bots are not replicated: this client simulates its own copy, so its
             // own alive count can still be above one when the server's match has ended. Ignoring the result here meant the HUD
             // never showed the results or the return countdown, and the server then shut down under the player.)
-            RaiseMatchEnded(winner, winnerClient);
+            RaiseMatchEnded(winner, winnerClient, winnerTeam);
         }
 
         private void RaiseKill(BRKillInfo info)
@@ -631,12 +676,14 @@ namespace Railbound.BR
             if (info.VictimIsLocal) LocalEliminated?.Invoke(info);
         }
 
-        private void RaiseMatchEnded(string winner, ulong winnerClient)
+        private void RaiseMatchEnded(string winner, ulong winnerClient, int winnerTeam)
         {
             ulong me = NetworkActive ? NetworkManager.Singleton.LocalClientId : ulong.MaxValue;
             var lp = LocalParticipant;
+            int myTeam = BRTeams.LocalTeam;
             bool local = (NetworkActive && winnerClient != ulong.MaxValue && winnerClient == me)
-                      || (lp != null && lp.DisplayName == winner);
+                      || (lp != null && lp.DisplayName == winner)
+                      || (winnerTeam >= 0 && myTeam == winnerTeam);   // a squad wins together
             MatchEnded?.Invoke(winner, local);
         }
 
@@ -650,8 +697,11 @@ namespace Railbound.BR
 
         // ================================================================= leaving
         /// <summary>Back to the lobby: stop the Netcode session if one is running, restore time and cursor, load the lobby scene.</summary>
+        private bool leaving;
+
         public void LeaveMatch()
         {
+            leaving = true;
             Time.timeScale = 1f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;

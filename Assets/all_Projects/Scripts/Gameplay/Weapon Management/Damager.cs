@@ -271,6 +271,19 @@ namespace JUTPS
 
         public void DoDamage(Collider collider, Vector3 point, Vector3 normal, float damage, SurfaceAudiosWithFX[] hitParticles, AudioSource hitAudioSource)
         {
+            // Railbound: a melee hit names its wielder like a bullet names its shooter (kill credit, weapon mastery, no friendly fire)
+            var previousAttacker = JUHealth.PendingAttacker;
+            if (previousAttacker == null)
+            {
+                var wielder = GetComponentInParent<JUTPS.JUCharacterController>();
+                if (wielder != null) JUHealth.PendingAttacker = wielder.gameObject;
+            }
+            try { DoDamageInternal(collider, point, normal, damage, hitParticles, hitAudioSource); }
+            finally { JUHealth.PendingAttacker = previousAttacker; }
+        }
+
+        private void DoDamageInternal(Collider collider, Vector3 point, Vector3 normal, float damage, SurfaceAudiosWithFX[] hitParticles, AudioSource hitAudioSource)
+        {
             DamageableBodyPart bodyPart = collider.GetComponentInChildren<DamageableBodyPart>();
             float realDamage = damage;
 

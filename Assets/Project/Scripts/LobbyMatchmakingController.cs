@@ -252,6 +252,14 @@ namespace Railbound.Networking
 
             var party = NakamaPartyService.InstanceIfExists;
             string partyId = party != null && party.InParty && party.MemberCount > 1 ? party.PartyId : null;
+            string[] partyMembers = null;
+            if (partyId != null)
+            {
+                var ids = new System.Collections.Generic.List<string>(party.MemberUserIds);
+                if (!ids.Contains(auth.Session.UserId)) ids.Add(auth.Session.UserId);
+                partyMembers = ids.ToArray();
+                Debug.Log($"[LobbyMatchmaker] Queueing as a party of {partyMembers.Length} ({partyId}).");
+            }
             string mode = Railbound.UI.GameModeCatalog.MatchKey;
 
             UpdateStatus("SEARCHING FOR PLAYERS");
@@ -264,7 +272,7 @@ namespace Railbound.Networking
                     case "LOCKED": UpdateStatus("LOBBY FOUND"); break;
                     case "STARTING": UpdateStatus("PREPARING A MATCH SERVER..."); break;
                 }
-            });
+            }, 180f, partyMembers);
 
             switch (result.Outcome)
             {

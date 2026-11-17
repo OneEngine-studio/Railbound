@@ -100,12 +100,13 @@ namespace Railbound.Networking
             public bool final;        // placement is decided
             public bool noReward;     // left before the battle began
             public int placement, kills, total;
+            public int team = -1, slot;   // the squad from Nakama's ticket check (-1 = a team of one)
             public float survived;
             public readonly Dictionary<string, int> weaponKills = new Dictionary<string, int>();   // weapon id -> kills (weapon mastery)
         }
 
         [Serializable] private sealed class ValidateRequest { public string matchId, userId, token; }
-        [Serializable] private sealed class ValidateReply { public bool valid; public string reason; }
+        [Serializable] private sealed class ValidateReply { public bool valid; public string reason; public int team = -1; public int slot; }
         [Serializable] private sealed class WeaponKill { public string weapon; public int kills; }
         [Serializable] private sealed class ReportPlayer { public string userId; public int placement, totalPlayers, kills, survivedSeconds; public List<WeaponKill> weaponKills = new List<WeaponKill>(); }
         [Serializable] private sealed class ReportRequest { public string matchId; public List<ReportPlayer> players = new List<ReportPlayer>(); }
@@ -115,6 +116,23 @@ namespace Railbound.Networking
         private readonly Dictionary<string, Entry> byUser = new Dictionary<string, Entry>();
         private readonly Dictionary<ulong, Entry> byClient = new Dictionary<ulong, Entry>();
         private string lockedMatchId = "";
+        private int approvedTeam = -1, approvedSlot;   // what the last ticket check said (approvals run one after the other)
+
+        /// <summary>The squad of a connected client, as Nakama told it with the ticket (false: no team, a team of one).</summary>
+        public static bool TryGetTeam(ulong clientId, out int team, out int slot)
+        {
+            team = -1; slot = 0;
+            if (instance == null || !instance.byClient.TryGetValue(clientId, out var e) || e.team < 0) return false;
+            team = e.team; slot = e.slot;
+            return true;
+        }
+
+        /// <summary>A squad member who fell earlier gets the squad's place now that the squad is out.</summary>
+        public static void NoteSquadPlacement(ulong clientId, int placement, int totalPlayers)
+        {
+            if (instance == null || !instance.byClient.TryGetValue(clientId, out var e)) return;
+            e.final = true; e.placement = Mathf.Max(2, placement); e.total = Mathf.Max(totalPlayers, e.placement);
+        }
         private bool subscribed;
         private enum ReportState { None, Sending, Done, Failed }
         private ReportState report = ReportState.None;
@@ -243,7 +261,13 @@ namespace Railbound.Networking
                     yield return CallRpc(ValidateRpc, JsonUtility.ToJson(new ValidateRequest { matchId = p.m, userId = p.u, token = p.t }), (ok, body) =>
                     {
                         if (!ok) { valid = null; return; }
-                        try { var r = JsonUtility.FromJson<ValidateReply>(body); valid = r != null && r.valid; } catch (Exception) { valid = null; }
+                        try
+                        {
+                            var r = JsonUtility.FromJson<ValidateReply>(body);
+                            valid = r != null && r.valid;
+                            if (r != null && r.valid) { approvedTeam = r.team; approvedSlot = r.slot; }
+                        }
+                        catch (Exception) { valid = null; }
                     });
                     if (valid == null) reject = "ACCOUNT SERVICE UNREACHABLE, TRY AGAIN";
                     else if (!valid.Value) reject = "JOIN TICKET REJECTED";
@@ -259,6 +283,8 @@ namespace Railbound.Networking
             if (string.IsNullOrEmpty(lockedMatchId)) lockedMatchId = p.m;
             if (!byUser.TryGetValue(p.u, out var entry)) { entry = new Entry { userId = p.u }; byUser[p.u] = entry; }
             entry.clientId = clientId; entry.connected = true;
+            if (approvedTeam >= 0) { entry.team = approvedTeam; entry.slot = approvedSlot; }
+            approvedTeam = -1; approvedSlot = 0;
             byClient[clientId] = entry;
             Debug.Log($"[ServerMatch] Approved client {clientId} as user {p.u} for match {p.m}{(Insecure ? " (INSECURE, not checked by Nakama)" : "")}.");
 
@@ -287,12 +313,14 @@ namespace Railbound.Networking
 
         // ================================================================= results (called by BRMatchCoordinator on the server)
         /// <summary>A combatant was eliminated. The victim's place and survival time are final; the killer's kill count is updated.</summary>
-        public static void NoteElimination(ulong victimClient, int placement, int totalPlayers, float survivedSeconds, ulong killerClient, int killerKills, string killerWeapon = "")
+        public static void NoteElimination(ulong victimClient, int placement, int totalPlayers, float survivedSeconds, ulong killerClient, int killerKills, string killerWeapon = "", bool final = true)
         {
             if (instance == null) return;
             if (instance.byClient.TryGetValue(victimClient, out var v) && !v.final)
             {
-                v.final = true; v.placement = Mathf.Max(2, placement); v.total = Mathf.Max(totalPlayers, v.placement); v.survived = survivedSeconds;
+                // a squad member who falls while the squad fights on: the place is the squad's, decided later
+                v.survived = survivedSeconds;
+                if (final) { v.final = true; v.placement = Mathf.Max(2, placement); v.total = Mathf.Max(totalPlayers, v.placement); }
             }
             if (killerClient != ulong.MaxValue && instance.byClient.TryGetValue(killerClient, out var k))
             {
