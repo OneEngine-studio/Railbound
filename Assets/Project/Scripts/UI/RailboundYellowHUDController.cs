@@ -178,6 +178,9 @@ namespace Railbound.UI
             menuScreens[4] = LobbyMenuScreen.Create<LobbyChallengesScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             menuScreens[5] = LobbyMenuScreen.Create<LobbyStoreScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
             customizer = LobbyCharacterCustomizer.Create(plateFont, gameObject, OnCustomizerClosed);
+            // leaderboards (a full-screen menu without a nav tab) and the social layer: chat, inbox, live notifications
+            leaderboardScreen = LobbyMenuScreen.Create<LobbyLeaderboardScreen>(plateFont, gameObject, SelectNavTab, backToPlay);
+            socialHub = LobbySocialHub.Create(transform, plateFont, OpenLeaderboards, () => SelectNavTab(3), SocialIdle);
             LobbyParty.Instance.SelectionChanged += UpdateOperatorDisplay;
 
             // Hook operator change
@@ -188,6 +191,31 @@ namespace Railbound.UI
         }
 
         private LobbyCharacterCustomizer customizer;
+        private LobbyLeaderboardScreen leaderboardScreen;
+        private LobbySocialHub socialHub;
+        public LobbySocialHub SocialHub => socialHub;
+        public LobbyLeaderboardScreen LeaderboardScreen => leaderboardScreen;
+
+        /// <summary>Opens LEADERBOARDS (from the social strip, the footer chip or L).</summary>
+        public void OpenLeaderboards()
+        {
+            if (leaderboardScreen == null) return;
+            if (settingsScreen != null) settingsScreen.Close();
+            for (int i = 0; i < menuScreens.Length; i++) if (menuScreens[i] != null) menuScreens[i].CloseQuietly();
+            if (socialHub != null && socialHub.InboxOpen) socialHub.SetInbox(false);
+            currentNavIndex = 0; RefreshNavTabsVisual();
+            leaderboardScreen.Open();
+        }
+
+        // the social layer shows while the lobby itself is in front (no menu, customizer, party or mode window)
+        private bool SocialIdle()
+        {
+            if (customizer != null && customizer.BusyThisFrame) return false;
+            if (AnyMenuBusy()) return false;
+            if (partyPanel != null && partyPanel.IsOpen) return false;
+            if (modePanel != null && modePanel.IsOpen) return false;
+            return true;
+        }
         private LobbyPartyPanel partyPanel;
         private LobbyGameModePanel modePanel;
         private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
@@ -220,6 +248,7 @@ namespace Railbound.UI
         private bool AnyMenuBusy()
         {
             foreach (var s in menuScreens) if (s != null && s.BusyThisFrame) return true;
+            if (leaderboardScreen != null && leaderboardScreen.BusyThisFrame) return true;
             if (settingsScreen != null && settingsScreen.BusyThisFrame) return true;
             return levelUpPopup != null && levelUpPopup.IsOpen;
         }
@@ -377,8 +406,27 @@ namespace Railbound.UI
                 return;
             }
 
+            // typing in the chat or the open inbox owns the keyboard (and the frame its Esc / Enter ended it)
+            if (socialHub != null && socialHub.OwnsKeyboard)
+            {
+                TickDeployState();
+                return;
+            }
+
             // Keyboard shortcuts
-            if (Input.GetKeyDown(KeyCode.M))
+            if (Input.GetKeyDown(KeyCode.L))
+            {
+                OpenLeaderboards();
+            }
+            else if (Input.GetKeyDown(KeyCode.N))
+            {
+                if (socialHub != null) socialHub.SetInbox(true);
+            }
+            else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                if (socialHub != null) socialHub.FocusChat();
+            }
+            else if (Input.GetKeyDown(KeyCode.M))
             {
                 OpenModePanel();
             }
@@ -546,6 +594,8 @@ namespace Railbound.UI
             // leaving a full-screen menu for another tab closes it first
             for (int i = 0; i < menuScreens.Length; i++)
                 if (menuScreens[i] != null && i != index) menuScreens[i].CloseQuietly();
+            if (leaderboardScreen != null) leaderboardScreen.CloseQuietly();
+            if (socialHub != null && socialHub.InboxOpen) socialHub.SetInbox(false);
 
             SetCustomizationPanelVisible(false);   // the old skills card is gone: skills show on the operator screens
 

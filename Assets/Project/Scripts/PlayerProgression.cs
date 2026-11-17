@@ -211,6 +211,9 @@ public static class PlayerProgression
     }
 
     /// <summary>Takes the profile out of an RPC reply and makes it the current one. Returns false when the reply has none.</summary>
+    /// <summary>Takes a profile reply of another server RPC (a gift claim, ...) as the current profile.</summary>
+    public static bool ApplyReply(JObject reply) { return reply != null && ApplyServerReply(reply); }
+
     private static bool ApplyServerReply(JObject reply)
     {
         var profile = reply != null ? reply["profile"] as JObject : null;
