@@ -84,6 +84,15 @@ public class AuthenticationService : MonoBehaviour
     /// device id on disk, so the player's real login is not touched. Any other host is refused.
     /// </summary>
     public static bool TestBackend { get; private set; }
+    private static bool bootstrapped;   // created by TestBootstrap: there is no login scene, so no lobby is loaded after the sign-in
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void TestBootstrap()
+    {
+        if (Instance != null || Application.isBatchMode || string.IsNullOrEmpty(ArgValue("-test-nakama"))) return;
+        bootstrapped = true;
+        new GameObject("[Test] AuthenticationService").AddComponent<AuthenticationService>();
+    }
     private static string testDeviceId = "";
 
     private void ReadTestBackend()
@@ -586,7 +595,7 @@ public class AuthenticationService : MonoBehaviour
         IsAuthenticationReady = true;
         var result = AuthResult.Success(currentUserId);
         OnLoginSuccess?.Invoke(result);
-        if (autoLoadLobbyOnSuccess && !string.IsNullOrEmpty(lobbySceneName)) LoadLobby();
+        if (autoLoadLobbyOnSuccess && !bootstrapped && !string.IsNullOrEmpty(lobbySceneName)) LoadLobby();
         return result;
     }
 

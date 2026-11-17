@@ -28,6 +28,15 @@ namespace Railbound.Gameplay
             yield return null;
             yield return new WaitForSeconds(0.4f);
             if (character == null) yield break;
+            // a sign-in still running (a match joined straight away) gets a few seconds, then the profile is fetched if nobody did
+            var auth = AuthenticationService.Instance;
+            for (float t = 0f; auth != null && !auth.IsAuthenticated && t < 15f; t += Time.unscaledDeltaTime) yield return null;
+            if (PlayerProgression.UsesServer && PlayerProgression.Tables == null)
+            {
+                var load = PlayerProgression.LoadAsync();
+                for (float t = 0f; !load.IsCompleted && t < 15f; t += Time.unscaledDeltaTime) yield return null;
+            }
+            if (character == null) yield break;
             var tables = PlayerProgression.Tables;
             var p = PlayerProgression.Current;
             if (tables == null || p == null)

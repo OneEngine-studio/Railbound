@@ -45,6 +45,7 @@ namespace Railbound.Networking
             // Only a server started with -insecure-join accepts them: a real server checks the join ticket with Nakama.
             if (string.IsNullOrEmpty(matchId)) matchId = CommandLineValue("-match");
             if (string.IsNullOrEmpty(user)) user = CommandLineValue("-test-user");
+            if (string.IsNullOrEmpty(joinToken)) joinToken = CommandLineValue("-join-token");
             return Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinPayload { m = matchId ?? "", u = user ?? "", t = joinToken ?? "" }));
         }
 
