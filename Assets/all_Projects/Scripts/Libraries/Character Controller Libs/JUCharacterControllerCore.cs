@@ -1976,8 +1976,15 @@ namespace JUTPS.CharacterBrain
 
 
         #region State Functions
+        /// <summary>
+        /// Set while the character sits in a vehicle that is not a JU <see cref="Vehicle"/> (a Railbound network vehicle). It keeps
+        /// <see cref="IsDriving"/> on, which the cameras, IK, rotation and fall damage already respect.
+        /// </summary>
+        [HideInInspector] public bool SeatedInExternalVehicle;
+
         public void DrivingCheck()
         {
+            if (SeatedInExternalVehicle) { IsDriving = true; return; }
             if (DriveVehicleAbility == null) { IsDriving = false; return; }
 
             IsDriving = DriveVehicleAbility.IsDriving;
