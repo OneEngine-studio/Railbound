@@ -306,7 +306,7 @@ namespace Railbound.UI
             // order on the stage: #2, #1, #3
             int[] order = { 1, 0, 2 };
             float[] xs = { -200f, 0f, 200f };
-            float[] hs = { 250f, 300f, 220f };
+            float[] hs = { 290f, 320f, 262f };
             for (int k = 0; k < 3; k++)
             {
                 int place = order[k];
@@ -320,16 +320,17 @@ namespace Railbound.UI
                 var tr = top.rectTransform; tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f); tr.anchoredPosition = Vector2.zero; tr.sizeDelta = new Vector2(0f, 5f);
                 var glow = Img("Glow", cr, new Color(medal.r, medal.g, medal.b, e != null ? 0.16f : 0.05f)); glow.sprite = gradient;
                 Place(glow.rectTransform, new Vector2(0f, h * 0.5f - 60f), new Vector2(182f, 110f));
-                LabelC(cr, (place + 1).ToString(), place == 0 ? 64 : 52, true, e != null ? medal : new Color(1f, 1f, 1f, 0.15f), new Vector2(0f, h * 0.5f - 52f), new Vector2(180f, 70f)).characterSpacing = 0f;
+                float cardTop = h * 0.5f;
+                LabelC(cr, (place + 1).ToString(), place == 0 ? 60 : 50, true, e != null ? medal : new Color(1f, 1f, 1f, 0.15f), new Vector2(0f, cardTop - 44f), new Vector2(180f, 64f)).characterSpacing = 0f;
                 if (e != null)
                 {
-                    Icon(cr, "UI/Lobby/Avatar_Operator", new Vector2(0f, h * 0.5f - 112f), new Vector2(44f, 44f), Color.white);
-                    var nm = LabelC(cr, e.username, 17, true, Color.white, new Vector2(0f, h * 0.5f - 152f), new Vector2(176f, 26f));
+                    Icon(cr, "UI/Lobby/Avatar_Operator", new Vector2(0f, cardTop - 100f), new Vector2(42f, 42f), Color.white);
+                    var nm = LabelC(cr, e.username, 17, true, Color.white, new Vector2(0f, cardTop - 140f), new Vector2(176f, 24f));
                     nm.characterSpacing = 1f; nm.enableAutoSizing = true; nm.fontSizeMin = 11f; nm.fontSizeMax = 17f;
-                    LabelC(cr, N(e.score), 26, true, medal, new Vector2(0f, h * 0.5f - 186f), new Vector2(176f, 34f)).characterSpacing = 1f;
-                    if (e.isMe) { var you = Img("You", cr, Color.white); Place(you.rectTransform, new Vector2(0f, -h * 0.5f + 46f), new Vector2(46f, 18f)); LabelC(you.rectTransform, "YOU", 11, true, Color.black, Vector2.zero, new Vector2(46f, 16f)); }
+                    LabelC(cr, N(e.score), 26, true, medal, new Vector2(0f, cardTop - 172f), new Vector2(176f, 32f)).characterSpacing = 1f;
+                    if (e.isMe) { var you = Img("You", cr, Color.white); Place(you.rectTransform, new Vector2(0f, cardTop - 202f), new Vector2(46f, 18f)); LabelC(you.rectTransform, "YOU", 11, true, Color.black, Vector2.zero, new Vector2(46f, 16f)); }
                 }
-                else LabelC(cr, "OPEN", 14, true, Faint, new Vector2(0f, h * 0.5f - 130f), new Vector2(176f, 24f)).characterSpacing = 6f;
+                else LabelC(cr, "OPEN", 14, true, Faint, new Vector2(0f, cardTop - 120f), new Vector2(176f, 24f)).characterSpacing = 6f;
                 if (payouts != null && place < payouts.Count)
                 {
                     var pay = Img("Payout", cr, new Color(1f, 1f, 1f, 0.08f)); Place(pay.rectTransform, new Vector2(0f, -h * 0.5f + 18f), new Vector2(176f, 28f));

@@ -69,7 +69,7 @@ namespace Railbound.Social
         // notification codes of the module (Nakama's own are negative: -2 friend request ...)
         public const int NoteMatchResult = 100, NoteLevelUp = 101, NoteWeaponLevelUp = 102, NoteTierReached = 103,
                          NoteLeaderboardReward = 110, NoteGift = 120, NoteAnnouncement = 130, NoteChatMuted = 140, NoteChatMention = 141,
-                         NoteFriendRequest = -2;
+                         NoteFriendRequest = -2, NoteFriendAccepted = -3;
         public static readonly string[] Rooms = { "global", "lfg", "help" };
         public const int ChatMaxLength = 200;
         private const int MaxLinesPerRoom = 120;

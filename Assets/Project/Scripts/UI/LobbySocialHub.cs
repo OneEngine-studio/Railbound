@@ -128,6 +128,7 @@ namespace Railbound.UI
         {
             var strip = NewRect("Strip", root, new Vector2(1f, 1f), new Vector2(360f, 28f), new Vector2(-36f, -84f));
             strip.pivot = new Vector2(1f, 1f);
+            stripGroup = strip.gameObject.AddComponent<CanvasGroup>();
             var inbox = StripButton(strip, "INBOX", "UI/Lobby/Icon_Mail", new Vector2(-70f, -14f), 140f, () => ToggleInbox());
             var lb = StripButton(strip, "LEADERBOARDS", "UI/Lobby/Icon_TabLeaderboard", new Vector2(-236f, -14f), 182f, () => { UISfx.Play(UISfx.Kind.Open); openLeaderboards?.Invoke(); });
             badgeBg = Img("Badge", inbox, Bad);
@@ -158,9 +159,12 @@ namespace Railbound.UI
             return r;
         }
 
+        private CanvasGroup stripGroup;
         private int shownUnread = -1;
         private void TickStrip(float dt)
         {
+            stripGroup.alpha = Mathf.MoveTowards(stripGroup.alpha, inboxOpen ? 0f : 1f, dt * 8f);
+            stripGroup.blocksRaycasts = !inboxOpen;
             int n = svc.UnreadCount;
             if (n != shownUnread)
             {
@@ -341,7 +345,7 @@ namespace Railbound.UI
             chatInput.targetGraphic = img;
             chatInput.onSubmit.AddListener(OnChatSubmit);
             chatInput.onValueChanged.AddListener(_ => UpdateCounter());
-            chatInput.onSelect.AddListener(_ => { chatPlaceholder.text = "SAY SOMETHING  -  @NAME PINGS A PLAYER"; svc.MarkRead(SocialService.Rooms[room]); });
+            chatInput.onSelect.AddListener(_ => { chatPlaceholder.text = "TYPE A MESSAGE   @NAME TO PING"; svc.MarkRead(SocialService.Rooms[room]); });
             chatInput.onDeselect.AddListener(_ => chatPlaceholder.text = "PRESS ENTER TO CHAT");
             chatCounter = Txt("Counter", r, "", 11, Faint, TextAlignmentOptions.Right);
             var cr = chatCounter.rectTransform; cr.anchorMin = cr.anchorMax = new Vector2(1f, 0.5f); cr.pivot = new Vector2(1f, 0.5f); cr.anchoredPosition = new Vector2(-8f, 0f); cr.sizeDelta = new Vector2(52f, 20f);
@@ -767,6 +771,7 @@ namespace Railbound.UI
 
             var subject = Txt("Subject", cr, item.subject, 17, Color.white, TextAlignmentOptions.TopLeft);
             subject.fontStyle = FontStyles.Bold; subject.characterSpacing = 2f; subject.enableWordWrapping = false; subject.overflowMode = TextOverflowModes.Ellipsis;
+            subject.enableAutoSizing = true; subject.fontSizeMin = 13f; subject.fontSizeMax = 17f;
             Top(subject.rectTransform, 90f, -14f, 330f, 26f);
             var when = Txt("When", cr, Ago(item.createTime), 11, Faint, TextAlignmentOptions.TopRight);
             when.fontStyle = FontStyles.Bold; when.characterSpacing = 3f;
@@ -886,6 +891,7 @@ namespace Railbound.UI
         // ================================================================= live toasts
         private sealed class Toast { public RectTransform rect; public CanvasGroup group; public Image timer; public float born, life; public InboxItem item; public bool closing; }
         private readonly List<Toast> toasts = new List<Toast>();
+        private const float ToastTop = -172f;   // under the header strip and the menus' BACK button
 
         private void BuildToasts()
         {
@@ -914,7 +920,7 @@ namespace Railbound.UI
             Color accent = AccentOf(item.code);
             var bg = Img("Toast", toastRoot, new Color(0.04f, 0.045f, 0.055f, 0.97f));
             var r = bg.rectTransform; r.anchorMin = r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(1f, 1f); r.sizeDelta = new Vector2(440f, 86f);
-            r.anchoredPosition = new Vector2(480f, -126f);
+            r.anchoredPosition = new Vector2(480f, ToastTop);
             bg.raycastTarget = true;
             var acc = Img("Accent", r, accent);
             var ar = acc.rectTransform; ar.anchorMin = Vector2.zero; ar.anchorMax = new Vector2(0f, 1f); ar.pivot = new Vector2(0f, 0.5f); ar.sizeDelta = new Vector2(5f, 0f); ar.anchoredPosition = Vector2.zero;
@@ -950,7 +956,7 @@ namespace Railbound.UI
 
         private void TickToasts(float dt)
         {
-            float y = -126f;
+            float y = ToastTop;
             for (int i = 0; i < toasts.Count; i++)
             {
                 var t = toasts[i];
@@ -982,6 +988,7 @@ namespace Railbound.UI
                 case SocialService.NoteAnnouncement: return Cyan;
                 case SocialService.NoteChatMuted: return Bad;
                 case SocialService.NoteChatMention: return Gold;
+                case SocialService.NoteFriendRequest: case SocialService.NoteFriendAccepted: return Cyan;
                 default: return Color.white;
             }
         }
@@ -999,7 +1006,7 @@ namespace Railbound.UI
                 case SocialService.NoteAnnouncement: return "UI/Lobby/Icon_Globe";
                 case SocialService.NoteChatMuted: return "UI/Lobby/Icon_Warning";
                 case SocialService.NoteChatMention: return "UI/Lobby/Icon_ChatShield";
-                case SocialService.NoteFriendRequest: return "UI/Lobby/Icon_FriendAdd";
+                case SocialService.NoteFriendRequest: case SocialService.NoteFriendAccepted: return "UI/Lobby/Icon_FriendAdd";
                 default: return "UI/Lobby/Icon_Mail";
             }
         }
@@ -1018,6 +1025,7 @@ namespace Railbound.UI
                 case SocialService.NoteChatMuted: return "CHAT";
                 case SocialService.NoteChatMention: return "MENTION";
                 case SocialService.NoteFriendRequest: return "FRIEND REQUEST";
+                case SocialService.NoteFriendAccepted: return "FRIENDS";
                 default: return "NOTIFICATION";
             }
         }
@@ -1060,6 +1068,7 @@ namespace Railbound.UI
                 }
                 case SocialService.NoteChatMention: return i.Str("from") + ": " + i.Str("message");
                 case SocialService.NoteFriendRequest: return "Wants to add you as a friend";
+                case SocialService.NoteFriendAccepted: return "You are now friends: you can message each other and compare scores";
                 default: return "";
             }
         }
