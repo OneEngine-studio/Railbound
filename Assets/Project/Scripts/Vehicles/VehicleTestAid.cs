@@ -128,7 +128,9 @@ namespace Railbound.Vehicles
             Steer = -0.4f;
             yield return Hold(2f, "4_turn_back");
             Throttle = 0f; Steer = 0f; Brake = 1f;
-            yield return Hold(2.5f, "5_brake");
+            yield return Hold(0.6f, "5_brake");
+            float tb = Time.realtimeSinceStartup;
+            while (v.SpeedKmh > 2f && Time.realtimeSinceStartup - tb < 5f) yield return null;   // stop (held brake would reverse)
             Brake = 0f; Handbrake = 1f;
             yield return new WaitForSecondsRealtime(1f);
             Debug.Log($"[VehicleTest] drove {Vector3.Distance(start, v.transform.position):F1} m; {v.DebugLine()}");
@@ -148,7 +150,9 @@ namespace Railbound.Vehicles
             Throttle = 0.8f; Steer = 0.2f;
             yield return Hold(5f, "7_with_passenger");
             Throttle = 0f; Brake = 1f; Steer = 0f;
-            yield return new WaitForSecondsRealtime(3f);
+            yield return new WaitForSecondsRealtime(0.6f);
+            tb = Time.realtimeSinceStartup;
+            while (v.SpeedKmh > 2f && Time.realtimeSinceStartup - tb < 5f) yield return null;
             Brake = 0f; Handbrake = 1f;
 
             v.RequestExit(Me);

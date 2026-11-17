@@ -319,9 +319,27 @@ namespace Railbound.Vehicles
             }
         }
 
+        /// <summary>
+        /// NWH's default state settings ship with traction control, ABS and stability control switched OFF. With up to ~2,000 Nm
+        /// per wheel in first gear the tyres just spun and the car span in circles. Match vehicles drive with all three on.
+        /// </summary>
+        private void EnableDrivingAids()
+        {
+            int on = 0;
+            foreach (var w in GetComponents<NWH.VehiclePhysics2.Modules.ModuleWrapper>())
+            {
+                if (!(w is NWH.VehiclePhysics2.Modules.TCS.TCSModuleWrapper) && !(w is NWH.VehiclePhysics2.Modules.ABS.ABSModuleWrapper)
+                    && !(w is NWH.VehiclePhysics2.Modules.ESC.ESCModuleWrapper)) continue;
+                var m = w.GetModule();
+                if (m != null && !m.IsActive && m.VC_Enable(false)) on++;
+            }
+            if (on > 0 && Application.isEditor) Debug.Log($"[Vehicle] {name}: {on} driving aids on (TCS / ABS / ESC).");
+        }
+
         private void OnVehicleInitialized()
         {
             initialized = true;
+            EnableDrivingAids();
             ApplyAuthority();
             if (!HasDriver && IsSimulating && vc.powertrain.engine.IsRunning) vc.powertrain.engine.StopEngine();
         }
