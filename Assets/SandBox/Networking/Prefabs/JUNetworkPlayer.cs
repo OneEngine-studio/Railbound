@@ -32,6 +32,10 @@ public class JUNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<int> teamId = new NetworkVariable<int>(-1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> teamSlot = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public int TeamId => IsSpawned ? teamId.Value : -1;
+    // the player's account name, written by its owner (squadmate markers show it; display only)
+    private readonly NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    public string PlayerName => IsSpawned ? playerName.Value.ToString() : "";
     public int TeamSlot => IsSpawned ? teamSlot.Value : 0;
 
     private readonly NetworkVariable<Railbound.BR.PuppetPose> pose = new NetworkVariable<Railbound.BR.PuppetPose>(
@@ -188,7 +192,13 @@ public class JUNetworkPlayer : NetworkBehaviour
             // 6c. The battle royale loadout and ability upgrades of the player's profile (sidearm, melee, lethal, Sonar, Medkit)
             if (characterController != null) Railbound.Gameplay.LoadoutApplier.ApplyWhenReady(this, characterController);
 
-            // 6d. Squads: markers over the teammates, and the squad's spawn spot when the team arrives after the first frame
+            // 6d. Squads: our name for the squad's markers, markers over the teammates, and the squad's spawn spot when the team arrives late
+            var auth = AuthenticationService.Instance;
+            if (auth != null && auth.IsAuthenticated && auth.Session != null && !string.IsNullOrEmpty(auth.Session.Username))
+            {
+                string n = auth.Session.Username;
+                playerName.Value = new Unity.Collections.FixedString64Bytes(n.Length > 30 ? n.Substring(0, 30) : n);
+            }
             Railbound.BR.TeammateMarkers.Ensure();
             teamId.OnValueChanged += OnOwnTeamChanged;
 

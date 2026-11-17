@@ -964,7 +964,11 @@ namespace Railbound.UI
                 var join = Img("Join", r, Color.white);
                 var jr = join.rectTransform; jr.anchorMin = jr.anchorMax = new Vector2(1f, 0.5f); jr.pivot = new Vector2(1f, 0.5f); jr.anchoredPosition = new Vector2(-12f, 0f); jr.sizeDelta = new Vector2(70f, 30f);
                 var jt = Txt("Label", jr, "JOIN", 13, Color.black, TextAlignmentOptions.Center); jt.fontStyle = FontStyles.Bold; jt.characterSpacing = 3f; Stretch(jt.rectTransform);
-                d.rectTransform.sizeDelta = new Vector2(230f, 20f); s.rectTransform.sizeDelta = new Vector2(230f, 22f);
+                // the inviter's name as the title, what it means under it (the long subject did not fit next to JOIN)
+                s.text = item.Str("fromName").ToUpperInvariant(); d.text = "WANTS YOU IN THEIR SQUAD";
+                s.rectTransform.sizeDelta = new Vector2(220f, 22f); d.rectTransform.sizeDelta = new Vector2(220f, 20f);
+                s.rectTransform.anchoredPosition += new Vector2(-40f, 0f); d.rectTransform.anchoredPosition += new Vector2(-40f, 0f);
+                kind.rectTransform.anchoredPosition += new Vector2(-40f, 0f);
             }
             b.onClick.AddListener(() =>
             {

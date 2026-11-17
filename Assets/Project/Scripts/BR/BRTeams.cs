@@ -185,6 +185,7 @@ namespace Railbound.BR
 
         private static string NameOf(JUNetworkPlayer p)
         {
+            if (!string.IsNullOrEmpty(p.PlayerName)) return p.PlayerName.ToUpperInvariant();
             var part = p.GetComponent<BRParticipant>();
             return part != null && !string.IsNullOrEmpty(part.DisplayName) ? part.DisplayName : "SQUADMATE";
         }
