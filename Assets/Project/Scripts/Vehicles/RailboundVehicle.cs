@@ -178,7 +178,7 @@ namespace Railbound.Vehicles
                 vc.input.autoSetInput = false;
                 vc.onVehicleInitialized.AddListener(OnVehicleInitialized);
             }
-            if (vc != null) UseMatchGround(vc);
+            if (vc != null) { UseMatchGround(vc); TuneHandling(); }
             if (steeringWheel == null && vc != null) steeringWheel = vc.steering.steeringWheel;
             CacheGripAxes();   // before NWH turns the wheel
             CacheColliders();
@@ -209,6 +209,19 @@ namespace Railbound.Vehicles
             CacheColliders();
         }
 #endif
+
+        /// <summary>
+        /// The NWH demo vehicles come with the Arcade module's drift assist at full strength aiming for a 45 degree slide: under
+        /// throttle the car pushed its tail out and spun in circles. Match driving keeps a light steering assist and no drift.
+        /// </summary>
+        private void TuneHandling()
+        {
+            var arcade = GetComponent<NWH.VehiclePhysics2.Modules.ArcadeModule.ArcadeModuleWrapper>();
+            if (arcade == null || arcade.module == null) return;
+            arcade.module.driftAssistStrength = 0f;
+            arcade.module.targetDriftAngle = 0f;
+            arcade.module.artificialSteerStrength = 0.35f;
+        }
 
         private static NWH.VehiclePhysics2.GroundDetection.GroundDetectionPreset matchGround;
 
