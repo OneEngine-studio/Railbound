@@ -1,0 +1,302 @@
+using System.Collections.Generic;
+using System.IO;
+using Railbound.Vehicles;
+using Unity.Netcode;
+using UnityEditor;
+using UnityEngine;
+
+namespace Railbound.Editor
+{
+    /// <summary>
+    /// Builds the match's network vehicles from the NWH Vehicle Physics 2 prefabs: a standalone copy (the NWH cameras, mirror
+    /// cameras, audio listeners and reflection probes removed), with a NetworkObject and
+    /// <see cref="RailboundVehicle"/> (seats, steering wheel, spawn weight), saved to Resources/Vehicles and registered in the
+    /// default network prefab list. Run it again after changing a seat or after an NWH update.
+    /// </summary>
+    public static class VehiclePrefabBuilder
+    {
+        private const string OutDir = "Assets/Project/Resources/Vehicles";
+        private const string NetworkPrefabsAsset = "Assets/DefaultNetworkPrefabs.asset";
+        private const string Nwh = "Assets/NWH/Vehicle Physics 2/Vehicles/";
+
+        private struct Spec
+        {
+            public string Source, Out, Name, Wheel;
+            public float Weight, WheelRadius;
+            public VehicleSeatDef[] Seats;
+        }
+
+        private static VehicleSeatDef Seat(string name, float x, float y, float z, bool driver = false)
+        {
+            return new VehicleSeatDef { Name = name, Hips = new Vector3(x, y, z), Driver = driver };
+        }
+
+        // the pelvis of each seat in vehicle space (from the NWH driver cameras: about 0.6 m below and 0.1 m behind the eyes)
+        private static readonly Spec[] Specs =
+        {
+            new Spec
+            {
+                Source = Nwh + "Niva/Niva.prefab", Out = "RB Niva", Name = "OFFROADER", Wheel = "Body/niva_steeringWheel_low_Circle.003",
+                Weight = 3f, WheelRadius = 0.18f,
+                Seats = new[] { Seat("DRIVER", -0.42f, 0.74f, -0.30f, true), Seat("PASSENGER", 0.42f, 0.74f, -0.30f), Seat("REAR LEFT", -0.40f, 0.76f, -1.02f), Seat("REAR RIGHT", 0.40f, 0.76f, -1.02f) }
+            },
+            new Spec
+            {
+                Source = Nwh + "Sports Car by GR3D/Sports Car.prefab", Out = "RB Sports Car", Name = "SPORTS CAR", Wheel = "Steering Wheel",
+                Weight = 2f, WheelRadius = 0.17f,
+                Seats = new[] { Seat("DRIVER", -0.36f, 0.34f, -0.04f, true), Seat("PASSENGER", 0.36f, 0.34f, -0.04f) }
+            },
+            new Spec
+            {
+                Source = Nwh + "MonsterTruck/MonsterTruck.prefab", Out = "RB Monster Truck", Name = "MONSTER TRUCK", Wheel = "SteeringWheel",
+                Weight = 1.5f, WheelRadius = 0.18f,
+                Seats = new[] { Seat("DRIVER", -0.28f, 1.02f, 0.28f, true), Seat("PASSENGER", 0.30f, 1.02f, 0.28f) }
+            },
+        };
+
+        [MenuItem("Tools/Railbound/Vehicles/Build Network Vehicle Prefabs")]
+        public static void BuildAll()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Project/Resources")) AssetDatabase.CreateFolder("Assets/Project", "Resources");
+            if (!AssetDatabase.IsValidFolder(OutDir)) AssetDatabase.CreateFolder("Assets/Project/Resources", "Vehicles");
+
+            ConvertMaterials();
+
+            var built = new List<GameObject>();
+            foreach (var spec in Specs)
+            {
+                var go = Build(spec);
+                if (go != null) built.Add(go);
+            }
+            Register(built);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[VehiclePrefabBuilder] Built {built.Count}/{Specs.Length} vehicle prefabs.");
+        }
+
+        /// <summary>Batch mode: -executeMethod Railbound.Editor.VehiclePrefabBuilder.BuildAllBatch</summary>
+        public static void BuildAllBatch()
+        {
+            int code = 0;
+            try { BuildAll(); if (LoadBuilt().Count != Specs.Length) code = 2; }
+            catch (System.Exception e) { Debug.LogException(e); code = 1; }
+            EditorApplication.Exit(code);
+        }
+
+        private const string HdrpEffectsPackage = "Assets/NWH/Vehicle Physics 2/_OptionalPackages/HDRP/HDRP_Materials.unitypackage";
+
+        /// <summary>
+        /// The NWH vehicles ship with built-in pipeline materials (Standard), which HDRP does not draw: the cars were invisible
+        /// and the skid marks pink. NWH's own HDRP package replaces the effect materials (skid marks, smoke, dust); the
+        /// vehicles' materials go through HDRP's Standard -> Lit upgrader, anything else is mapped by hand.
+        /// </summary>
+        [MenuItem("Tools/Railbound/Vehicles/Convert Vehicle Materials to HDRP")]
+        public static void ConvertMaterials()
+        {
+            if (File.Exists(HdrpEffectsPackage))
+            {
+                AssetDatabase.ImportPackage(HdrpEffectsPackage, false);
+                AssetDatabase.Refresh();
+            }
+
+            var mats = new HashSet<Material>();
+            foreach (var spec in Specs)
+            {
+                var src = AssetDatabase.LoadAssetAtPath<GameObject>(spec.Source);
+                if (src == null) continue;
+                foreach (var r in src.GetComponentsInChildren<Renderer>(true))
+                    foreach (var m in r.sharedMaterials) if (m != null) mats.Add(m);
+            }
+            foreach (var folder in new[] { "Assets/NWH/Vehicle Physics 2/Effects/Materials", "Assets/NWH/Vehicle Physics 2/Resources" })
+                foreach (var guid in AssetDatabase.FindAssets("t:Material", new[] { folder }))
+                {
+                    var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                    if (m != null) mats.Add(m);
+                }
+
+            // HDRP's own upgrader (internal class, public method)
+            System.Collections.IList upgraders = null;
+            System.Reflection.MethodInfo upgrade = null;
+            object noFlags = null;
+            var upType = System.Type.GetType("UnityEditor.Rendering.HighDefinition.UpgradeStandardShaderMaterials, Unity.RenderPipelines.HighDefinition.Editor");
+            var muType = System.Type.GetType("UnityEditor.Rendering.MaterialUpgrader, Unity.RenderPipelines.Core.Editor");
+            if (upType != null && muType != null)
+            {
+                upgraders = upType.GetMethod("GetHDUpgraders", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.Invoke(null, null) as System.Collections.IList;
+                var flagsType = muType.GetNestedType("UpgradeFlags");
+                foreach (var mi in muType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+                {
+                    var ps = mi.GetParameters();
+                    if (mi.Name == "Upgrade" && ps.Length == 3 && ps[0].ParameterType == typeof(Material) && typeof(System.Collections.IList).IsAssignableFrom(ps[1].ParameterType)) upgrade = mi;
+                }
+                if (flagsType != null) noFlags = System.Enum.ToObject(flagsType, 0);
+            }
+
+            Shader lit = Shader.Find("HDRP/Lit"), unlit = Shader.Find("HDRP/Unlit");
+            int byUpgrader = 0, byHand = 0;
+            foreach (var m in mats)
+            {
+                string sn = m.shader != null ? m.shader.name : "";
+                if (sn.StartsWith("HDRP/") || sn.StartsWith("Shader Graphs/") || sn.StartsWith("TextMeshPro") || sn.StartsWith("UI/")) continue;
+                if (sn.StartsWith("Standard") && upgraders != null && upgrade != null)
+                {
+                    upgrade.Invoke(null, new object[] { m, upgraders, noFlags });
+                    UnityEditor.Rendering.HighDefinition.HDShaderUtils.ResetMaterialKeywords(m);
+                    EditorUtility.SetDirty(m);
+                    byUpgrader++;
+                    continue;
+                }
+                ConvertByHand(m, sn, lit, unlit);
+                byHand++;
+            }
+            ConvertEffects();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[VehiclePrefabBuilder] Materials: {byUpgrader} upgraded by HDRP, {byHand} mapped by hand, {mats.Count} checked (upgrader {(upgrade != null ? "found" : "MISSING")}).");
+        }
+
+        private const string Fx = "Assets/NWH/Vehicle Physics 2/Effects/";
+
+        /// <summary>
+        /// Skid marks, exhaust smoke, dust and dirt: the project's vertex-colour particle shader (HDRP/Particles/Unlit, which the
+        /// weapon smoke uses), NWH's own textures and a tint. Vertex colour carries the particles' fade and the skid marks' strength;
+        /// without it they were flat white quads and stripes.
+        /// </summary>
+        private static void ConvertEffects()
+        {
+            var particle = Shader.Find("HDRP/Particles/Unlit");
+            if (particle == null) { Debug.LogError("[VehiclePrefabBuilder] HDRP/Particles/Unlit is missing"); return; }
+            Effect(particle, Fx + "Materials/SkidmarkGrass.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.16f, 0.13f, 0.08f, 0.75f));
+            Effect(particle, Fx + "Materials/SkidmarkGravel.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.22f, 0.19f, 0.15f, 0.7f));
+            Effect(particle, Fx + "Materials/SkidmarkSand.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.35f, 0.29f, 0.2f, 0.6f));
+            Effect(particle, Fx + "Materials/SkidmarkAsphalt.mat", Fx + "Textures/SkidmarkHard_Albedo.png", new Color(0.05f, 0.05f, 0.05f, 0.8f));
+            Effect(particle, "Assets/NWH/Vehicle Physics 2/Resources/NWH Vehicle Physics 2/Defaults/Materials/DefaultSkidmarkMaterial.mat", Fx + "Textures/SkidmarkSoft_Albedo.png", new Color(0.12f, 0.11f, 0.09f, 0.75f));
+            Effect(particle, Fx + "Materials/ExhaustSmoke.mat", Fx + "Textures/SmokeTextureSheet.png", new Color(0.72f, 0.72f, 0.72f, 0.28f));
+            Effect(particle, Fx + "Materials/DustCloud.mat", Fx + "Textures/SmokeTextureSheet.png", new Color(0.58f, 0.5f, 0.38f, 0.42f));
+            Effect(particle, Fx + "Materials/DirtChunks.mat", Fx + "Textures/PebbleTextureSheet.png", new Color(0.35f, 0.3f, 0.24f, 1f));
+            Effect(particle, Fx + "Materials/ExhaustFlash.mat", Fx + "Textures/ExhaustFlash6.png", new Color(1f, 0.6f, 0.25f, 0.9f));
+        }
+
+        private static void Effect(Shader shader, string matPath, string texPath, Color tint)
+        {
+            var m = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            var tex = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
+            if (m == null || tex == null) { Debug.LogWarning($"[VehiclePrefabBuilder] effect material skipped: {matPath} / {texPath}"); return; }
+            m.shader = shader;
+            m.SetTexture("_UnlitColorMap", tex);
+            m.SetColor("_UnlitColor", tint);
+            m.SetFloat("_UseVertexColor", 1f);
+            m.SetFloat("_SurfaceType", 1f);
+            m.SetFloat("_BlendMode", 0f);
+            m.SetFloat("_AlphaCutoffEnable", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            try { UnityEditor.Rendering.HighDefinition.HDShaderUtils.ResetMaterialKeywords(m); } catch (System.Exception) { /* custom shader without HDRP keywords */ }
+            EditorUtility.SetDirty(m);
+            Debug.Log($"[VehiclePrefabBuilder] effect {matPath}: {shader.name} + {tex.name}");
+        }
+
+        private static void ConvertByHand(Material m, string shaderName, Shader lit, Shader unlit)
+        {
+            string n = (m.name + " " + AssetDatabase.GetAssetPath(m)).ToLowerInvariant();
+            Texture main = m.HasProperty("_MainTex") ? m.GetTexture("_MainTex") : null;
+            Color color = m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
+            Texture normal = m.HasProperty("_BumpMap") ? m.GetTexture("_BumpMap") : null;
+            bool glass = n.Contains("glass") || n.Contains("window") || n.Contains("light") && color.a < 0.99f;
+            bool particle = shaderName.Contains("Particle") || n.Contains("skid") || n.Contains("smoke") || n.Contains("dust");
+
+            m.shader = particle ? unlit : lit;
+            if (main != null && m.HasProperty("_BaseColorMap")) m.SetTexture("_BaseColorMap", main);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            if (!particle && normal != null && m.HasProperty("_NormalMap")) m.SetTexture("_NormalMap", normal);
+            if (glass || particle)
+            {
+                m.SetFloat("_SurfaceType", 1f);
+                m.SetFloat("_BlendMode", 0f);
+                if (glass && m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.95f);
+            }
+            UnityEditor.Rendering.HighDefinition.HDShaderUtils.ResetMaterialKeywords(m);
+            EditorUtility.SetDirty(m);
+            Debug.Log($"[VehiclePrefabBuilder] {AssetDatabase.GetAssetPath(m)}: {shaderName} -> {m.shader.name}{(glass ? " (glass)" : particle ? " (effect)" : "")}");
+        }
+
+        private static List<GameObject> LoadBuilt()
+        {
+            var list = new List<GameObject>();
+            foreach (var spec in Specs)
+            {
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(OutDir + "/" + spec.Out + ".prefab");
+                if (go != null && go.GetComponent<RailboundVehicle>() != null) list.Add(go);
+            }
+            return list;
+        }
+
+        private static GameObject Build(Spec spec)
+        {
+            var src = AssetDatabase.LoadAssetAtPath<GameObject>(spec.Source);
+            if (src == null) { Debug.LogError("[VehiclePrefabBuilder] Missing " + spec.Source); return null; }
+
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(src);
+            try
+            {
+                PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                inst.name = spec.Out;
+                inst.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                RailboundVehicle.StripStandaloneParts(inst);
+
+                var rb = inst.GetComponent<Rigidbody>();
+                if (rb != null) rb.interpolation = RigidbodyInterpolation.Interpolate;
+                var vc = inst.GetComponent<NWH.VehiclePhysics2.VehicleController>();
+                if (vc != null) vc.input.autoSetInput = false;
+
+                var no = inst.GetComponent<NetworkObject>() ?? inst.AddComponent<NetworkObject>();
+                no.DontDestroyWithOwner = true;
+                no.AutoObjectParentSync = false;
+                // the pose is synced by RailboundVehicle (NGO 1.7's owner-authoritative NetworkTransform stops after an ownership change)
+                foreach (var oldNt in inst.GetComponents<Unity.Netcode.Components.NetworkTransform>()) Object.DestroyImmediate(oldNt, true);
+
+                var wheel = inst.transform.Find(spec.Wheel);
+                var rv = inst.GetComponent<RailboundVehicle>() ?? inst.AddComponent<RailboundVehicle>();
+                rv.BakeForPrefab(spec.Name, spec.Seats, spec.Weight, wheel);
+                var so = new SerializedObject(rv);
+                so.FindProperty("steeringWheelRadius").floatValue = spec.WheelRadius;
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                string path = OutDir + "/" + spec.Out + ".prefab";
+                var saved = PrefabUtility.SaveAsPrefabAsset(inst, path, out bool ok);
+                if (!ok || saved == null) { Debug.LogError("[VehiclePrefabBuilder] Could not save " + path); return null; }
+
+                // the NetworkObject's id comes from the asset's GUID, which exists only now: open, touch and save once more
+                var contents = PrefabUtility.LoadPrefabContents(path);
+                EditorUtility.SetDirty(contents.GetComponent<NetworkObject>());
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                PrefabUtility.UnloadPrefabContents(contents);
+                saved = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+                var hash = new SerializedObject(saved.GetComponent<NetworkObject>()).FindProperty("GlobalObjectIdHash");
+                var savedRv = saved.GetComponent<RailboundVehicle>();
+                Debug.Log($"[VehiclePrefabBuilder] {path}: hash={(hash != null ? hash.longValue.ToString() : "?")} seats={savedRv.SeatCount} " +
+                          $"wheel={(savedRv.SteeringWheel != null ? savedRv.SteeringWheel.name : "NONE")} bounds={savedRv.LocalBounds.center:F2}/{savedRv.LocalBounds.size:F2} " +
+                          $"cameras={saved.GetComponentsInChildren<Camera>(true).Length} listeners={saved.GetComponentsInChildren<AudioListener>(true).Length}");
+                return saved;
+            }
+            finally
+            {
+                Object.DestroyImmediate(inst);
+            }
+        }
+
+        private static void Register(List<GameObject> prefabs)
+        {
+            var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(NetworkPrefabsAsset);
+            if (list == null) { Debug.LogError("[VehiclePrefabBuilder] Missing " + NetworkPrefabsAsset); return; }
+            foreach (var go in prefabs)
+            {
+                bool present = false;
+                foreach (var p in list.PrefabList) if (p.Prefab == go) { present = true; break; }
+                if (present) continue;
+                list.Add(new NetworkPrefab { Prefab = go });
+                Debug.Log("[VehiclePrefabBuilder] Registered network prefab " + go.name);
+            }
+            EditorUtility.SetDirty(list);
+        }
+    }
+}
