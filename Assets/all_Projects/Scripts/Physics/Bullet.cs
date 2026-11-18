@@ -133,10 +133,14 @@ namespace JUTPS.WeaponSystem
 			OldPosition = transform.position;
 		}
 
+		/// <summary>Railbound: any bullet hit, on the machine that fired it (vehicles take bullet damage through this).</summary>
+		public static event System.Action<Bullet, Collision> AnyHit;
+
 		void OnCollisionEnter(Collision col)
 		{
 			if (col.gameObject.tag != "Bullet")
 			{
+				AnyHit?.Invoke(this, col);
 				float RealDamage = BulletDamage;
 				JUHealth.PendingAttacker = GetOwner();   // kill credit: whoever fired this bullet
 				//Check Character and Bones Layers

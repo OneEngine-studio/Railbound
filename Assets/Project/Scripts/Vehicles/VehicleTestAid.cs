@@ -13,7 +13,7 @@ namespace Railbound.Vehicles
     ///    handbrake), switches seats, gets out, and takes screenshots on the way (<c>-vehshots DIR</c>);
     ///  * <c>ride</c>: waits for another player to sit at the wheel of a vehicle, joins as a passenger, rides, gets out.
     /// </summary>
-    public class VehicleTestAid : MonoBehaviour
+    public partial class VehicleTestAid : MonoBehaviour
     {
         // test overrides for the local driver's controls (null = the real input)
         public static float? Throttle, Brake, Steer, Handbrake;
@@ -39,6 +39,11 @@ namespace Railbound.Vehicles
             StartCoroutine(LogLoop());
             if (mode == "drive") yield return Drive();
             else if (mode == "ride") yield return Ride();
+            else if (mode == "runover") yield return RunOver();
+            else if (mode == "target") yield return Target();
+            else if (mode == "park") yield return Park();
+            else if (mode == "shoot") yield return Shoot();
+            else if (mode == "seats") yield return SeatTour();
         }
 
         private IEnumerator LogLoop()
