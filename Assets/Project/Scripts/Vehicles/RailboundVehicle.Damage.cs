@@ -149,7 +149,7 @@ namespace Railbound.Vehicles
             var hurtVehicles = new HashSet<RailboundVehicle> { this };
             foreach (var c in Physics.OverlapSphere(center, BlastRadius, ~0, QueryTriggerInteraction.Ignore))
             {
-                float d = Vector3.Distance(center, c.ClosestPoint(center));
+                float d = Vector3.Distance(center, c.bounds.ClosestPoint(center));   // ClosestPoint() refuses concave mesh colliders
                 float k = 1f - Mathf.Clamp01(d / BlastRadius);
                 var h = c.GetComponentInParent<JUHealth>();
                 if (h != null && hurt.Add(h)) HurtCharacter(h, Mathf.Lerp(15f, 160f, k));
@@ -178,6 +178,7 @@ namespace Railbound.Vehicles
             JUHealth.PendingAttacker = lastAttacker;
             try { h.DoDamage(damage, transform.position); }
             finally { JUHealth.PendingAttacker = previous; }
+            Debug.Log($"[Vehicle] {name} explosion hurt {h.name} for {damage:F0}: health {h.Health:F0}{(h.IsDead ? " (dead)" : "")}, credited to {(h.LastAttacker != null ? h.LastAttacker.name : "nobody")}.");
         }
 
         private IEnumerator RemoveWreckLater()
@@ -205,15 +206,51 @@ namespace Railbound.Vehicles
 
         private static bool HasScreen => SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null;
 
+        private static Material fxMaterial;
+
+        /// <summary>The vehicle's own smoke material (NWH's smoke sheet on the vertex-colour particle shader), untinted so the
+        /// particles' colours (fire, black smoke) come through. One copy shared by every vehicle.</summary>
         private Material SmokeMaterial
         {
             get
             {
+                if (fxMaterial != null) return fxMaterial;
                 if (smokeMaterial == null)
                     foreach (var r in GetComponentsInChildren<ParticleSystemRenderer>(true))
                         if (r.sharedMaterial != null) { smokeMaterial = r.sharedMaterial; break; }
-                return smokeMaterial;
+                if (smokeMaterial == null) return null;
+                fxMaterial = new Material(smokeMaterial) { name = "Vehicle FX (runtime)" };
+                if (fxMaterial.HasProperty("_UnlitColor")) fxMaterial.SetColor("_UnlitColor", Color.white);
+                return fxMaterial;
             }
+        }
+
+        private static Material fireMaterial;
+
+        /// <summary>The same, brightened past white: flames glow in daylight exposure.</summary>
+        private Material FireMaterial
+        {
+            get
+            {
+                if (fireMaterial == null && SmokeMaterial != null)
+                {
+                    fireMaterial = new Material(SmokeMaterial) { name = "Vehicle Fire FX (runtime)" };
+                    if (fireMaterial.HasProperty("_UnlitColor")) fireMaterial.SetColor("_UnlitColor", new Color(2.6f, 2.6f, 2.6f, 1f));
+                }
+                return fireMaterial;
+            }
+        }
+
+        /// <summary>Smoke and fire rise straight up from the top of the vehicle, however it lies (a wreck often lands on its roof).</summary>
+        private void LateUpdate()
+        {
+            if (engineSmoke == null && engineFire == null && wreckSmoke == null) return;
+            Vector3 top = transform.TransformPoint(localBounds.center) + Vector3.up * (localBounds.extents.y * 0.6f);
+            Vector3 engine = IsUpright ? transform.TransformPoint(EngineLocal) : top;
+            Quaternion up = Quaternion.LookRotation(Vector3.up);
+            if (engineSmoke != null) engineSmoke.transform.SetPositionAndRotation(engine, up);
+            if (engineFire != null) engineFire.transform.SetPositionAndRotation(wreckShown ? top : engine, up);
+            if (wreckSmoke != null) wreckSmoke.transform.SetPositionAndRotation(top + Vector3.up * 0.4f, up);
         }
 
         private Vector3 EngineLocal => new Vector3(0f, localBounds.max.y - 0.25f, localBounds.max.z - 0.6f);
@@ -266,7 +303,7 @@ namespace Railbound.Vehicles
         /// <summary>A looping particle column (smoke or fire) on the vehicle, drawn with the vehicle's own smoke material.</summary>
         private ParticleSystem MakeEmitter(string id, Vector3 local, Color start, Color end, float rate, float life, float sizeFrom, float sizeTo, float rise)
         {
-            var mat = SmokeMaterial;
+            var mat = id.Contains("Fire") ? FireMaterial : SmokeMaterial;
             if (mat == null) return null;
             var go = new GameObject("[FX] " + id);
             go.transform.SetParent(transform, false);
@@ -291,7 +328,7 @@ namespace Railbound.Vehicles
                       new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(start.a, 0.12f), new GradientAlphaKey(start.a * 0.6f, 0.6f), new GradientAlphaKey(0f, 1f) });
             col.color = g;
             var size = ps.sizeOverLifetime; size.enabled = true; size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, sizeTo / Mathf.Max(0.01f, sizeFrom)));
-            var tsa = ps.textureSheetAnimation; tsa.enabled = true; tsa.numTilesX = 4; tsa.numTilesY = 4;   // NWH's smoke sheet
+            var tsa = ps.textureSheetAnimation; tsa.enabled = true; tsa.numTilesX = 6; tsa.numTilesY = 5;   // NWH's smoke sheet is 6 x 5 frames
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.sharedMaterial = mat;
             r.renderMode = ParticleSystemRenderMode.Billboard;
@@ -302,7 +339,7 @@ namespace Railbound.Vehicles
         /// <summary>The explosion: a fast orange fireball turning to black smoke, and flying debris sparks.</summary>
         private void Fireball(Vector3 at)
         {
-            var mat = SmokeMaterial;
+            var mat = FireMaterial;
             if (mat == null) return;
             var go = new GameObject("[FX] Explosion");
             go.transform.position = at;
@@ -327,7 +364,7 @@ namespace Railbound.Vehicles
                       new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.9f, 0.4f), new GradientAlphaKey(0f, 1f) });
             col.color = g;
             var size = ps.sizeOverLifetime; size.enabled = true; size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.6f, 1f, 2.2f));
-            var tsa = ps.textureSheetAnimation; tsa.enabled = true; tsa.numTilesX = 4; tsa.numTilesY = 4;
+            var tsa = ps.textureSheetAnimation; tsa.enabled = true; tsa.numTilesX = 6; tsa.numTilesY = 5;
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.sharedMaterial = mat;
             ps.Play();
