@@ -135,14 +135,35 @@ namespace Michsky.UI.Reach
 
         public void SetVSync(bool value)
         {
-            QualitySettings.vSyncCount = value ? 1 : 0;
             PlayerPrefs.SetInt("Graphics_VSync", value ? 1 : 0);
+            ApplyFramePacing();
         }
 
         public void SetFrameRate(int value)
         {
-            Application.targetFrameRate = value;
             PlayerPrefs.SetInt("Graphics_FrameRate", value);
+            ApplyFramePacing();
+        }
+
+        /// <summary>
+        /// "VSync" caps the frame rate at the display's refresh rate instead of using hard vsync: with vSyncCount = 1 a frame
+        /// that misses one refresh waits for the next, so on a 144 Hz laptop a heavy scene snaps from 144 to 72, 48, 36 and
+        /// 29 fps and reads as "stuck at 30". The cap keeps whatever rate the GPU can manage. An explicit frame-rate limit
+        /// still applies, the lower of the two winning.
+        /// </summary>
+        public static void ApplyFramePacing()
+        {
+            bool vsync = PlayerPrefs.GetInt("Graphics_VSync", 1) == 1;
+            int limit = PlayerPrefs.GetInt("Graphics_FrameRate", -1);
+
+            int refresh = Mathf.RoundToInt((float)Screen.currentResolution.refreshRateRatio.value);
+            if (refresh <= 0) refresh = 60;
+
+            int target = limit > 0 ? limit : -1;
+            if (vsync) target = target > 0 ? Mathf.Min(target, refresh) : refresh;
+
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = target;
         }
 
         public void SetWindowFullscreen()
