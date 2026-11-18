@@ -788,14 +788,7 @@ namespace Michsky.UI.Reach
 
         public void LoadAndApplyAllSettings()
         {
-            if (PlayerPrefs.HasKey("Graphics_VSync"))
-            {
-                SetVSync(PlayerPrefs.GetInt("Graphics_VSync") == 1);
-            }
-            if (PlayerPrefs.HasKey("Graphics_FrameRate"))
-            {
-                SetFrameRate(PlayerPrefs.GetInt("Graphics_FrameRate"));
-            }
+            ApplyFramePacing();     // also for a first run with nothing saved: the quality levels default to hard vsync
             if (PlayerPrefs.HasKey("Graphics_TextureQuality"))
             {
                 SetTextureQuality(PlayerPrefs.GetInt("Graphics_TextureQuality"));
