@@ -326,11 +326,7 @@ namespace Michsky.UI.Reach
         public void SetDLSS(bool enabled)
         {
             PlayerPrefs.SetInt("Graphics_DLSS", enabled ? 1 : 0);
-            if (!IsHDRP) return;
-            var hd = HdCamera();
-            if (hd == null) return;
-            hd.allowDeepLearningSuperSampling = enabled;
-            if (enabled) hd.allowDynamicResolution = true;
+            ApplySavedUpscaling(HdCamera());
         }
 
         // index: 0 Ultra Performance, 1 Performance, 2 Balanced, 3 Quality, 4 DLAA (native resolution anti-aliasing)
@@ -339,12 +335,27 @@ namespace Michsky.UI.Reach
         public void SetDLSSQuality(int index)
         {
             PlayerPrefs.SetInt("Graphics_DLSSQuality", index);
-            if (!IsHDRP) return;
-            var hd = HdCamera();
-            if (hd == null) return;
-            hd.deepLearningSuperSamplingUseCustomQualitySettings = true;
-            hd.deepLearningSuperSamplingQuality = DlssQualityMap[Mathf.Clamp(index, 0, DlssQualityMap.Length - 1)];
-            hd.deepLearningSuperSamplingUseOptimalSettings = true;
+            ApplySavedUpscaling(HdCamera());
+        }
+
+        /// <summary>
+        /// Puts the saved DLSS choice on a camera. Static so the match's gameplay camera gets it too (see
+        /// ClientRenderStability): this manager lives in the lobby, so before, DLSS only ever reached the lobby camera.
+        /// Needs dynamic resolution and DLSS enabled in the HDRP asset; without them the camera flags do nothing.
+        /// </summary>
+        public static void ApplySavedUpscaling(HD.HDAdditionalCameraData hd)
+        {
+            if (hd == null || !IsHDRP) return;
+            bool dlss = PlayerPrefs.GetInt("Graphics_DLSS", 0) == 1 && IsDLSSSupported;
+            hd.allowDeepLearningSuperSampling = dlss;
+            if (!dlss) return;
+            hd.allowDynamicResolution = true;
+            if (PlayerPrefs.HasKey("Graphics_DLSSQuality"))
+            {
+                hd.deepLearningSuperSamplingUseCustomQualitySettings = true;
+                hd.deepLearningSuperSamplingQuality = DlssQualityMap[Mathf.Clamp(PlayerPrefs.GetInt("Graphics_DLSSQuality"), 0, DlssQualityMap.Length - 1)];
+                hd.deepLearningSuperSamplingUseOptimalSettings = true;
+            }
         }
 
         public void SetVolumetricFog(bool enabled)
