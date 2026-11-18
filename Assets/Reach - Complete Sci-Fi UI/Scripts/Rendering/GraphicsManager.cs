@@ -135,14 +135,35 @@ namespace Michsky.UI.Reach
 
         public void SetVSync(bool value)
         {
-            QualitySettings.vSyncCount = value ? 1 : 0;
             PlayerPrefs.SetInt("Graphics_VSync", value ? 1 : 0);
+            ApplyFramePacing();
         }
 
         public void SetFrameRate(int value)
         {
-            Application.targetFrameRate = value;
             PlayerPrefs.SetInt("Graphics_FrameRate", value);
+            ApplyFramePacing();
+        }
+
+        /// <summary>
+        /// "VSync" caps the frame rate at the display's refresh rate instead of using hard vsync: with vSyncCount = 1 a frame
+        /// that misses one refresh waits for the next, so on a 144 Hz laptop a heavy scene snaps from 144 to 72, 48, 36 and
+        /// 29 fps and reads as "stuck at 30". The cap keeps whatever rate the GPU can manage. An explicit frame-rate limit
+        /// still applies, the lower of the two winning.
+        /// </summary>
+        public static void ApplyFramePacing()
+        {
+            bool vsync = PlayerPrefs.GetInt("Graphics_VSync", 1) == 1;
+            int limit = PlayerPrefs.GetInt("Graphics_FrameRate", -1);
+
+            int refresh = Mathf.RoundToInt((float)Screen.currentResolution.refreshRateRatio.value);
+            if (refresh <= 0) refresh = 60;
+
+            int target = limit > 0 ? limit : -1;
+            if (vsync) target = target > 0 ? Mathf.Min(target, refresh) : refresh;
+
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = target;
         }
 
         public void SetWindowFullscreen()
@@ -305,11 +326,7 @@ namespace Michsky.UI.Reach
         public void SetDLSS(bool enabled)
         {
             PlayerPrefs.SetInt("Graphics_DLSS", enabled ? 1 : 0);
-            if (!IsHDRP) return;
-            var hd = HdCamera();
-            if (hd == null) return;
-            hd.allowDeepLearningSuperSampling = enabled;
-            if (enabled) hd.allowDynamicResolution = true;
+            ApplySavedUpscaling(HdCamera());
         }
 
         // index: 0 Ultra Performance, 1 Performance, 2 Balanced, 3 Quality, 4 DLAA (native resolution anti-aliasing)
@@ -318,12 +335,27 @@ namespace Michsky.UI.Reach
         public void SetDLSSQuality(int index)
         {
             PlayerPrefs.SetInt("Graphics_DLSSQuality", index);
-            if (!IsHDRP) return;
-            var hd = HdCamera();
-            if (hd == null) return;
-            hd.deepLearningSuperSamplingUseCustomQualitySettings = true;
-            hd.deepLearningSuperSamplingQuality = DlssQualityMap[Mathf.Clamp(index, 0, DlssQualityMap.Length - 1)];
-            hd.deepLearningSuperSamplingUseOptimalSettings = true;
+            ApplySavedUpscaling(HdCamera());
+        }
+
+        /// <summary>
+        /// Puts the saved DLSS choice on a camera. Static so the match's gameplay camera gets it too (see
+        /// ClientRenderStability): this manager lives in the lobby, so before, DLSS only ever reached the lobby camera.
+        /// Needs dynamic resolution and DLSS enabled in the HDRP asset; without them the camera flags do nothing.
+        /// </summary>
+        public static void ApplySavedUpscaling(HD.HDAdditionalCameraData hd)
+        {
+            if (hd == null || !IsHDRP) return;
+            bool dlss = PlayerPrefs.GetInt("Graphics_DLSS", 0) == 1 && IsDLSSSupported;
+            hd.allowDeepLearningSuperSampling = dlss;
+            if (!dlss) return;
+            hd.allowDynamicResolution = true;
+            if (PlayerPrefs.HasKey("Graphics_DLSSQuality"))
+            {
+                hd.deepLearningSuperSamplingUseCustomQualitySettings = true;
+                hd.deepLearningSuperSamplingQuality = DlssQualityMap[Mathf.Clamp(PlayerPrefs.GetInt("Graphics_DLSSQuality"), 0, DlssQualityMap.Length - 1)];
+                hd.deepLearningSuperSamplingUseOptimalSettings = true;
+            }
         }
 
         public void SetVolumetricFog(bool enabled)
@@ -767,14 +799,7 @@ namespace Michsky.UI.Reach
 
         public void LoadAndApplyAllSettings()
         {
-            if (PlayerPrefs.HasKey("Graphics_VSync"))
-            {
-                SetVSync(PlayerPrefs.GetInt("Graphics_VSync") == 1);
-            }
-            if (PlayerPrefs.HasKey("Graphics_FrameRate"))
-            {
-                SetFrameRate(PlayerPrefs.GetInt("Graphics_FrameRate"));
-            }
+            ApplyFramePacing();     // also for a first run with nothing saved: the quality levels default to hard vsync
             if (PlayerPrefs.HasKey("Graphics_TextureQuality"))
             {
                 SetTextureQuality(PlayerPrefs.GetInt("Graphics_TextureQuality"));
