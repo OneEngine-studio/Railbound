@@ -7890,9 +7890,11 @@ MonoBehaviour:
   - Name: DRIVER
     Hips: {x: -0.36, y: 0.34, z: -0.04}
     Driver: 1
+    FloorY: 0.16
   - Name: PASSENGER
     Hips: {x: 0.36, y: 0.34, z: -0.04}
     Driver: 0
+    FloorY: 0.16
   steeringWheel: {fileID: 7143541710261804608}
   steeringWheelRadius: 0.17
   enterRange: 2.6
