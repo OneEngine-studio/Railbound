@@ -30,6 +30,48 @@ namespace Railbound.Networking
             public int Port, Players;
         }
 
+        // ---------------------------------------------------------------- leaving
+        // Nakama sends a player who is still on the roster of a running match back into it when the player queues again (a reconnect
+        // after a crash). After LEAVING a match on purpose (pause menu LEAVE, LEAVE MATCH, refused as out of the match) the next
+        // deploy must start a new match instead, so the client remembers that it left, also across a restart.
+        private const string LeftMatchKey = "rb.queue.leftMatch", LeftAtKey = "rb.queue.leftAt";
+        private const double LeftMemorySeconds = 20 * 60;   // longer than Nakama's 15 minute reconnect window
+
+        /// <summary>The player left <paramref name="matchId"/> for good: the next queue request asks for a new match.</summary>
+        public static void NoteLeftMatch(string matchId)
+        {
+            try
+            {
+                PlayerPrefs.SetString(LeftMatchKey, matchId ?? "");
+                PlayerPrefs.SetString(LeftAtKey, DateTime.UtcNow.ToString("o"));
+                PlayerPrefs.Save();
+            }
+            catch (Exception) { /* a device without prefs: the server still refuses the rejoin */ }
+            Debug.Log($"[Queue] Left match {(string.IsNullOrEmpty(matchId) ? "(unknown)" : matchId)}: the next deploy starts a new match.");
+        }
+
+        /// <summary>True while a match left on purpose would still be offered again as a reconnect.</summary>
+        public static bool LeftMatchRecently
+        {
+            get
+            {
+                try
+                {
+                    string at = PlayerPrefs.GetString(LeftAtKey, "");
+                    return DateTime.TryParse(at, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t)
+                           && (DateTime.UtcNow - t).TotalSeconds < LeftMemorySeconds;
+                }
+                catch (Exception) { return false; }
+            }
+        }
+
+        public static string LeftMatchId { get { try { return PlayerPrefs.GetString(LeftMatchKey, ""); } catch (Exception) { return ""; } } }
+
+        private static void ForgetLeftMatch()
+        {
+            try { PlayerPrefs.DeleteKey(LeftMatchKey); PlayerPrefs.DeleteKey(LeftAtKey); PlayerPrefs.Save(); } catch (Exception) { }
+        }
+
         /// <summary>What the server last said about the session (for the HUD).</summary>
         public sealed class Progress { public string Phase; public int Countdown, Players, Max; }
 
@@ -59,7 +101,9 @@ namespace Railbound.Networking
                     try
                     {
                         // a party sends its roster: the server seats every member in one session, as one squad
-                        var rpc = await client.RpcAsync(session, RpcName, JsonUtility.ToJson(new JoinRequest { mode = mode, partyId = partyId ?? "", party = partyMembers ?? Array.Empty<string>() }));
+                        // after leaving a match on purpose: a new match, never that one again (Nakama skips its reconnect)
+                        bool newMatch = LeftMatchRecently;
+                        var rpc = await client.RpcAsync(session, RpcName, JsonUtility.ToJson(new JoinRequest { mode = mode, partyId = partyId ?? "", party = partyMembers ?? Array.Empty<string>(), newMatch = newMatch }));
                         reply = JsonUtility.FromJson<JoinReply>(rpc.Payload);
                     }
                     catch (ApiResponseException ex) when (ex.StatusCode == 404 || (ex.Message ?? "").IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -68,6 +112,14 @@ namespace Railbound.Networking
                         return new Result { Outcome = Outcome.Unavailable, Reason = "no_queue_rpc" };
                     }
 
+                    if (reply != null && reply.status == "assigned" && LeftMatchRecently && reply.matchId == LeftMatchId)
+                    {
+                        // an older module that ignores newMatch: never go back into the match the player left
+                        Debug.LogWarning($"[Queue] The server offered match {reply.matchId} again, which this player left; asking for a new one.");
+                        reply = null;
+                        await System.Threading.Tasks.Task.Delay(1000);
+                        continue;
+                    }
                     if (reply != null && reply.status == "assigned")
                     {
                         Debug.Log($"[Queue] Already locked into match {reply.matchId}: going back to it (reconnect).");
@@ -143,6 +195,7 @@ namespace Railbound.Networking
 
         private static Result Assigned(string sessionId, string matchId, string host, int port, string name, string token, int players)
         {
+            if (!string.IsNullOrEmpty(matchId) && matchId != LeftMatchId) ForgetLeftMatch();   // a new match: the old one no longer matters
             return new Result { Outcome = Outcome.Assigned, SessionId = sessionId, MatchId = matchId, Host = host, Port = port, ServerName = name, Token = token, Players = Mathf.Max(1, players) };
         }
     }

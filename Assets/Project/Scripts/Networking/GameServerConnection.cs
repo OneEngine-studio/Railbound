@@ -207,6 +207,7 @@ namespace Railbound.Networking
             int attempts = MaxAttempts;
             string failure = "COULD NOT REACH THE GAME SERVER";
             bool connected = false;
+            bool finalRefusal = false;
 
             for (Attempt = 1; Attempt <= attempts && !connected; Attempt++)
             {
@@ -239,6 +240,7 @@ namespace Railbound.Networking
                     {
                         string reason = nm.DisconnectReason;
                         failure = string.IsNullOrEmpty(reason) ? "CONNECTION TO THE GAME SERVER FAILED" : "THE GAME SERVER REFUSED THE CONNECTION: " + reason;
+                        if (IsFinalRefusal(reason)) finalRefusal = true;
                         break;
                     }
                     yield return null;
@@ -247,6 +249,12 @@ namespace Railbound.Networking
                 if (!connected)
                 {
                     Debug.LogWarning($"[GameServer] Attempt {Attempt}/{attempts} to {Endpoint} failed: {failure}");
+                    if (finalRefusal)
+                    {
+                        // retrying cannot change the answer; a match the player is out of is not offered again
+                        if (failure.Contains(ServerMatchSession.OutOfMatchReason) || failure.Contains("THE MATCH IS OVER")) MatchmakingQueueClient.NoteLeftMatch(MatchId);
+                        break;
+                    }
                     if (Attempt < attempts)
                     {
                         // a handshake that is still running can complete during the pause, so watch for it instead of sleeping blind
@@ -278,6 +286,14 @@ namespace Railbound.Networking
                 string reason = nm != null ? nm.DisconnectReason : "";
                 Fail(string.IsNullOrEmpty(reason) ? "DISCONNECTED FROM THE GAME SERVER" : "DISCONNECTED: " + reason);
             }
+        }
+
+        /// <summary>Refusals a retry cannot change.</summary>
+        private static bool IsFinalRefusal(string reason)
+        {
+            if (string.IsNullOrEmpty(reason)) return false;
+            return reason.Contains(ServerMatchSession.OutOfMatchReason) || reason.Contains("THE MATCH IS OVER")
+                || reason.Contains("WRONG MATCH") || reason.Contains("JOIN TICKET REJECTED") || reason.Contains("ALREADY CONNECTED");
         }
 
         private bool Fail(string reason)

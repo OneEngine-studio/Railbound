@@ -23,6 +23,14 @@ namespace Railbound.UI
             string d = Arg("-lobbyshot");
             string sd = Arg("-socialshot");
             string pf = Arg("-partyflow");
+            if (!string.IsNullOrEmpty(Arg("-leaveflow")) && !Application.isBatchMode)
+            {
+                var lgo = new GameObject("[Test] Leave Flow");
+                DontDestroyOnLoad(lgo);
+                var laid = lgo.AddComponent<LobbyShotAid>();
+                laid.partyRole = "leave"; laid.dir = Arg("-leaveflow");
+                return;
+            }
             if (!string.IsNullOrEmpty(pf) && !Application.isBatchMode)
             {
                 var pgo = new GameObject("[Test] Party Flow");
@@ -48,6 +56,7 @@ namespace Railbound.UI
 
         private IEnumerator Start()
         {
+            if (partyRole == "leave") { yield return LeaveFlow(); yield break; }
             if (!string.IsNullOrEmpty(partyRole)) { yield return PartyFlow(); yield break; }
             Directory.CreateDirectory(dir);
             float t = 0f;
@@ -162,6 +171,58 @@ namespace Railbound.UI
                 yield return PartyShot("45_social_joined");
                 hud.PartyPanel.Hide();
             }
+        }
+
+        // -leaveflow DIR: deploy, play, open the pause menu, press LEAVE (the real button's handler), deploy again. The second
+        // deploy must give a NEW match (before the fix Nakama sent the player straight back into the match it had left).
+        private IEnumerator LeaveFlow()
+        {
+            Directory.CreateDirectory(dir);
+            var matches = new System.Collections.Generic.List<string>();
+            for (int round = 1; round <= 2; round++)
+            {
+                float t = 0f;
+                while (t < 120f && RailboundYellowHUDController.Instance == null) { t += 0.25f; yield return new WaitForSecondsRealtime(0.25f); }
+                var hud = RailboundYellowHUDController.Instance;
+                if (hud == null) { Debug.LogError("[LeaveFlow] The lobby never loaded."); yield break; }
+                yield return new WaitForSecondsRealtime(round == 1 ? 12f : 6f);
+                if (round == 2) yield return Shot("50_lobby_after_leave");
+                Debug.Log($"[LeaveFlow] round {round}: DEPLOY (left recently={Railbound.Networking.MatchmakingQueueClient.LeftMatchRecently}, left match={Railbound.Networking.MatchmakingQueueClient.LeftMatchId})");
+                hud.TestDeploy();
+
+                var link = Railbound.Networking.GameServerConnection.Instance;
+                t = 0f;
+                while (t < 240f && !(link != null && link.State == Railbound.Networking.GameServerState.Connected && Railbound.BR.BRMatchCoordinator.Instance != null))
+                { t += 0.5f; yield return new WaitForSecondsRealtime(0.5f); link = Railbound.Networking.GameServerConnection.Instance; }
+                if (link == null || link.State != Railbound.Networking.GameServerState.Connected)
+                {
+                    Debug.LogError($"[LeaveFlow] round {round}: never got into a match (state {(link != null ? link.State.ToString() : "none")}, error '{(link != null ? link.LastError : "")}').");
+                    yield break;
+                }
+                matches.Add(link.MatchId);
+                Debug.Log($"[LeaveFlow] round {round}: IN MATCH {link.MatchId}");
+                yield return new WaitForSecondsRealtime(15f);
+                if (round == 2) break;
+
+                // the pause menu, then its LEAVE confirmation, as the player sees them
+                var pause = FindFirstObjectByType<Michsky.UI.Reach.PauseMenuManager>(FindObjectsInactive.Include);
+                if (pause != null) { pause.OpenPauseMenu(); yield return new WaitForSecondsRealtime(1.5f); yield return Shot("51_pause_menu"); }
+                Michsky.UI.Reach.ModalWindowManager confirm = null;
+                foreach (var m in FindObjectsByType<Michsky.UI.Reach.ModalWindowManager>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (m.titleText == "Leave match") confirm = m;
+                if (confirm != null) { confirm.OpenWindow(); yield return new WaitForSecondsRealtime(1.2f); yield return Shot("52_leave_confirm"); }
+                string labels = "";
+                foreach (var b in FindObjectsByType<Michsky.UI.Reach.ButtonManager>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (b.buttonText == "Leave" || b.buttonText == "Exit") labels += b.buttonText + " ";
+                Debug.Log($"[LeaveFlow] pause menu buttons: {labels}; confirm title '{(confirm != null ? confirm.titleText : "none")}'");
+
+                var bridge = FindFirstObjectByType<Michsky.UI.Reach.ReachPauseBridge>(FindObjectsInactive.Include);
+                Debug.Log("[LeaveFlow] pressing LEAVE (bridge " + (bridge != null) + ")");
+                if (bridge != null) bridge.ExitToMainMenu(); else Railbound.BR.BRMatchCoordinator.Instance.LeaveMatch();
+                yield return new WaitForSecondsRealtime(3f);
+            }
+            bool different = matches.Count == 2 && matches[0] != matches[1];
+            Debug.Log($"[LeaveFlow] RESULT first={(matches.Count > 0 ? matches[0] : "-")} second={(matches.Count > 1 ? matches[1] : "-")} newMatch={different}");
         }
 
         private IEnumerator PartyShot(string name)
