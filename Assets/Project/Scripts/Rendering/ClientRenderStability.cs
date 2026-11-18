@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 ///  - volumetric fog that uses Reprojection denoising is switched to Gaussian: HDRP documents Reprojection as causing
 ///    "severe ghosting artifacts for highly dynamic lighting", which shows as trails behind the player and flickering fog;
 ///  - cameras using TAA reject more history on moving pixels, so characters and vehicles no longer leave trails;
+///  - the saved DLSS choice reaches the match's main camera (GraphicsManager only runs in the lobby);
 ///  - frame pacing (see GraphicsManager.ApplyFramePacing) is applied before the first scene, not only once the lobby loads.
 ///
 /// Cameras and volumes created after a scene loads (the network player camera, map streaming) are picked up by a light
@@ -54,6 +55,7 @@ public static class ClientRenderStability
                 if (cam == null || !doneCameras.Add(cam.GetInstanceID())) continue;
                 var hd = cam.GetComponent<HDAdditionalCameraData>();
                 if (hd == null) continue;
+                if (cam.CompareTag("MainCamera")) Michsky.UI.Reach.GraphicsManager.ApplySavedUpscaling(hd);   // not minimap / UI cameras
                 TuneTaa(hd);
             }
 
