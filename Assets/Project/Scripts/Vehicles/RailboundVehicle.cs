@@ -15,6 +15,8 @@ namespace Railbound.Vehicles
         public string Name;
         public Vector3 Hips;
         public bool Driver;
+        [Tooltip("Height of the floor under the feet (vehicle space); 0 = 0.42 m below the pelvis.")]
+        public float FloorY;
     }
 
     /// <summary>Who sits where: the NetworkObjectId + 1 of the character in each seat (0 = empty).</summary>
