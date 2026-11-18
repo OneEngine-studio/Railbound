@@ -32,7 +32,9 @@ namespace Railbound.Vehicles
         private bool kinematicWas, gravityWas;
         private Vector3 hipsOffset = new Vector3(0f, 0.55f, 0f);   // pelvis relative to the root in the sitting pose (measured)
         private bool hipsMeasured;
-        private int itemBeforeSeat = -1;   // the weapon in hand when the owner got in: back in hand when it gets out
+        private int itemBeforeSeat = -1;
+        private JUTPS.JUFootPlacement footPlacer;
+        private bool footPlacerWasOn;   // the weapon in hand when the owner got in: back in hand when it gets out
         private float nextIgnoreRefresh;
 
         private void Awake()
@@ -79,6 +81,11 @@ namespace Railbound.Vehicles
         {
             colliders = GetComponentsInChildren<Collider>(true);
             Vehicle.IgnoreOccupant(colliders, true);
+
+            // JU's foot placement zeroes the feet's IK every pass while it is off (it is off while driving), which would undo ours
+            footPlacer = GetComponent<JUTPS.JUFootPlacement>();
+            footPlacerWasOn = footPlacer != null && footPlacer.enabled;
+            if (footPlacerWasOn) footPlacer.enabled = false;
 
             if (rb != null)
             {
@@ -255,6 +262,8 @@ namespace Railbound.Vehicles
                 cc.SeatedInExternalVehicle = false;
                 cc.IsDriving = false;
             }
+            if (footPlacer != null && footPlacerWasOn) footPlacer.enabled = true;
+            footPlacerWasOn = false;
 
             if (local)
             {
