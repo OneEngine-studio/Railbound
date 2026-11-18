@@ -50,7 +50,7 @@ namespace Railbound.Editor
             {
                 Source = Nwh + "MonsterTruck/MonsterTruck.prefab", Out = "RB Monster Truck", Name = "MONSTER TRUCK", Wheel = "SteeringWheel",
                 Weight = 1.5f, WheelRadius = 0.18f,
-                Seats = new[] { Seat("DRIVER", -0.28f, 1.06f, 0.28f, true, 0.80f), Seat("PASSENGER", 0.30f, 1.06f, 0.28f, false, 0.80f) }
+                Seats = new[] { Seat("DRIVER", -0.28f, 1.06f, 0.28f, true, 0.92f), Seat("PASSENGER", 0.30f, 1.06f, 0.28f, false, 0.92f) }
             },
         };
 

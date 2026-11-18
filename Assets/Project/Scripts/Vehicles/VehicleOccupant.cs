@@ -196,7 +196,8 @@ namespace Railbound.Vehicles
             // feet flat on the floor ahead of the seat, knees bent: JU's driving pose drops the legs lower than some cabins
             float floorY = def.FloorY > 0.01f ? def.FloorY : hips.y - 0.42f;
             float drop = Mathf.Clamp(hips.y - floorY, 0.05f, 0.6f);
-            float reach = Mathf.Sqrt(Mathf.Max(0.04f, 0.8f * 0.8f - drop * drop));
+            // never further forward than 0.62 m: some cabins end in an open wheel well there (the monster truck)
+            float reach = Mathf.Min(0.62f, Mathf.Sqrt(Mathf.Max(0.04f, 0.8f * 0.8f - drop * drop)));
             for (int i = 0; i < 2; i++)
             {
                 float s = i == 0 ? -1f : 1f;
