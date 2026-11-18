@@ -26,9 +26,9 @@ namespace Railbound.Editor
             public VehicleSeatDef[] Seats;
         }
 
-        private static VehicleSeatDef Seat(string name, float x, float y, float z, bool driver = false)
+        private static VehicleSeatDef Seat(string name, float x, float y, float z, bool driver = false, float floor = 0f)
         {
-            return new VehicleSeatDef { Name = name, Hips = new Vector3(x, y, z), Driver = driver };
+            return new VehicleSeatDef { Name = name, Hips = new Vector3(x, y, z), Driver = driver, FloorY = floor };
         }
 
         // the pelvis of each seat in vehicle space (from the NWH driver cameras: about 0.6 m below and 0.1 m behind the eyes)
@@ -38,19 +38,19 @@ namespace Railbound.Editor
             {
                 Source = Nwh + "Niva/Niva.prefab", Out = "RB Niva", Name = "OFFROADER", Wheel = "Body/niva_steeringWheel_low_Circle.003",
                 Weight = 3f, WheelRadius = 0.18f,
-                Seats = new[] { Seat("DRIVER", -0.42f, 0.74f, -0.30f, true), Seat("PASSENGER", 0.42f, 0.74f, -0.30f), Seat("REAR LEFT", -0.40f, 0.76f, -1.02f), Seat("REAR RIGHT", 0.40f, 0.76f, -1.02f) }
+                Seats = new[] { Seat("DRIVER", -0.42f, 0.74f, -0.30f, true, 0.36f), Seat("PASSENGER", 0.42f, 0.74f, -0.30f, false, 0.36f), Seat("REAR LEFT", -0.40f, 0.76f, -1.02f, false, 0.40f), Seat("REAR RIGHT", 0.40f, 0.76f, -1.02f, false, 0.40f) }
             },
             new Spec
             {
                 Source = Nwh + "Sports Car by GR3D/Sports Car.prefab", Out = "RB Sports Car", Name = "SPORTS CAR", Wheel = "Steering Wheel",
                 Weight = 2f, WheelRadius = 0.17f,
-                Seats = new[] { Seat("DRIVER", -0.36f, 0.34f, -0.04f, true), Seat("PASSENGER", 0.36f, 0.34f, -0.04f) }
+                Seats = new[] { Seat("DRIVER", -0.36f, 0.34f, -0.04f, true, 0.16f), Seat("PASSENGER", 0.36f, 0.34f, -0.04f, false, 0.16f) }
             },
             new Spec
             {
                 Source = Nwh + "MonsterTruck/MonsterTruck.prefab", Out = "RB Monster Truck", Name = "MONSTER TRUCK", Wheel = "SteeringWheel",
                 Weight = 1.5f, WheelRadius = 0.18f,
-                Seats = new[] { Seat("DRIVER", -0.28f, 1.02f, 0.28f, true), Seat("PASSENGER", 0.30f, 1.02f, 0.28f) }
+                Seats = new[] { Seat("DRIVER", -0.28f, 1.06f, 0.28f, true, 0.92f), Seat("PASSENGER", 0.30f, 1.06f, 0.28f, false, 0.92f) }
             },
         };
 

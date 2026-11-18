@@ -1,3 +1,4 @@
+using System;
 using JUTPS;
 using JUTPS.CameraSystems;
 using JUTPS.JUInputSystem;
@@ -113,7 +114,7 @@ namespace Railbound.Vehicles
             float bestD = float.MaxValue;
             foreach (var v in RailboundVehicle.All)
             {
-                if (v == null || !v.isActiveAndEnabled || !v.IsUpright) continue;
+                if (v == null || !v.isActiveAndEnabled || !v.IsUpright || v.IsWrecked) continue;
                 float d = v.DistanceTo(from);
                 if (d <= v.EnterRange && d < bestD) { bestD = d; best = v; }
             }
@@ -225,7 +226,18 @@ namespace Railbound.Vehicles
             // a little wider at speed
             fov = Mathf.Lerp(fov, baseFov + Mathf.Clamp01(kmh / 170f) * 12f, 1f - Mathf.Exp(-3f * dt));
             cam.fieldOfView = fov;
+
+            var test = TestCamera?.Invoke();
+            if (test.HasValue)
+            {
+                cam.transform.position = test.Value.position;
+                cam.transform.rotation = Quaternion.LookRotation(test.Value.lookAt - test.Value.position);
+                cam.fieldOfView = 50f;
+            }
         }
+
+        /// <summary>Test aid: a fixed camera (position, point to look at) instead of the chase camera while it returns a value.</summary>
+        public static Func<(Vector3 position, Vector3 lookAt)?> TestCamera;
 
         private float CameraClearance(Vector3 from, Vector3 dir, float distance, RailboundVehicle v)
         {
@@ -250,7 +262,8 @@ namespace Railbound.Vehicles
         private Canvas canvas;
         private CanvasGroup promptGroup, driveGroup, toastGroup;
         private TextMeshProUGUI promptKey, promptVerb, promptName, speedNum, speedUnit, gearText, seatText, keysText, toastText;
-        private Image speedFill, keyBox;
+        private Image speedFill, keyBox, healthFill;
+        private static readonly Color HealthLow = new Color(1f, 0.32f, 0.25f, 1f);
         private readonly Image[] seatDots = new Image[VehicleSeats.Max];
         private TMP_FontAsset fontBold, fontSemi;
         private Sprite px;
@@ -293,6 +306,12 @@ namespace Railbound.Vehicles
                 int kmh = Mathf.RoundToInt(v.SpeedKmh);
                 if (kmh != shownSpeed) { shownSpeed = kmh; speedNum.text = kmh.ToString("000"); }
                 speedFill.fillAmount = Mathf.Lerp(speedFill.fillAmount, Mathf.Clamp01(kmh / 200f), k);
+                float hp = v.Health01;
+                healthFill.fillAmount = Mathf.Lerp(healthFill.fillAmount, hp, k);
+                // white while healthy, red under a third, pulsing when it is about to go
+                Color hc = hp > 0.33f ? Color.white : HealthLow;
+                if (hp < 0.15f) hc.a = 0.55f + 0.45f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f));
+                healthFill.color = hc;
                 int gear = v.Controller != null ? v.Controller.powertrain.transmission.Gear : 0;
                 gearText.text = gear < 0 ? "R" : gear == 0 ? "N" : gear.ToString();
                 bool driver = seated.IsDriver;
@@ -362,6 +381,12 @@ namespace Railbound.Vehicles
             var barBackImg = barBack.gameObject.AddComponent<Image>(); barBackImg.sprite = px; barBackImg.color = new Color(1f, 1f, 1f, 0.12f);
             var fill = Rect("Fill", barBack, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             speedFill = fill.gameObject.AddComponent<Image>(); speedFill.sprite = px; speedFill.type = Image.Type.Filled; speedFill.fillMethod = Image.FillMethod.Horizontal; speedFill.fillAmount = 0f;
+
+            // vehicle health along the top edge of the panel
+            var hpBack = Rect("Health", panel, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(2f, 0f), new Vector2(-4f, 4f), new Vector2(0.5f, 1f));
+            var hpBackImg = hpBack.gameObject.AddComponent<Image>(); hpBackImg.sprite = px; hpBackImg.color = new Color(1f, 1f, 1f, 0.12f);
+            var hpFill = Rect("Fill", hpBack, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            healthFill = hpFill.gameObject.AddComponent<Image>(); healthFill.sprite = px; healthFill.type = Image.Type.Filled; healthFill.fillMethod = Image.FillMethod.Horizontal; healthFill.fillAmount = 1f;
 
             seatText = Text("Seat", panel, "", 18f, fontBold, Color.white, 4f, TextAlignmentOptions.MidlineLeft);
             Place(seatText.rectTransform, new Vector2(0f, 0f), new Vector2(22f, 30f), new Vector2(260f, 22f), new Vector2(0f, 0.5f));

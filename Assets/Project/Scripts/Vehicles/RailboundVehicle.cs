@@ -15,6 +15,8 @@ namespace Railbound.Vehicles
         public string Name;
         public Vector3 Hips;
         public bool Driver;
+        [Tooltip("Height of the floor under the feet (vehicle space); 0 = 0.42 m below the pelvis.")]
+        public float FloorY;
     }
 
     /// <summary>Who sits where: the NetworkObjectId + 1 of the character in each seat (0 = empty).</summary>
@@ -117,7 +119,7 @@ namespace Railbound.Vehicles
     [DisallowMultipleComponent]
     [RequireComponent(typeof(VehicleController))]
     [DefaultExecutionOrder(50)]
-    public class RailboundVehicle : NetworkBehaviour
+    public partial class RailboundVehicle : NetworkBehaviour
     {
         public static readonly List<RailboundVehicle> All = new List<RailboundVehicle>();
 
@@ -170,6 +172,7 @@ namespace Railbound.Vehicles
         private readonly List<(Collider[] victim, float until)> ignoredVictims = new List<(Collider[], float)>();
 
         public static event Action<RailboundVehicle, string> Denied;   // local player was refused (reason)
+        public static event Action<RailboundVehicle, GameObject, float, float> RanOver;   // vehicle, victim, speed (m/s), damage (driver's machine)
 
         // ---------------------------------------------------------------- public state
         public string DisplayName => displayName;
@@ -379,7 +382,9 @@ namespace Railbound.Vehicles
 
         public override void OnNetworkSpawn()
         {
-            if (IsServer) seats.Value = default;
+            if (IsServer) { seats.Value = default; netHealth.Value = MaxHealth; netWrecked.Value = false; }
+            netWrecked.OnValueChanged += OnWreckedChanged;
+            if (netWrecked.Value) ShowWreck();   // joined after it blew up
             pose.OnValueChanged += OnPose;
             if (IsOwner) pose.Value = CapturePose();
             else if (pose.Value.Time > 0) { OnPose(default, pose.Value); ApplyPose(pose.Value.Position, pose.Value.Rotation); }
@@ -390,6 +395,7 @@ namespace Railbound.Vehicles
         public override void OnNetworkDespawn()
         {
             pose.OnValueChanged -= OnPose;
+            netWrecked.OnValueChanged -= OnWreckedChanged;
             // everyone inside gets out where they are
             for (int i = 0; i < VehicleSeats.Max; i++)
             {
@@ -601,6 +607,7 @@ namespace Railbound.Vehicles
 
             var health = character.GetComponent<JUHealth>();
             if (health != null && health.IsDead) return "DEAD";
+            if (IsWrecked) return "WRECKED";
             if (current < 0)
             {
                 var other = VehicleOf(character, out _);
@@ -685,6 +692,7 @@ namespace Railbound.Vehicles
             }
 
             if (!initialized) return;
+            if (Time.frameCount % 15 == 0) UpdateDamageFx();
             if (IsSimulating) SimulateInput();
             else ApplyRemoteState(IsSpawned ? drive.Value : default);
             ExpireIgnoredVictims();
@@ -807,6 +815,13 @@ namespace Railbound.Vehicles
             var driver = Driver;
             bool localDriver = driver != null && VehicleOccupant.IsLocalCharacter(driver);
             var engine = vc.powertrain.engine;
+            if (IsWrecked)
+            {
+                st.throttle = 0f; st.brakes = 0.05f; st.handbrake = 0f; st.boost = false; st.horn = false; st.flipOver = false;
+                vc.input.states = st;
+                if (engine.IsRunning) engine.StopEngine();
+                return;
+            }
 
             if (localDriver)
             {
@@ -883,7 +898,7 @@ namespace Railbound.Vehicles
         {
             if (!IsSimulating || c.collider == null) return;
             var victimHealth = c.collider.GetComponentInParent<JUHealth>();
-            if (victimHealth == null) return;
+            if (victimHealth == null) { CrashDamage(c); return; }
             var victim = victimHealth.gameObject;
             if (SeatOf(victim) >= 0) return;
 
@@ -904,6 +919,7 @@ namespace Railbound.Vehicles
             JUHealth.PendingAttacker = driver;
             victimHealth.DoDamage(damage, c.GetContact(0).point);
             JUHealth.PendingAttacker = null;
+            RanOver?.Invoke(this, victim, speed, damage);
             Debug.Log($"[Vehicle] {name} ran over {victim.name} at {speed * 3.6f:F0} km/h: {damage:F0} damage.");
         }
 
@@ -1037,7 +1053,7 @@ namespace Railbound.Vehicles
         {
             var s = Seats;
             return $"{name} pos={transform.position:F2} yaw={transform.eulerAngles.y:F0} up={Vector3.Dot(transform.up, Vector3.up):F2} speed={SpeedKmh:F0}km/h " +
-                   $"owner={(IsSpawned ? NetworkObject.OwnerClientId.ToString() : "local")} sim={IsSimulating} kin={(body != null && body.isKinematic)} " +
+                   $"hp={Health:F0}/{MaxHealth:F0}{(IsWrecked ? " WRECKED" : "")} owner={(IsSpawned ? NetworkObject.OwnerClientId.ToString() : "local")} sim={IsSimulating} kin={(body != null && body.isKinematic)} " +
                    $"seats=[{s.S0},{s.S1},{s.S2},{s.S3}] engine={(vc != null && vc.powertrain.engine.IsRunning)} thr={(vc != null ? vc.input.states.throttle : 0f):F2} steer={(vc != null ? vc.input.states.steering : 0f):F2}";
         }
     }

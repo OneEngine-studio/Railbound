@@ -41,8 +41,12 @@ namespace JUTPS.PhysicsScripts
         /// <summary>
         /// Create a explosion force with current settings
         /// </summary>
+        /// <summary>Railbound: any explosion, on the machine where it went off (vehicles take blast damage through this).</summary>
+        public static event System.Action<Explosion> Exploded;
+
         public void Explode()
         {
+            Exploded?.Invoke(this);
             Invoke(nameof(doExplosionForce), 0.1f);
             //>>> Character Damaging
             if (DamageCharacters == false) return;

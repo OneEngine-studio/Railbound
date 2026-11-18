@@ -32,6 +32,9 @@ namespace Railbound.Vehicles
         private bool kinematicWas, gravityWas;
         private Vector3 hipsOffset = new Vector3(0f, 0.55f, 0f);   // pelvis relative to the root in the sitting pose (measured)
         private bool hipsMeasured;
+        private int itemBeforeSeat = -1;
+        private JUTPS.JUFootPlacement footPlacer;
+        private bool footPlacerWasOn;   // the weapon in hand when the owner got in: back in hand when it gets out
         private float nextIgnoreRefresh;
 
         private void Awake()
@@ -79,6 +82,11 @@ namespace Railbound.Vehicles
             colliders = GetComponentsInChildren<Collider>(true);
             Vehicle.IgnoreOccupant(colliders, true);
 
+            // JU's foot placement zeroes the feet's IK every pass while it is off (it is off while driving), which would undo ours
+            footPlacer = GetComponent<JUTPS.JUFootPlacement>();
+            footPlacerWasOn = footPlacer != null && footPlacer.enabled;
+            if (footPlacerWasOn) footPlacer.enabled = false;
+
             if (rb != null)
             {
                 kinematicWas = rb.isKinematic; gravityWas = rb.useGravity;
@@ -88,6 +96,11 @@ namespace Railbound.Vehicles
             }
             if (cc != null)
             {
+                if (IsLocal)
+                {
+                    itemBeforeSeat = cc.Inventory != null ? cc.Inventory.CurrentRightHandItemID : -1;
+                    if (cc.IsItemEquiped) cc.SwitchToItem(-1);   // before IsDriving: JU ignores item switches while driving
+                }
                 cc.SeatedInExternalVehicle = true;
                 cc.IsDriving = true;
                 if (IsLocal) HoldStill();
@@ -100,7 +113,14 @@ namespace Railbound.Vehicles
         private void HoldStill()
         {
             if (cc == null) return;
-            if (cc.IsItemEquiped) cc.SwitchToItem(-1);
+            if (cc.IsItemEquiped || (cc.Inventory != null && cc.Inventory.CurrentRightHandItemID >= 0))
+            {
+                // something drew a weapon (a loadout arriving, a hotkey): put it away again
+                bool driving = cc.IsDriving;
+                cc.IsDriving = false;
+                cc.SwitchToItem(-1);
+                cc.IsDriving = driving;
+            }
             cc.DisableLocomotion();
             cc.IsJumping = false;
             cc.IsRunning = false;
@@ -174,10 +194,48 @@ namespace Railbound.Vehicles
         /// <summary>The driver's hands on the wheel; they follow it as it turns.</summary>
         private void OnAnimatorIK(int layerIndex)
         {
-            if (Vehicle == null || anim == null || !IsDriver) return;
-            if (!Vehicle.WheelGrips(out Vector3 left, out Vector3 right, out Vector3 down)) return;
+            if (Vehicle == null || anim == null || Seat < 0) return;
             float w = Mathf.Clamp01((Time.time - SeatedSince - 0.25f) / 0.45f);
-            Vector3 side = Vehicle.transform.right;
+            var vt = Vehicle.transform;
+            var def = Vehicle.SeatDef(Seat);
+            Vector3 hips = def.Hips;
+
+            // feet flat on the floor ahead of the seat, knees bent: JU's driving pose drops the legs lower than some cabins
+            float floorY = def.FloorY > 0.01f ? def.FloorY : hips.y - 0.42f;
+            float drop = Mathf.Clamp(hips.y - floorY, 0.05f, 0.6f);
+            // never further forward than 0.62 m: some cabins end in an open wheel well there (the monster truck)
+            float reach = Mathf.Min(0.62f, Mathf.Sqrt(Mathf.Max(0.04f, 0.8f * 0.8f - drop * drop)));
+            for (int i = 0; i < 2; i++)
+            {
+                float s = i == 0 ? -1f : 1f;
+                var foot = i == 0 ? AvatarIKGoal.LeftFoot : AvatarIKGoal.RightFoot;
+                var knee = i == 0 ? AvatarIKHint.LeftKnee : AvatarIKHint.RightKnee;
+                anim.SetIKPositionWeight(foot, w);
+                anim.SetIKPosition(foot, vt.TransformPoint(hips + new Vector3(s * 0.13f, -drop + 0.06f, reach)));
+                anim.SetIKRotationWeight(foot, w * 0.7f);
+                anim.SetIKRotation(foot, vt.rotation);
+                anim.SetIKHintPositionWeight(knee, w);
+                anim.SetIKHintPosition(knee, vt.TransformPoint(hips + new Vector3(s * 0.17f, 0.25f, reach * 0.6f)));
+            }
+
+            if (!IsDriver)
+            {
+                // a passenger rests its hands on its thighs
+                for (int i = 0; i < 2; i++)
+                {
+                    float s = i == 0 ? -1f : 1f;
+                    var hand = i == 0 ? AvatarIKGoal.LeftHand : AvatarIKGoal.RightHand;
+                    var elbow = i == 0 ? AvatarIKHint.LeftElbow : AvatarIKHint.RightElbow;
+                    anim.SetIKPositionWeight(hand, w);
+                    anim.SetIKPosition(hand, vt.TransformPoint(hips + new Vector3(s * 0.15f, 0.1f, Mathf.Min(0.36f, reach * 0.5f))));
+                    anim.SetIKHintPositionWeight(elbow, w * 0.8f);
+                    anim.SetIKHintPosition(elbow, vt.TransformPoint(hips + new Vector3(s * 0.38f, 0.25f, -0.05f)));
+                }
+                return;
+            }
+
+            if (!Vehicle.WheelGrips(out Vector3 left, out Vector3 right, out Vector3 down)) return;
+            Vector3 side = vt.right;
             anim.SetIKPositionWeight(AvatarIKGoal.LeftHand, w);
             anim.SetIKPositionWeight(AvatarIKGoal.RightHand, w);
             anim.SetIKPosition(AvatarIKGoal.LeftHand, left);
@@ -204,6 +262,8 @@ namespace Railbound.Vehicles
                 cc.SeatedInExternalVehicle = false;
                 cc.IsDriving = false;
             }
+            if (footPlacer != null && footPlacerWasOn) footPlacer.enabled = true;
+            footPlacerWasOn = false;
 
             if (local)
             {
@@ -233,6 +293,8 @@ namespace Railbound.Vehicles
                     cc.CanRotate = true;
                     cc.IsGrounded = true;
                     cc.ResetDefaultLayersWeight();
+                    if (itemBeforeSeat >= 0) cc.SwitchToItem(itemBeforeSeat);
+                    itemBeforeSeat = -1;
                 }
                 VehicleLocalPlayer.NotifyLeft(this, vehicle);
             }
