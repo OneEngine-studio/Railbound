@@ -267,6 +267,10 @@ namespace Railbound.Vehicles
                         var rh = anim.GetBoneTransform(HumanBodyBones.RightHand);
                         grips = $" leftHand->grip {Vector3.Distance(lh.position, gl):F2} m, rightHand->grip {Vector3.Distance(rh.position, gr):F2} m";
                     }
+                    var lf = anim != null ? anim.GetBoneTransform(HumanBodyBones.LeftFoot) : null;
+                    var rf = anim != null ? anim.GetBoneTransform(HumanBodyBones.RightFoot) : null;
+                    if (lf != null && rf != null)
+                        Debug.Log($"[VehicleTest] seats: {v.DisplayName} {def.Name}: feet local L={v.transform.InverseTransformPoint(lf.position):F2} R={v.transform.InverseTransformPoint(rf.position):F2} (floor {def.FloorY:F2}, hips {def.Hips:F2})");
                     Debug.Log($"[VehicleTest] seats: {v.DisplayName} {def.Name}: hipsErr={(hips != null ? Vector3.Distance(hips.position, v.SeatHipsWorld(seat)) : -1f):F2} " +
                               $"head local={(head != null ? v.transform.InverseTransformPoint(head.position).ToString("F2") : "?")} roof={b.max.y:F2}{grips}");
                 }
