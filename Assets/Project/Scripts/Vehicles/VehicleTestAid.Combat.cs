@@ -244,13 +244,17 @@ namespace Railbound.Vehicles
                     // from outside the door at head height, looking at the seat (side windows are open glass)
                     VehicleLocalPlayer.TestCamera = () => (v.transform.TransformPoint(new Vector3(sideSign * (b.extents.x + 1.6f), def.Hips.y + 0.55f, def.Hips.z + 0.4f)),
                                                            v.SeatHipsWorld(s) + v.transform.up * 0.35f);
-                    yield return new WaitForSecondsRealtime(0.3f);
+                    yield return new WaitForSecondsRealtime(0.8f);   // motion blur from the camera cut settles
                     Shot($"seat{seatShot++}_{v.DisplayName.Replace(' ', '_')}_{def.Name.Replace(' ', '_')}_side");
+                    yield return new WaitForEndOfFrame();   // the capture happens at the end of this frame: keep the pose until then
+                    yield return null;
                     // and from the front through the windscreen
                     VehicleLocalPlayer.TestCamera = () => (v.transform.TransformPoint(new Vector3(def.Hips.x * 0.6f, def.Hips.y + 1.0f, b.max.z + 1.6f)),
                                                            v.SeatHipsWorld(s) + v.transform.up * 0.45f);
-                    yield return new WaitForSecondsRealtime(0.3f);
+                    yield return new WaitForSecondsRealtime(0.8f);
                     Shot($"seat{seatShot++}_{v.DisplayName.Replace(' ', '_')}_{def.Name.Replace(' ', '_')}_front");
+                    yield return new WaitForEndOfFrame();
+                    yield return null;
                     VehicleLocalPlayer.TestCamera = null;
 
                     var anim = Me.GetComponent<Animator>();
