@@ -196,6 +196,9 @@ namespace JUTPS
                 }
             }
 
+            // Railbound: walking pace while aiming down the sights
+            if (IsAiming && FiringMode) { IsRunning = false; IsSprinting = false; }
+
             //Start sprinting impulse
             //if (JUInput.GetButtonDown(JUInput.Buttons.RunButton) && AutoRun && SprintOnRunButton && FiringMode == false)
             //{

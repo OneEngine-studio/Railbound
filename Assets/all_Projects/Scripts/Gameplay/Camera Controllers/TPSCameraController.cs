@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 using JUTPS.JUInputSystem;
 using JUTPS.WeaponSystem;
 using JUTPS.ActionScripts;
@@ -38,6 +39,93 @@ namespace JUTPS.CameraSystems
 
         float SmoothedXMouse;
         float SmoothedYMouse;
+
+        // ------------------------------------------------------------------ Railbound: steady aim
+        // JU glued the sight camera to the animated weapon, sampled it in Update (before this frame's animation) while the body only
+        // moves in physics steps, stopped the pivot while aiming and froze the camera when the sight was not usable (reload, switch).
+        // Walking or running while aiming shook and stuttered the view. Now the sight camera is placed in LateUpdate from a stable
+        // frame (where the player looks, anchored at the chest height of a smoothly interpolated body), keeping only a small part of
+        // the weapon's walk bob, and HDRP motion blur is off on this camera while looking down the sights.
+        [Header("Steady Aim (Railbound)")]
+        public bool SteadyAim = true;
+        [Tooltip("How much of the walk / run bob of the weapon reaches the sight camera (0 = none, 1 = all of it).")]
+        [Range(0f, 1f)] public float AimBobKeep = 0.12f;
+        [Tooltip("How quickly the sight camera settles onto the weapon (seconds); also the time to raise the sights.")]
+        public float AimSettleTime = 0.09f;
+        [Tooltip("No motion blur on this camera while looking down the sights.")]
+        public bool NoMotionBlurInSights = true;
+
+        private Vector3 bodyPrev, bodyCurr, adsLocal, adsLocalAverage, adsVelocity;
+        private float bodyCurrTime = -1f, chestHeight = 1.4f;
+        private bool adsOn, adsBlurOff;
+        private HDAdditionalCameraData hdCamera;
+
+        /// <summary>Looking down a usable sight right now (the weapon is up and has an aim mode).</summary>
+        public bool ScopeActive
+        {
+            get
+            {
+                if (characterTarget == null || mCamera == null || !characterTarget.IsAiming || !characterTarget.FiringMode || !characterTarget.IsItemEquiped) return false;
+                Weapon gun = characterTarget.WeaponInUseRightHand;
+                return gun != null && gun.AimMode != Weapon.WeaponAimMode.None;
+            }
+        }
+
+        /// <summary>The body's position between its last two physics steps (the rigidbody is not interpolated: JU turns it itself).</summary>
+        private Vector3 SmoothBodyPosition()
+        {
+            Vector3 p = characterTarget.transform.position;
+            if (bodyCurrTime < 0f || (p - bodyCurr).sqrMagnitude > 9f) { bodyPrev = bodyCurr = p; bodyCurrTime = Time.time; }
+            else if ((p - bodyCurr).sqrMagnitude > 1e-10f) { bodyPrev = bodyCurr; bodyCurr = p; bodyCurrTime = Time.time; }
+            float a = Mathf.Clamp01((Time.time - bodyCurrTime) / Mathf.Max(0.001f, Time.fixedDeltaTime));
+            return Vector3.Lerp(bodyPrev, bodyCurr, a);
+        }
+
+        /// <summary>
+        /// Where the sight camera goes for the weapon's sight at <paramref name="raw"/>. Measured in the frame of the player's view
+        /// (pitch and yaw) around the chest, the sight barely moves when the player turns or looks up; what is left is the walk and
+        /// run bob of the animation. A slow average follows where the sight really sits, only <see cref="AimBobKeep"/> of the bob
+        /// around it is kept, and the result settles in smoothly (no snap when raising the sights).
+        /// </summary>
+        public Vector3 SteadyScopePosition(Vector3 raw)
+        {
+            if (!SteadyAim || characterTarget == null || mCamera == null || mCamera.transform.parent == null) return raw;
+            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+            Vector3 body = SmoothBodyPosition();
+            if (characterTarget.HumanoidSpine != null)
+                chestHeight = Mathf.Lerp(chestHeight, characterTarget.HumanoidSpine.position.y - characterTarget.transform.position.y, 1f - Mathf.Exp(-dt / 0.5f));
+            Vector3 origin = body + Vector3.up * chestHeight;
+            Quaternion view = mCamera.transform.parent.rotation;
+            Vector3 local = Quaternion.Inverse(view) * (raw - origin);
+            if (!adsOn)
+            {
+                adsOn = true;
+                adsLocalAverage = local;
+                adsLocal = Quaternion.Inverse(view) * (mCamera.transform.position - origin);   // raise the sights from where the camera is
+                adsVelocity = Vector3.zero;
+            }
+            adsLocalAverage = Vector3.Lerp(adsLocalAverage, local, 1f - Mathf.Exp(-dt / 0.3f));
+            Vector3 target = adsLocalAverage + (local - adsLocalAverage) * AimBobKeep;
+            adsLocal = Vector3.SmoothDamp(adsLocal, target, ref adsVelocity, AimSettleTime, Mathf.Infinity, dt);
+            return origin + view * adsLocal;
+        }
+
+        /// <summary>HDRP motion blur on this camera only while looking down the sights (the player's setting stays as it is otherwise).</summary>
+        private void SightMotionBlur(bool inSights)
+        {
+            bool off = inSights && NoMotionBlurInSights;
+            if (off == adsBlurOff || mCamera == null) return;
+            if (hdCamera == null) hdCamera = mCamera.GetComponent<HDAdditionalCameraData>();
+            if (hdCamera == null) return;
+            adsBlurOff = off;
+            hdCamera.customRenderingSettings = true;
+            var mask = hdCamera.renderingPathCustomFrameSettingsOverrideMask;
+            mask.mask[(uint)FrameSettingsField.MotionBlur] = off;
+            hdCamera.renderingPathCustomFrameSettingsOverrideMask = mask;
+            var frame = hdCamera.renderingPathCustomFrameSettings;
+            frame.SetEnabled(FrameSettingsField.MotionBlur, !off);
+            hdCamera.renderingPathCustomFrameSettings = frame;
+        }
 
         protected enum PlayerStates { Normal, FireMode, Aiming, Driving, Dead }
         protected PlayerStates CharacterState;
@@ -100,7 +188,7 @@ namespace JUTPS.CameraSystems
 
             UpdateCharacterState(characterTarget);
             ChangeCameraStateAccordingCharacterState(CharacterState);
-            SetCameraToScopePosition();
+            if (characterTarget != null) Aiming = characterTarget.IsAiming;
         }
 
         protected virtual void SetRotationInput()
@@ -124,7 +212,6 @@ namespace JUTPS.CameraSystems
             {
                 DriveVehicles driveAbility = characterTarget.DriveVehicleAbility;
 
-                if (characterTarget.IsAiming) return;
                 if (driveAbility && driveAbility.IsDriving && driveAbility.CurrentVehicle)
                 {
                     SetPivotCameraPosition(GetCurrentCameraState.GetCameraPivotPosition(driveAbility.CurrentVehicle.transform), true);
@@ -144,7 +231,10 @@ namespace JUTPS.CameraSystems
         protected virtual void LateUpdate()
         {
             if (mCamera == null) return;
-            if (characterTarget != null && characterTarget.IsAiming) return;
+            bool inSights = ScopeActive;
+            SightMotionBlur(inSights);
+            if (inSights) { SetCameraToScopePosition(); return; }
+            adsOn = false;
 
             SetCameraPosition(GetCurrentCameraState.GetCameraPosition(mCamera.transform), false);
             SetCameraCollision(GetCurrentCameraState.CollisionLayers);
@@ -221,7 +311,7 @@ namespace JUTPS.CameraSystems
                     + gun.transform.up * ySway
                     + mCamera.transform.parent.forward * gun.CameraAimingPosition.z;
 
-                SetCameraPosition(scopePosition, false);
+                SetCameraPosition(SteadyScopePosition(scopePosition), false);
 
                 AimModeCameraState.CameraFieldOfView = Mathf.Lerp(AimModeCameraState.CameraFieldOfView, gun.CameraFOV, 15 * Time.deltaTime);
                 SetFieldOfView(AimModeCameraState.CameraFieldOfView);
