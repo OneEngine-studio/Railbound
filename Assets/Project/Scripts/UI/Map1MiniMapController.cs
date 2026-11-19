@@ -143,7 +143,7 @@ namespace Railbound.UI
             // Maps built from several terrain tiles (MAP-2): the playable region comes from the MiniMapBounds corners.
             if (Terrain.activeTerrains.Length > 1)
             {
-                var bounds = FindObjectOfType<Arikan.MiniMapBounds>();
+                var bounds = FindAnyObjectByType<Arikan.MiniMapBounds>();
                 if (bounds != null && bounds.topRight != null && bounds.bottomLeft != null)
                 {
                     Vector3 bl = bounds.bottomLeft.position, tr = bounds.topRight.position;
