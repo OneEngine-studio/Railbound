@@ -23,7 +23,9 @@ namespace Railbound.Gameplay
         private TPSCameraController tps;
         private float move, run;
         private bool driving, measuring;
-        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>(), gunScreen = new List<float>(), gunScreenJumps = new List<float>();
+        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>(), gunScreen = new List<float>(), gunScreenJumps = new List<float>(), sightScreen = new List<float>(), gunTilt = new List<float>(), handMiss = new List<float>();
+        private Vector2 sightScreenSmooth;
+        private Quaternion gunRelSmooth;
         private float bodySmoothY, gunSmoothY;
         private Vector2 gunScreenSmooth, gunScreenLast;
         private bool aimDown = true;
@@ -117,7 +119,7 @@ namespace Railbound.Gameplay
                     foreach (var item in pc.Inventory.HoldableItensRightHand) if (item is Weapon w && w.AimMode != Weapon.WeaponAimMode.None) { pc.SwitchToItem(w.ItemSwitchID); break; }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear(); gunScreen.Clear(); gunScreenJumps.Clear();
+            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear(); gunScreen.Clear(); gunScreenJumps.Clear(); sightScreen.Clear(); gunTilt.Clear(); handMiss.Clear();
             hasLast = false;
             measuring = true;
             float t = 0f; int shotNo = 0;
@@ -132,7 +134,7 @@ namespace Railbound.Gameplay
                 yield return null;
             }
             measuring = false;
-            Debug.Log($"[AimTest] {tag,-6} {name,-7} sights={tps.ScopeActive} frames={jumps.Count} WEAPON ON SCREEN sway {Rms(gunScreen):F1} px, jump p95 {P95(gunScreenJumps):F1} px, biggest {Max(gunScreenJumps):F1} px | " +
+            Debug.Log($"[AimTest] {tag,-6} {name,-7} sights={tps.ScopeActive} frames={jumps.Count} WEAPON ON SCREEN sway {Rms(gunScreen):F1} px, jump p95 {P95(gunScreenJumps):F1} px, biggest {Max(gunScreenJumps):F1} px, sight point {Rms(sightScreen):F1} px, gun tilt {Rms(gunTilt):F2} deg, hand off its IK target {Rms(handMiss):F2} cm | " +
                       $"view shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
                       $"jump p95 {P95(jumps):F2} cm, biggest {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
         }
@@ -163,7 +165,24 @@ namespace Railbound.Gameplay
                 Vector3 v = tps.mCamera.WorldToViewportPoint(pc.WeaponInUseRightHand.transform.position);
                 gs = new Vector2(v.x * 1080f * tps.mCamera.aspect, v.y * 1080f);
             }
-            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; bodySmoothY = by; gunSmoothY = gy; gunScreenSmooth = gunScreenLast = gs; return; }
+            // the sight point the camera aims through (as JU computes it), the gun's turn relative to the view, the hand's IK miss
+            Vector2 ss = gs; Quaternion rel = Quaternion.identity;
+            var g = pc.WeaponInUseRightHand;
+            if (g != null)
+            {
+                Vector3 sp = g.transform.position + g.transform.right * g.CameraAimingPosition.x + g.transform.up * g.CameraAimingPosition.y;
+                Vector3 v = tps.mCamera.WorldToViewportPoint(sp);
+                ss = new Vector2(v.x * 1080f * tps.mCamera.aspect, v.y * 1080f);
+                rel = Quaternion.Inverse(cam.rotation) * g.transform.rotation;
+                var hand = pc.anim != null ? pc.anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
+                if (hand != null && pc.IKPositionRightHand != null) handMiss.Add((hand.position - pc.IKPositionRightHand.position).magnitude * 100f);
+            }
+            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; bodySmoothY = by; gunSmoothY = gy; gunScreenSmooth = gunScreenLast = gs; sightScreenSmooth = ss; gunRelSmooth = rel; return; }
+            float k4 = 1f - Mathf.Exp(-Time.deltaTime / 0.25f);
+            sightScreenSmooth = Vector2.Lerp(sightScreenSmooth, ss, k4);
+            sightScreen.Add((ss - sightScreenSmooth).magnitude);
+            gunRelSmooth = Quaternion.Slerp(gunRelSmooth, rel, k4);
+            gunTilt.Add(Quaternion.Angle(gunRelSmooth, rel));
             gunScreenSmooth = Vector2.Lerp(gunScreenSmooth, gs, 1f - Mathf.Exp(-Time.deltaTime / 0.25f));
             gunScreen.Add((gs - gunScreenSmooth).magnitude);
             gunScreenJumps.Add((gs - gunScreenLast).magnitude);
