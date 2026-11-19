@@ -296,7 +296,7 @@ namespace Railbound.UI
                 }
             }
 
-            var vol = FindObjectOfType<Volume>();
+            var vol = FindAnyObjectByType<Volume>();
             if (vol != null && vol.sharedProfile != null)
             {
                 var inst = vol.profile;   // runtime copy: never edits the saved asset
