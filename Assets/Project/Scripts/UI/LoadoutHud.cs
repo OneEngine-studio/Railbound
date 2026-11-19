@@ -31,7 +31,7 @@ namespace Railbound.UI
 
         private static void Spawn()
         {
-            if (FindObjectOfType<LoadoutHud>() != null) return;
+            if (FindAnyObjectByType<LoadoutHud>() != null) return;
             new GameObject("[HUD] Loadout").AddComponent<LoadoutHud>();
         }
 
