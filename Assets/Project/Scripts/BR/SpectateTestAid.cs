@@ -58,11 +58,23 @@ namespace Railbound.BR
                 if (i > 0 && hud != null && pick != null) pick.Invoke(hud, new object[] { 1 });
                 yield return new WaitForSecondsRealtime(3.5f);
                 var p = hud != null && targetField != null ? targetField.GetValue(hud) as BRParticipant : null;
-                Debug.Log($"[SpecTest] spectating {i}: " + (p != null ? p.DisplayName + " " + Describe(p.Controller) : "nobody"));
+                Debug.Log($"[SpecTest] spectating {i}: " + (p != null ? p.DisplayName + " " + Describe(p.Controller) : "nobody") + " | HUD shows: " + HudWeapon());
                 ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"spectate_{i}.png"));
                 yield return new WaitForSecondsRealtime(0.8f);
             }
             Debug.Log("[SpecTest] DONE");
+        }
+
+        /// <summary>What the loadout HUD's weapon card says right now (name and ammunition).</summary>
+        private static string HudWeapon()
+        {
+            var hud = FindFirstObjectByType<Railbound.UI.LoadoutHud>();
+            if (hud == null) return "no hud";
+            var t = typeof(Railbound.UI.LoadoutHud);
+            var name = t.GetField("weaponName", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hud) as TMPro.TextMeshProUGUI;
+            var ammo = t.GetField("ammoMag", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(hud) as TMPro.TextMeshProUGUI;
+            string a = ammo != null ? System.Text.RegularExpressions.Regex.Replace(ammo.text, "<.*?>", "") : "?";
+            return (name != null ? name.text : "?") + " " + a;
         }
 
         private static JUCharacterController Nearest(JUCharacterController me, int rank)

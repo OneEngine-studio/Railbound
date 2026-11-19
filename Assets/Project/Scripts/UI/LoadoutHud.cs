@@ -111,14 +111,76 @@ namespace Railbound.UI
                 }
             }
 
-            bool show = player != null && player.isActiveAndEnabled;
+            // the spectator view (after the local player is out): the HUD shows the watched fighter's weapon, not our own
+            var watched = Railbound.BR.BRMatchHUD.Spectated;
+            bool spectating = watched != null && watched != player && watched.gameObject.activeInHierarchy;
+            ShowLocalWidgets(!spectating);
+
+            bool show = spectating || (player != null && player.isActiveAndEnabled);
             float target = show && Time.timeScale > 0.01f && !DeathScreenUI.IsShowing ? 1f : 0f;
             rootGroup.alpha = Mathf.MoveTowards(rootGroup.alpha, target, Time.unscaledDeltaTime * 5f);
             if (!show) return;
 
+            if (spectating) { RefreshWatched(watched); return; }
             RefreshWeapon();
             RefreshSlots();
             RefreshTiles();
+        }
+
+        // ---------------- spectator ----------------
+        private bool localWidgetsShown = true;
+        private readonly List<CanvasGroup> healthBars = new List<CanvasGroup>();
+
+        /// <summary>Our own slots, ability tiles and health bar mean nothing while watching someone else.</summary>
+        private void ShowLocalWidgets(bool on)
+        {
+            if (on == localWidgetsShown) return;
+            localWidgetsShown = on;
+            foreach (var sl in slots) if (sl.root != null) sl.root.SetActive(on && sl.item != null);
+            foreach (var t in new[] { medkitTile, sonarTile, throwTile }) if (t != null && t.root != null) t.root.SetActive(on);
+            if (!on)
+            {
+                healthBars.Clear();
+                foreach (var hb in FindObjectsByType<JUTPS.UI.UIHealhBar>(FindObjectsSortMode.None))
+                {
+                    if (hb == null) continue;
+                    var cg = hb.GetComponent<CanvasGroup>();
+                    if (cg == null) cg = hb.gameObject.AddComponent<CanvasGroup>();
+                    healthBars.Add(cg);
+                }
+            }
+            foreach (var cg in healthBars) if (cg != null) cg.alpha = on ? 1f : 0f;
+        }
+
+        /// <summary>The weapon card for the fighter the spectator view follows (its ammunition comes from the pose its machine publishes).</summary>
+        private void RefreshWatched(JUCharacterController watched)
+        {
+            bool has = Railbound.BR.PuppetPoseSync.TryGetHeld(watched, out Weapon weapon, out int mag, out int reserve);
+            JUHoldableItem held = has ? weapon : watched.HoldableItemInUseRightHand;
+            bool shown = held != null;
+            cardGroup.alpha = Mathf.MoveTowards(cardGroup.alpha, shown ? 1f : 0f, Time.unscaledDeltaTime * 6f);
+            ammoGroup.alpha = Mathf.MoveTowards(ammoGroup.alpha, has && mag >= 0 ? 1f : 0f, Time.unscaledDeltaTime * 6f);
+            if (!shown) return;
+            weaponIcon.sprite = held.ItemIcon;
+            weaponIcon.enabled = held.ItemIcon != null;
+            weaponName.text = (held.ItemName ?? "").ToUpperInvariant();
+            if (!has) { fireMode.text = held is MeleeWeapon ? "MELEE" : ""; stateText.text = ""; lastMag = -1; return; }
+            fireMode.text = FireModeLabel(weapon.FireMode);
+            mag = Mathf.Max(0, mag); reserve = Mathf.Max(0, reserve);
+            if (mag != lastMag) { if (lastMag >= 0) punchStart = Time.unscaledTime; lastMag = mag; }
+            bool lowMag = weapon.BulletsPerMagazine > 0 && mag <= Mathf.CeilToInt(weapon.BulletsPerMagazine * 0.25f);
+            Color c = lowMag ? Low : Color.white;
+            string padded = mag.ToString("000");
+            int lead = 0; while (lead < 2 && padded[lead] == '0') lead++;
+            string dimHex = ColorUtility.ToHtmlStringRGBA(new Color(c.r, c.g, c.b, c.a * 0.35f));
+            string reserveHex = ColorUtility.ToHtmlStringRGBA(reserve == 0 ? Low : Dim);
+            ammoMag.text = (lead > 0 ? "<color=#" + dimHex + ">" + padded.Substring(0, lead) + "</color>" + padded.Substring(lead) : padded)
+                + "<size=44%><color=#" + reserveHex + ">/" + reserve + "</color></size>";
+            ammoMag.color = c;
+            stateText.text = mag == 0 ? (reserve == 0 ? "NO AMMO" : "RELOADING") : "";
+            stateText.color = Low;
+            float k = Time.unscaledTime - punchStart;
+            ammoRoot.localScale = Vector3.one * (k < 0.15f ? Mathf.Lerp(1.08f, 1f, k / 0.15f) : 1f);
         }
 
         // the Rajdhani HUD fonts live outside Resources; the pause menu has them loaded in every gameplay scene

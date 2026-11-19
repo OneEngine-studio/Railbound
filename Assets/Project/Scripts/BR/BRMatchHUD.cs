@@ -79,6 +79,7 @@ namespace Railbound.BR
 
         private void OnDestroy()
         {
+            Spectated = null;
             if (canvas != null) Destroy(canvas.gameObject);
         }
 
@@ -234,7 +235,7 @@ namespace Railbound.BR
             bool clickable = spectating && !matchEnded && spectateGroup.alpha > 0.5f;
             spectateGroup.blocksRaycasts = clickable;
             spectateGroup.interactable = clickable;
-            if (!spectating) return;
+            if (!spectating) { Spectated = null; return; }
 
             if (!spectateUiFreed)
             {
@@ -290,7 +291,7 @@ namespace Railbound.BR
             var list = new List<BRParticipant>();
             var local = c.LocalParticipant;
             foreach (var p in c.Participants) if (p != null && p != local && p.IsAlive) list.Add(p);
-            if (list.Count == 0) { spectateTarget = null; return; }
+            if (list.Count == 0) { spectateTarget = null; Spectated = null; return; }
 
             int idx = spectateTarget != null ? list.IndexOf(spectateTarget) : -1;
             idx = step == 0 ? (idx >= 0 ? idx : 0) : (idx + step + list.Count) % list.Count;
@@ -298,8 +299,15 @@ namespace Railbound.BR
             FollowWithCamera(spectateTarget);
         }
 
+        /// <summary>The fighter the spectator view follows right now (null while the local player is alive or nobody is watched).</summary>
+        public static JUTPS.JUCharacterController Spectated { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSpectated() { Spectated = null; }
+
         private static void FollowWithCamera(BRParticipant p)
         {
+            Spectated = p != null ? p.Controller : null;
             if (p == null || p.Controller == null) return;
             var cam = FindFirstObjectByType<TPSCameraController>();
             if (cam == null) return;

@@ -41,6 +41,8 @@ public class JUNetworkPlayer : NetworkBehaviour
     private readonly NetworkVariable<Railbound.BR.PuppetPose> pose = new NetworkVariable<Railbound.BR.PuppetPose>(
         default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private float nextPosePublish;
+    /// <summary>The pose the owner publishes (aim, reload, ammunition in the hand).</summary>
+    public Railbound.BR.PuppetPose PoseValue => pose.Value;
     private bool isPuppet;
 
     private void Awake()
