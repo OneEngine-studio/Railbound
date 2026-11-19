@@ -705,8 +705,13 @@ namespace Railbound.BR
             Time.timeScale = 1f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+            // the next deploy must start a new match: Nakama would otherwise send this player back here as a "reconnect"
+            var link = Railbound.Networking.GameServerConnection.Instance;
+            bool networked = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer;
+            if (networked || (link != null && !string.IsNullOrEmpty(link.MatchId)))
+                Railbound.Networking.MatchmakingQueueClient.NoteLeftMatch(link != null ? link.MatchId : "");
             // leave the game server through the connection singleton so it forgets the address and does not report a lost connection
-            if (Railbound.Networking.GameServerConnection.Instance != null) Railbound.Networking.GameServerConnection.Instance.Clear();
+            if (link != null) link.Clear();
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) NetworkManager.Singleton.Shutdown();
             Railbound.UI.SceneTransition.Go(LobbySceneName, "RETURNING TO LOBBY");
         }

@@ -277,6 +277,8 @@ namespace Railbound.Networking
             // 3. one connection per player
             if (reject == null && byUser.TryGetValue(p.u, out var known) && known.connected) reject = "ALREADY CONNECTED";
             if (reject == null && report != ReportState.None) reject = "THE MATCH IS OVER";
+            // left the battle or was eliminated: the place is final, so no second life (a reconnect during the warm-up is fine)
+            if (reject == null && byUser.TryGetValue(p.u, out var prior) && prior.final) reject = OutOfMatchReason;
 
             if (reject != null) { Reject(response, reject); yield break; }
 
@@ -292,6 +294,9 @@ namespace Railbound.Networking
             response.CreatePlayerObject = true;
             response.Pending = false;   // last: Netcode reads the other fields once this is false
         }
+
+        /// <summary>The refusal a client gets when it tries to come back into a match it is already out of.</summary>
+        public const string OutOfMatchReason = "YOU ARE OUT OF THIS MATCH";
 
         private void OnClientDisconnected(ulong clientId)
         {
