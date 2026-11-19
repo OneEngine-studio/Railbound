@@ -497,7 +497,7 @@ namespace Railbound.BR
                 Vector3 p = t.transform.position + Vector3.Scale(best.position, td.size);
                 var body = pc.GetComponent<Rigidbody>();
                 pc.transform.position = p + Vector3.up * 12f;
-                if (body != null) { body.position = pc.transform.position; body.velocity = Vector3.zero; }
+                if (body != null && !body.isKinematic) { body.position = pc.transform.position; body.velocity = Vector3.zero; }
                 Debug.Log("[BRNetDebug] netrock " + rockStep + ": dropping onto " + want + " (scale " + best.widthScale.ToString("F2") + "/" + best.heightScale.ToString("F2") + ", prefab scale " + td.treePrototypes[pi].prefab.transform.localScale.y + ") at " + p.ToString("F1"));
                 rockShotAt = Time.realtimeSinceStartup + 4f;
                 return;
