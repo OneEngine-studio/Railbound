@@ -923,13 +923,55 @@ namespace JUTPS
                 }
             }
         }
+        // ------------------------------------------------------------------ Railbound: steady weapon
+        // The weapon hangs on PivotItemRotation (the hands are IK'd to it, the weapon sits in the hand). JU put that pivot exactly on
+        // the animated spine, read in Update (a frame behind the animation) while the body moves in physics steps: with the weapon up,
+        // every step of the walk and run cycle swung the gun around (and, in the sights, the view with it). While the weapon is up the
+        // pivot now rides on the body, interpolated between physics steps, at the spine's average place; only a small part of the
+        // spine's bob gets through and the arms take up the rest, like a shooter's arms do.
+        [Header("Steady Weapon (Railbound)")]
+        public bool SteadyWeapon = true;
+        [Tooltip("How much of the spine's walk / run bob moves the raised weapon (0 = none, 1 = all of it).")]
+        [Range(0f, 1f)] public float WeaponBobKeep = 0.15f;
+        [Tooltip("How quickly the weapon follows the spine's average place (seconds).")]
+        public float WeaponFollowTime = 0.25f;
+
+        private Vector3 pivotBodyPrev, pivotBodyCurr, pivotSpineAverage;
+        private float pivotBodyTime = -1f;
+        private bool pivotSteadyOn;
+
+        /// <summary>The body between its last two physics steps (the rigidbody is not interpolated: JU turns the transform itself).</summary>
+        private Vector3 InterpolatedBodyPosition()
+        {
+            Vector3 p = transform.position;
+            if (pivotBodyTime < 0f || (p - pivotBodyCurr).sqrMagnitude > 9f) { pivotBodyPrev = pivotBodyCurr = p; pivotBodyTime = Time.time; }
+            else if ((p - pivotBodyCurr).sqrMagnitude > 1e-10f) { pivotBodyPrev = pivotBodyCurr; pivotBodyCurr = p; pivotBodyTime = Time.time; }
+            float a = Mathf.Clamp01((Time.time - pivotBodyTime) / Mathf.Max(0.001f, Time.fixedDeltaTime));
+            return Vector3.Lerp(pivotBodyPrev, pivotBodyCurr, a);
+        }
+
+        /// <summary>Where the weapon pivot goes for the spine at <paramref name="spine"/>: steady while the weapon is up.</summary>
+        private Vector3 SteadyPivotPosition(Vector3 spine)
+        {
+            bool raised = SteadyWeapon && (FiringMode || IsAiming) && !IsProne && !IsDriving && !IsRolling && !IsRagdolled && !IsDead;
+            if (!raised) { pivotSteadyOn = false; pivotBodyTime = -1f; return spine; }
+            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+            Vector3 body = IsRemotePuppet ? transform.position : InterpolatedBodyPosition();   // a copy is already smoothed by the network
+            Quaternion yaw = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            Vector3 local = Quaternion.Inverse(yaw) * (spine - transform.position);   // the spine in the body's own frame
+            if (!pivotSteadyOn) { pivotSteadyOn = true; pivotSpineAverage = local; }
+            pivotSpineAverage = Vector3.Lerp(pivotSpineAverage, local, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, WeaponFollowTime)));
+            Vector3 steady = pivotSpineAverage + (local - pivotSpineAverage) * WeaponBobKeep;
+            return body + yaw * steady;
+        }
+
         private void RefreshItemAimRotationPivot()
         {
             //Pivot Weapons Rotation
 
             //Prone IK Adjust
             Vector3 HumanoidSpinePronePosition = HumanoidSpine.position + transform.forward * 0.2f - transform.up * 0.2f;
-            Vector3 TargetHumanoidSpinePosition = IsProne == false ? HumanoidSpine.position : HumanoidSpinePronePosition;
+            Vector3 TargetHumanoidSpinePosition = IsProne == false ? SteadyPivotPosition(HumanoidSpine.position) : HumanoidSpinePronePosition;
 
             // Items/Weapons Aim Rotation Center Rotation
             PivotItemRotation.transform.position = TargetHumanoidSpinePosition;

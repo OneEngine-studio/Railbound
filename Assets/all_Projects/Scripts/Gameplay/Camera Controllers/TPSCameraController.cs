@@ -49,9 +49,9 @@ namespace JUTPS.CameraSystems
         [Header("Steady Aim (Railbound)")]
         public bool SteadyAim = true;
         [Tooltip("How much of the walk / run bob of the weapon reaches the sight camera (0 = none, 1 = all of it).")]
-        [Range(0f, 1f)] public float AimBobKeep = 0.12f;
+        [Range(0f, 1f)] public float AimBobKeep = 0.6f;   // the weapon itself is steady now (JUCharacterController.SteadyWeapon)
         [Tooltip("How quickly the sight camera settles onto the weapon (seconds); also the time to raise the sights.")]
-        public float AimSettleTime = 0.09f;
+        public float AimSettleTime = 0.06f;
         [Tooltip("Smooths the body's up-and-down jolts (ground snapping, steps) for the sight camera (seconds, 0 = off).")]
         public float AimBodyHeightSmoothing = 0.12f;
         [Tooltip("No motion blur on this camera while looking down the sights.")]

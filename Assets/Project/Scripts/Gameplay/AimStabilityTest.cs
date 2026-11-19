@@ -10,9 +10,10 @@ namespace Railbound.Gameplay
 {
     /// <summary>
     /// Test aid, only with <c>-aimtest DIR</c>: the local player raises its sights and stands, walks and runs, once with JU's old
-    /// sight camera (steady aim off) and once with the steady aim, and logs how much the view shakes in each phase:
-    /// the high-frequency movement of the camera (what makes the picture shake), its biggest jump between two frames, and the
-    /// rotation jitter. Screenshots of the walking phase go to DIR.
+    /// sight camera and weapon (OLD), with the steady sight camera only (CAMERA, the first fix) and with the steady weapon too
+    /// (WEAPON), and logs how much the view shakes in each phase (the high-frequency movement of the camera, its jumps between
+    /// frames, the rotation jitter) and how much the weapon swings around on the screen, in pixels. The same is measured with the
+    /// weapon up from the hip (third person fire mode). Screenshots go to DIR.
     /// </summary>
     [DefaultExecutionOrder(32000)]   // measure after every camera has been placed
     public class AimStabilityTest : MonoBehaviour
@@ -22,8 +23,10 @@ namespace Railbound.Gameplay
         private TPSCameraController tps;
         private float move, run;
         private bool driving, measuring;
-        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>();
+        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>(), gunScreen = new List<float>(), gunScreenJumps = new List<float>();
         private float bodySmoothY, gunSmoothY;
+        private Vector2 gunScreenSmooth, gunScreenLast;
+        private bool aimDown = true;
         private Vector3 smoothed, last;
         private Quaternion lastRot;
         private bool hasLast;
@@ -69,7 +72,7 @@ namespace Railbound.Gameplay
 
             pc.UseDefaultControllerInput = false;
             driving = true;
-            float bodySmoothing = tps.AimBodyHeightSmoothing;
+            float bodySmoothing = tps.AimBodyHeightSmoothing, bobKeep = tps.AimBobKeep;
             Vector3 startPos = pc.transform.position; Quaternion startRot = pc.transform.rotation;
             foreach (int mode in new[] { 0, 1, 2 })
             {
@@ -81,14 +84,21 @@ namespace Railbound.Gameplay
                 var body = pc.GetComponent<Rigidbody>();
                 if (body != null) { body.position = startPos; body.velocity = Vector3.zero; }
                 yield return new WaitForSecondsRealtime(1.5f);
+                // OLD: JU's camera and weapon. CAMERA: the first fix (steady sight camera, the weapon still on the spine).
+                // WEAPON: the steady weapon, with the sight camera following it closely.
                 bool steady = mode > 0;
                 tps.SteadyAim = steady;
                 tps.NoMotionBlurInSights = steady;
-                tps.AimBodyHeightSmoothing = mode == 2 ? bodySmoothing : 0f;
-                string tag = mode == 0 ? "OLD" : mode == 1 ? "STEADY" : "STEADY+BODY";
+                tps.AimBodyHeightSmoothing = steady ? bodySmoothing : 0f;
+                tps.AimBobKeep = mode == 1 ? 0.12f : bobKeep;
+                pc.SteadyWeapon = mode == 2;
+                string tag = mode == 0 ? "OLD" : mode == 1 ? "CAMERA" : "WEAPON";
+                aimDown = true;
                 yield return Phase(tag, "stand", 0f, 0f, 2.5f, null);
                 yield return Phase(tag, "walk", 1f, 0f, 5f, tag.ToLower() + "_walk");
                 yield return Phase(tag, "run", 1f, 1f, 4f, tag.ToLower() + "_run");
+                aimDown = false;   // the weapon up from the hip (third person fire mode)
+                yield return Phase(tag, "hipwalk", 1f, 0f, 4f, tag.ToLower() + "_hip");
                 move = 0f; run = 0f;
                 yield return new WaitForSecondsRealtime(1.5f);
             }
@@ -101,13 +111,13 @@ namespace Railbound.Gameplay
         {
             move = forward; run = running;
             yield return new WaitForSecondsRealtime(1.2f);   // into the gait, sights settled
-            for (int i = 0; i < 20 && !tps.ScopeActive; i++)
+            for (int i = 0; i < 20 && aimDown && !tps.ScopeActive; i++)
             {
                 if (pc.WeaponInUseRightHand == null || !pc.IsItemEquiped)
                     foreach (var item in pc.Inventory.HoldableItensRightHand) if (item is Weapon w && w.AimMode != Weapon.WeaponAimMode.None) { pc.SwitchToItem(w.ItemSwitchID); break; }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear();
+            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear(); gunScreen.Clear(); gunScreenJumps.Clear();
             hasLast = false;
             measuring = true;
             float t = 0f; int shotNo = 0;
@@ -122,14 +132,15 @@ namespace Railbound.Gameplay
                 yield return null;
             }
             measuring = false;
-            Debug.Log($"[AimTest] {tag,-11} {name,-5} sights={tps.ScopeActive} frames={jumps.Count} shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
+            Debug.Log($"[AimTest] {tag,-6} {name,-7} sights={tps.ScopeActive} frames={jumps.Count} WEAPON ON SCREEN sway {Rms(gunScreen):F1} px, jump p95 {P95(gunScreenJumps):F1} px, biggest {Max(gunScreenJumps):F1} px | " +
+                      $"view shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
                       $"jump p95 {P95(jumps):F2} cm, biggest {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
         }
 
         private void Update()
         {
             if (!driving || pc == null) return;
-            pc.IsAiming = true;
+            pc.IsAiming = aimDown;
             pc.FiringMode = true;
             pc.FiringModeIK = true;
             pc.CurrentTimeToDisableFireMode = 0f;
@@ -145,7 +156,18 @@ namespace Railbound.Gameplay
             Vector3 p = cam.position;
             float by = pc.transform.position.y;
             float gy = pc.WeaponInUseRightHand != null ? pc.WeaponInUseRightHand.transform.position.y - by : 0f;
-            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; bodySmoothY = by; gunSmoothY = gy; return; }
+            // the weapon on the screen (pixels of a 1080 p picture): where it is drawn, around a 0.25 s average of itself
+            Vector2 gs = Vector2.zero;
+            if (pc.WeaponInUseRightHand != null)
+            {
+                Vector3 v = tps.mCamera.WorldToViewportPoint(pc.WeaponInUseRightHand.transform.position);
+                gs = new Vector2(v.x * 1080f * tps.mCamera.aspect, v.y * 1080f);
+            }
+            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; bodySmoothY = by; gunSmoothY = gy; gunScreenSmooth = gunScreenLast = gs; return; }
+            gunScreenSmooth = Vector2.Lerp(gunScreenSmooth, gs, 1f - Mathf.Exp(-Time.deltaTime / 0.25f));
+            gunScreen.Add((gs - gunScreenSmooth).magnitude);
+            gunScreenJumps.Add((gs - gunScreenLast).magnitude);
+            gunScreenLast = gs;
             float kk = 1f - Mathf.Exp(-Time.deltaTime / 0.25f);
             bodySmoothY = Mathf.Lerp(bodySmoothY, by, kk); gunSmoothY = Mathf.Lerp(gunSmoothY, gy, kk);
             bodyVertical.Add((by - bodySmoothY) * 100f); gunVertical.Add((gy - gunSmoothY) * 100f);
