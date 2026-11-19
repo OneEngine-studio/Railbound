@@ -295,6 +295,10 @@ namespace Railbound.Maps
                 Box(g, new Vector3(hw - 0.55f, height * 0.5f, zz), new Vector3(0.45f, height, 0.45f), "metal", null, true, "Column");
                 Box(g, new Vector3(0f, height - 0.35f, zz), new Vector3(width - 0.4f, 0.3f, 0.25f), "metal", null, false, "Truss");
             }
+            // lamps under the roof: a hall has almost no daylight inside
+            for (int i = 0; i < bays; i++)
+                InteriorLight(g, new Vector3(0f, height - 1.1f, -hl + length * (i + 0.5f) / bays), Mathf.Max(width, 12f) * 1.1f, 9000f);
+
             // roof with a skylight strip down the middle (the strip is open: daylight falls in)
             float strip = Mathf.Min(2.4f, width * 0.2f);
             float side2 = (width + 0.6f - strip) * 0.5f;
@@ -303,6 +307,21 @@ namespace Railbound.Maps
             for (int i = 0; i <= bays; i++)
                 Box(g, new Vector3(0f, height + 0.15f, -hl + length * i / bays), new Vector3(strip, 0.2f, 0.15f), "metal", null, true, "Skylight bar");
             return g;
+        }
+
+        /// <summary>A warm lamp hanging inside a building (local to <paramref name="p"/>): a glowing fitting and a shadowless point light.</summary>
+        public void InteriorLight(Transform p, Vector3 local, float range, float lumen)
+        {
+            Box(p, local + Vector3.up * 0.15f, new Vector3(0.9f, 0.12f, 0.4f), "glow_white", null, false, "Lamp");
+            if (Headless) return;
+            var go = new GameObject("Light");
+            go.transform.SetParent(p, false);
+            go.transform.localPosition = local;
+            var hd = UnityEngine.Rendering.HighDefinition.GameObjectExtension.AddHDLight(go, UnityEngine.Rendering.HighDefinition.HDLightTypeAndShape.Point);
+            hd.SetIntensity(lumen, UnityEngine.Rendering.HighDefinition.LightUnit.Lumen);
+            hd.SetRange(range);
+            hd.EnableShadows(false);
+            hd.color = new Color(1f, 0.88f, 0.72f);
         }
 
         /// <summary>A raised platform (station platform, loading dock) with ramp-stairs at both ends. Top at ground + height.</summary>

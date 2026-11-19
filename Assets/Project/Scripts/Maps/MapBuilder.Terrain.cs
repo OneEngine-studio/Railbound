@@ -108,7 +108,8 @@ namespace Railbound.Maps
                         if (g <= 0.01f) continue;
                         // patches: each kind of grass has its own places
                         int kind = Mathf.Clamp(Mathf.FloorToInt(Mathf.PerlinNoise(wx * 0.021f + 31.7f, wz * 0.021f + 7.3f) * n * 1.3f), 0, n - 1);
-                        maps[kind][zi, xi] = coverage ? Mathf.RoundToInt(Mathf.Clamp01(g) * 255f) : Mathf.RoundToInt(Mathf.Clamp01(g) * 6f);
+                        // MAP-2's grass is tall: keep it a light cover that does not hide the ground, the markers or a crouching player
+                        maps[kind][zi, xi] = coverage ? Mathf.RoundToInt(Mathf.Clamp01(g) * 110f) : Mathf.RoundToInt(Mathf.Clamp01(g) * 3f);
                     }
                 }
                 for (int i = 0; i < n; i++) td.SetDetailLayer(0, 0, i, maps[i]);

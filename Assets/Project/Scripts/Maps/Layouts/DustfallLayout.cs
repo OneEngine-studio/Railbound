@@ -112,7 +112,7 @@ namespace Railbound.Maps.Layouts
                 B.Rock(B.OnGround(x, z), B.Range(0.7f, 2f), B.Range(0f, 360f), open);
             }
 
-            View("overview", -560f, -560f, 220f, 0f, 0f, 30f);
+            View("overview", -330f, -330f, 170f, 0f, 0f, 30f);
             View("mine", -40f, 300f, 2f, Mine.x + 30f, Mine.y + 25f, -4f);
             View("ghost town", Town.x + 70f, Town.y + 3f, 1.8f, Town.x - 20f, Town.y);
             View("wreck", Wreck.x - 30f, Wreck.y - 70f, 3f, Wreck.x, Wreck.y);

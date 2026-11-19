@@ -280,9 +280,27 @@ namespace Railbound.Maps
             go.transform.localScale = template.transform.lossyScale * scale;
             foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true)) Kill(mb);
             foreach (var rb in go.GetComponentsInChildren<Rigidbody>(true)) Kill(rb);
-            if (go.GetComponentInChildren<Collider>() == null)
-                foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
-                    if (mf.sharedMesh != null) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+            foreach (var c in go.GetComponentsInChildren<Collider>(true)) Kill(c);
+            // one box around the rock's first model (a mesh collider needs a readable mesh, which a build may not keep)
+            Bounds local = new Bounds();
+            bool any = false;
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                Matrix4x4 m = go.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                foreach (var corner in Corners(mf.sharedMesh.bounds))
+                {
+                    Vector3 p = m.MultiplyPoint3x4(corner);
+                    if (!any) { local = new Bounds(p, Vector3.zero); any = true; } else local.Encapsulate(p);
+                }
+                if (mf.GetComponentInParent<LODGroup>() != null) break;   // LOD0 is enough
+            }
+            if (any)
+            {
+                var bc = go.AddComponent<BoxCollider>();
+                bc.center = local.center;
+                bc.size = local.size * 0.85f;   // rocks are rounder than their box
+            }
             Props++;
             return go;
         }

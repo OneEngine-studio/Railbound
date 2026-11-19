@@ -105,7 +105,7 @@ namespace Railbound.Maps.Layouts
         public override float GrassDensity(float x, float z, float h, float slope)
         {
             if (Mathf.Abs(z - RiverZ(x)) < 9f || slope > 34f) return 0f;
-            return 0.85f - Forest(x, z) * 0.45f;
+            return 0.55f - Forest(x, z) * 0.3f;
         }
 
         public override void Build()
@@ -166,7 +166,7 @@ namespace Railbound.Maps.Layouts
                 for (int s = -1; s <= 1; s += 2) B.Box(g, new Vector3(0f, -3f, s * 7f), new Vector3(3f, 5.6f, 0.9f), "wood_dark", null, true, "Trestle");
             }
 
-            View("overview", -520f, -520f, 200f, 0f, 0f, 40f);
+            View("overview", -300f, -330f, 150f, 0f, 0f, 40f);
             View("valley", -300f, RiverZ(-300f) + 30f, 2f, -100f, RiverZ(-100f));
             View("north ridge", -160f, 210f, 2f, 0f, 120f, 40f);
             View("forest", 120f, -60f, 1.8f, 180f, -110f, 20f);

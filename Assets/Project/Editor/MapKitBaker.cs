@@ -52,11 +52,11 @@ namespace Railbound.EditorTools
             S("plaster_ochre", "ConcreteAlbedo.png", "ConcreteNormal.png", new Color(0.9f, 0.72f, 0.46f), 4f),
             S("plaster_red", "ConcreteAlbedo.png", "ConcreteNormal.png", new Color(0.74f, 0.38f, 0.31f), 4f),
             S("plaster_blue", "ConcreteAlbedo.png", "ConcreteNormal.png", new Color(0.5f, 0.6f, 0.68f), 4f),
-            S("brick", "CliffAlbedo.png", "CliffNormal.png", new Color(0.66f, 0.33f, 0.26f), 2.2f),
+            S("brick", "CliffAlbedo.png", "CliffNormal.png", new Color(0.58f, 0.4f, 0.34f), 3f),
             S("wood", "DirtAlbedo.png", "DirtNormal.png", new Color(0.62f, 0.45f, 0.3f), 1.6f, 0f, 0.2f),
             S("wood_dark", "DirtAlbedo.png", "DirtNormal.png", new Color(0.36f, 0.25f, 0.17f), 1.6f, 0f, 0.2f),
             S("metal", "ConcreteAlbedo.png", "ConcreteNormal.png", new Color(0.4f, 0.42f, 0.45f), 2f, 0.7f, 0.45f),
-            S("metal_rust", "DirtAlbedo.png", "DirtNormal.png", new Color(0.62f, 0.36f, 0.22f), 2f, 0.45f, 0.3f),
+            S("metal_rust", "DirtAlbedo.png", "DirtNormal.png", new Color(0.55f, 0.4f, 0.3f), 2f, 0.45f, 0.3f),
             S("metal_green", "ConcreteAlbedo.png", "ConcreteNormal.png", new Color(0.3f, 0.42f, 0.33f), 2f, 0.5f, 0.4f),
             S("roof", "AsphaltAlbedo.png", "AsphaltNormal.png", new Color(0.42f, 0.4f, 0.39f), 2f),
             S("roof_red", "AsphaltAlbedo.png", "AsphaltNormal.png", new Color(0.62f, 0.3f, 0.22f), 2f),
@@ -77,8 +77,8 @@ namespace Railbound.EditorTools
         {
             ("GrassAlbedo.png", "GrassNormal.png", 5f),
             ("DirtAlbedo.png", "DirtNormal.png", 5f),
-            ("CliffAlbedo.png", "CliffNormal.png", 9f),
-            ("SandAlbedo.png", "SandNormal.png", 7f),
+            ("CliffAlbedo.png", "CliffNormal.png", 16f),
+            ("SandAlbedo.png", "SandNormal.png", 9f),
             ("RoadGravel.png", "RoadGravelNormal.png", 5f),
             ("AsphaltAlbedo.png", "AsphaltNormal.png", 6f),
             ("ConcreteAlbedo.png", "ConcreteNormal.png", 5f),
@@ -144,6 +144,8 @@ namespace Railbound.EditorTools
                 layer.normalScale = 1f;
                 layer.tileSize = new Vector2(tile, tile);
                 layer.smoothness = 0.1f;
+                // the sand texture is near white: a warm, darker sand reads as desert ground instead of snow
+                layer.diffuseRemapMax = (Surface)i == Surface.Sand ? new Vector4(0.82f, 0.66f, 0.48f, 1f) : Vector4.one;
                 EditorUtility.SetDirty(layer);
                 kit.terrainLayers[i] = layer;
             }

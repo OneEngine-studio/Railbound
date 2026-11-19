@@ -108,7 +108,7 @@ namespace Railbound.Maps.Layouts
         }
 
         public override float BushDensity(float x, float z, float h, float slope) => RoadDistance(x, z) > 6f && Mathf.Abs(z) > 30f ? 0.4f : 0f;
-        public override float GrassDensity(float x, float z, float h, float slope) => RoadDistance(x, z) > 5f && Mathf.Abs(z) > 28f ? 0.7f : 0f;
+        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 0.6f : (RoadDistance(x, z) > 7f && Mathf.Abs(z) > 30f ? 0.25f * MapNoise.Smooth(0.4f, 0.75f, MapNoise.Perlin(x, z, 0.04f, 7f)) : 0f);
 
         // ------------------------------------------------------------------ build
         private readonly List<Vector3> taken = new List<Vector3>();   // x, radius, z of things placed (buildings avoid each other)
@@ -137,7 +137,7 @@ namespace Railbound.Maps.Layouts
                 B.Lamp(B.OnGround(i * 42f, -67f), 0f, town);
             }
 
-            View("overview", -330f, -330f, 120f, 0f, 0f);
+            View("overview", -230f, -240f, 110f, 0f, 0f);
             View("yard", -80f, -30f, 3f, 40f, 0f);
             View("station", 30f, 70f, 2f, 0f, 38f, 4f);
             View("market", -100f, 125f, 1.8f, -130f, 155f);

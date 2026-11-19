@@ -61,7 +61,7 @@ namespace Railbound.Maps.Layouts
         }
 
         public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 1f : 0.12f;
-        public override float GrassDensity(float x, float z, float h, float slope) => 0.75f;
+        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.6f : 0.3f * MapNoise.Smooth(0.35f, 0.7f, MapNoise.Perlin(x, z, 0.05f, 9f));
 
         public override void Build()
         {

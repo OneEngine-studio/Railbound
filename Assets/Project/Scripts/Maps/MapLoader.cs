@@ -5,6 +5,7 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Railbound.Maps
 {
@@ -83,13 +84,18 @@ namespace Railbound.Maps
             {
                 if (Array.IndexOf(Map2Ground, root.name) < 0) continue;
                 if (root.name == "Terrain") Harvest(root, b);
-                if (root.name == "Rocks") HarvestRocks(root, b);
                 if (root.name == "Navigation") map2Nav = root.GetComponentInChildren<NavMeshSurface>(true);
                 off.Add(root);
             }
             int agentType = map2Nav != null ? map2Nav.agentTypeID : 0;
             foreach (var go in off) go.SetActive(false);
             FreezeSceneItems(scene);
+            // MAP-2's sea (an HDRP water surface) would flood the new map's low ground
+            int water = 0;
+            foreach (var w in Object.FindObjectsByType<UnityEngine.Rendering.HighDefinition.WaterSurface>(FindObjectsSortMode.None))
+                if (w.gameObject.scene == scene) { w.enabled = false; water++; }
+            Debug.Log($"[Map] MAP-2 assets: {b.Map2Trees.Count} trees, {b.Map2Bushes.Count} bushes, {b.Map2Rocks.Count} rocks, {b.Map2Grass.Count} grass; water surfaces off: {water}" +
+                      (b.Map2Trees.Count > 0 ? " (trees: " + string.Join(", ", b.Map2Trees.ConvertAll(t => t.name)) + ")" : ""));
 
             var layout = def.Layout();
             layout.Bind(b);
@@ -97,6 +103,9 @@ namespace Railbound.Maps
             b.BuildTerrain(layout);
             layout.Build();
             b.Boundary();
+            // the terrain and the buildings were moved into place after their colliders were made: physics has to know before the
+            // match setup casts its rays (this same frame, in Start)
+            Physics.SyncTransforms();
 
             float navSeconds = 0f;
             if (!preview)
@@ -118,42 +127,37 @@ namespace Railbound.Maps
         }
 
         // ------------------------------------------------------------------ MAP-2's assets
+        // the prefabs of every MAP-2 terrain tile (prefab assets: the scene's own rocks are static-batched and cannot be copied)
         private static void Harvest(GameObject terrainRoot, MapBuilder b)
         {
             var terrains = terrainRoot.GetComponentsInChildren<Terrain>(true);
             if (terrains.Length == 0) return;
-            var t = terrains[0];
-            b.Map2Terrain = t;
-            b.Map2TerrainMaterial = t.materialTemplate;
-            var data = t.terrainData;
-            if (data == null) return;
-            b.Map2Layers = data.terrainLayers;
-            var seen = new HashSet<GameObject>();
-            foreach (var tp in data.treePrototypes)
+            b.Map2Terrain = terrains[0];
+            b.Map2TerrainMaterial = terrains[0].materialTemplate;
+            var seen = new HashSet<Object>();
+            foreach (var t in terrains)
             {
-                if (tp.prefab == null || !seen.Add(tp.prefab)) continue;
-                string n = tp.prefab.name.ToLowerInvariant();
-                if (n.Contains("rock")) continue;   // rocks come from MAP-2's rock objects (with colliders)
-                if (n.Contains("pine") || n.Contains("conifer") || n.Contains("cypress") || n.Contains("tree")) b.Map2Trees.Add(tp.prefab);
-                else if (n.Contains("bush") || n.Contains("shrub") || n.Contains("fern")) b.Map2Bushes.Add(tp.prefab);
+                var data = t.terrainData;
+                if (data == null) continue;
+                if (b.Map2Layers == null || b.Map2Layers.Length == 0) b.Map2Layers = data.terrainLayers;
+                foreach (var tp in data.treePrototypes)
+                {
+                    if (tp.prefab == null || !seen.Add(tp.prefab)) continue;
+                    string n = tp.prefab.name.ToLowerInvariant();
+                    if (n.Contains("rock")) b.Map2Rocks.Add(tp.prefab);
+                    else if (n.Contains("bush") || n.Contains("shrub") || n.Contains("fern") || n.Contains("heather")) b.Map2Bushes.Add(tp.prefab);
+                    else b.Map2Trees.Add(tp.prefab);
+                }
+                foreach (var dp in data.detailPrototypes)
+                {
+                    if (dp == null) continue;
+                    Object key = dp.prototype != null ? (Object)dp.prototype : dp.prototypeTexture;
+                    if (key != null && seen.Add(key)) b.Map2Grass.Add(dp);
+                }
             }
-            foreach (var dp in data.detailPrototypes)
-                if (dp != null && (dp.prototype != null || dp.prototypeTexture != null)) b.Map2Grass.Add(dp);
-        }
-
-        private static void HarvestRocks(GameObject rocksRoot, MapBuilder b)
-        {
-            var names = new HashSet<string>();
-            foreach (Transform child in rocksRoot.GetComponentsInChildren<Transform>(true))
-            {
-                if (child == rocksRoot.transform || child.parent != rocksRoot.transform && child.parent.parent != rocksRoot.transform) continue;
-                if (child.GetComponentInChildren<MeshRenderer>(true) == null) continue;
-                string key = child.name.Split(' ', '(')[0];
-                if (!names.Add(key)) continue;   // one template per rock model
-                b.Map2Rocks.Add(child.gameObject);
-                if (b.Map2Rocks.Count >= 12) break;
-            }
-            // the same order on every peer (the layout picks rocks with the seeded generator)
+            // the same order on every peer (the layout picks with the seeded generator)
+            b.Map2Trees.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
+            b.Map2Bushes.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
             b.Map2Rocks.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
         }
 

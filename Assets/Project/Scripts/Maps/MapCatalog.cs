@@ -50,7 +50,7 @@ namespace Railbound.Maps
                 Concept = "A compact rail junction town: four districts around a rail yard, tight and fast for respawn fights.",
                 PlayArea = new Vector2(520f, 520f), TerrainSize = 900f, Vehicles = 4,
                 Layout = () => new RailheadLayout(),
-                SunElevation = 38f, SunAzimuth = 120f, SunTint = new Color(1f, 0.95f, 0.88f), FogDistance = 900f,
+                SunElevation = 38f, SunAzimuth = 120f, SunTint = new Color(1f, 0.95f, 0.88f), FogDistance = 1300f,
             },
             new MapDefinition
             {
@@ -58,7 +58,7 @@ namespace Railbound.Maps
                 Concept = "Forested highland of ridges, gullies and rock outcrops: natural cover only.",
                 PlayArea = new Vector2(900f, 900f), TerrainSize = 1300f, Vehicles = 0,
                 Layout = () => new TimberlineLayout(),
-                SunElevation = 30f, SunAzimuth = 210f, SunTint = new Color(1f, 0.92f, 0.82f), FogDistance = 700f,
+                SunElevation = 30f, SunAzimuth = 210f, SunTint = new Color(1f, 0.92f, 0.82f), FogDistance = 1500f,
             },
             new MapDefinition
             {
@@ -106,7 +106,7 @@ namespace Railbound.Maps
                 Concept = "Dry canyon and mesa country: four loot areas and three extraction pads at the edges.",
                 PlayArea = new Vector2(1000f, 1000f), TerrainSize = 1400f, Vehicles = 6,
                 Layout = () => new DustfallLayout(),
-                SunElevation = 55f, SunAzimuth = 190f, SunTint = new Color(1f, 0.94f, 0.84f), FogDistance = 1400f,
+                SunElevation = 48f, SunAzimuth = 190f, SunTint = new Color(1f, 0.9f, 0.78f), FogDistance = 2200f,
             },
         };
 
