@@ -545,6 +545,15 @@ namespace Project.AI.RL
                 EnsureWeaponEquippedIfNeeded();
             }
 
+            // matches: the tactical brain (JUCharacterRLAgent.Tactics.cs) sees, decides, moves and shoots
+            if (TacticalActive)
+            {
+                UpdateExplorationAndLoot();
+                TacticalTick();
+                EvaluateStepRewards();
+                return;
+            }
+
             targetScanTimer -= Time.deltaTime;
             if (targetScanTimer <= 0f)
             {
@@ -683,6 +692,7 @@ namespace Project.AI.RL
 
         public override void OnActionReceived(ActionBuffers actions)
         {
+            if (TacticalActive) return;   // the tactical brain drives the bot in matches
             if (characterBrain == null || (selfHealth != null && selfHealth.IsDead))
             {
                 return;
@@ -865,7 +875,7 @@ namespace Project.AI.RL
             disc[4] = 0;
             disc[5] = 0;
 
-            if (characterBrain == null || (selfHealth != null && selfHealth.IsDead))
+            if (characterBrain == null || (selfHealth != null && selfHealth.IsDead) || TacticalActive)
             {
                 return;
             }

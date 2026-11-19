@@ -43,6 +43,8 @@ namespace Railbound.BR
             if (IsServer)
             {
                 netHealth.Value = health.Health;
+                health.OnTakeDamage -= ServerDamaged;
+                health.OnTakeDamage += ServerDamaged;
             }
             else
             {
@@ -64,6 +66,34 @@ namespace Railbound.BR
             if (health != null) health.OnDeath.RemoveListener(RagdollRemotePlayer);
             JUHealth.OnAnyDamaged -= HandleAnyDamaged;
             netHealth.OnValueChanged -= HandleServerHealth;
+            if (health != null) health.OnTakeDamage -= ServerDamaged;
+        }
+
+        // ------------------------------------------------------------------ hit feedback
+        // the server applies every hit; the player who was hit only sees his health drop. Tell him who hit him and from where,
+        // so his camera jolts and the hit arc points at the shooter (Railbound.Gameplay.HitFeedback).
+        private ClientRpcParams ownerOnly;
+
+        private void ServerDamaged(float damage, Vector3 hitPosition)
+        {
+            if (!IsSpawned || damage <= 0f || GetComponent<BRNetBot>() != null) return;
+            bool known = health.LastAttacker != null && health.LastAttacker != gameObject && Time.time - health.LastAttackTime < 0.05f;
+            Vector3 from = known ? health.LastAttacker.transform.position + Vector3.up * 1.4f : hitPosition;
+            if (OwnerClientId == NetworkManager.ServerClientId)
+            {
+                if (IsOwner) Railbound.Gameplay.HitFeedback.Report(from, known, damage);   // a host's own player
+                return;
+            }
+            if (ownerOnly.Send.TargetClientIds == null || ownerOnly.Send.TargetClientIds.Count == 0 || ownerOnly.Send.TargetClientIds[0] != OwnerClientId)
+                ownerOnly = new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { OwnerClientId } } };
+            HitClientRpc(from, known, damage, ownerOnly);
+        }
+
+        [ClientRpc]
+        private void HitClientRpc(Vector3 from, bool known, float damage, ClientRpcParams rpcParams = default)
+        {
+            if (!IsOwner) return;
+            Railbound.Gameplay.HitFeedback.Report(from, known, damage);
         }
 
         private void HandleServerHealth(float previous, float current)
