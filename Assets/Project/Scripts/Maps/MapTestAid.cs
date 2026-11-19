@@ -79,6 +79,11 @@ namespace Railbound.Maps
             var controllers = FindObjectsByType<JUCameraController>(FindObjectsSortMode.None);
             foreach (var c in controllers) c.enabled = false;
             int shot = 0;
+            // the camera hangs on the player's camera pivot, which keeps turning: take it off for the tour
+            Transform camParent = cam != null ? cam.transform.parent : null;
+            Vector3 camLocalPos = cam != null ? cam.transform.localPosition : Vector3.zero;
+            Quaternion camLocalRot = cam != null ? cam.transform.localRotation : Quaternion.identity;
+            if (cam != null) cam.transform.SetParent(null, true);
             if (cam != null && b != null)
             {
                 foreach (var a in b.Anchors)
@@ -91,6 +96,12 @@ namespace Railbound.Maps
                     shot++;
                     yield return new WaitForSecondsRealtime(0.6f);
                 }
+            }
+            if (cam != null && camParent != null)
+            {
+                cam.transform.SetParent(camParent, false);
+                cam.transform.localPosition = camLocalPos;
+                cam.transform.localRotation = camLocalRot;
             }
             foreach (var c in controllers) if (c != null) c.enabled = true;
             Debug.Log($"[MapTest] {shot} screenshots");
