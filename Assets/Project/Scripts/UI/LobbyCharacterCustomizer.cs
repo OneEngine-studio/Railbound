@@ -93,7 +93,7 @@ namespace Railbound.UI
             }
 
             LobbyParty.Instance.Select(0);       // the local operator is the one on show
-            var director = FindObjectOfType<LobbyStageDirector>();
+            var director = FindAnyObjectByType<LobbyStageDirector>();
             if (director != null) director.SetCustomizing(true);
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null) preview.OnOperatorChanged += OnOperatorChanged;
@@ -110,7 +110,7 @@ namespace Railbound.UI
             IsOpen = false;
             closedFrame = Time.frameCount;
 
-            var director = FindObjectOfType<LobbyStageDirector>();
+            var director = FindAnyObjectByType<LobbyStageDirector>();
             if (director != null) director.SetCustomizing(false);
             var preview = LobbyCharacterPreviewManager.Instance;
             if (preview != null) preview.OnOperatorChanged -= OnOperatorChanged;
