@@ -269,7 +269,7 @@ namespace Railbound.BR
                     Vector3 target = best.transform.position - best.transform.forward * 8f;
                     var rb = pc.GetComponent<Rigidbody>();
                     pc.transform.SetPositionAndRotation(target + Vector3.up * 0.5f, Quaternion.LookRotation(best.transform.position - target));
-                    if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                    if (rb != null && !rb.isKinematic) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
                     Debug.Log("[BRNetDebug] moved the local player next to " + best.name);
                 }
             }
