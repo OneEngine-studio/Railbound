@@ -71,7 +71,9 @@ namespace Railbound.Vehicles
 
         private IEnumerator Start()
         {
-            int n = IntArg("-vehicles", Count);
+            // a map built for a mode says how many vehicles it has (none on the arenas); MAP-2 keeps the scene's count
+            var map = Railbound.Maps.MapLoader.Active;
+            int n = IntArg("-vehicles", map != null && !map.IsMap2 ? map.Vehicles : Count);
             if (n <= 0) yield break;
 
             // wait for the map layout (player spawns) and, in a network session, for the server to run

@@ -90,7 +90,7 @@ namespace Railbound.Maps
                 {
                     if (a == null || a.Kind != MapAnchor.AnchorKind.Viewpoint) continue;
                     cam.transform.SetPositionAndRotation(a.transform.position, a.transform.rotation);
-                    yield return new WaitForSecondsRealtime(2.2f);   // exposure and streaming settle
+                    yield return new WaitForSecondsRealtime(5f);   // auto exposure adapts (outdoor to indoor takes seconds) and streaming settles
                     string file = Path.Combine(dir, $"{def.Id}_{shot:00}_{a.Label.Replace(' ', '_')}.png");
                     ScreenCapture.CaptureScreenshot(file);
                     shot++;
