@@ -149,7 +149,7 @@ namespace Project.AI.RL
             fwd.y = 0f;
             if (fwd.sqrMagnitude < 0.01f) fwd = transform.forward;
             fwd.Normalize();
-            float range = Mathf.Max(DetectionRadius, WeaponRange() * 1.1f);
+            float range = Mathf.Max(Mathf.Min(DetectionRadius, 140f), WeaponRange() * 1.1f);
             float reaction = runtimeProfile != null ? Mathf.Clamp(runtimeProfile.ReactionTime, 0.12f, 0.8f) : 0.3f;
 
             foreach (var c in fighters)
@@ -256,12 +256,13 @@ namespace Project.AI.RL
         {
             var w = Gun;
             if (w == null) return 3f;
+            // where a shot still has a fair chance with this weapon's spread (further out the bot closes in instead of wasting ammo)
             switch (w.FireMode)
             {
-                case Weapon.WeaponFireMode.Shotgun: return 28f;
+                case Weapon.WeaponFireMode.Shotgun: return 25f;
                 case Weapon.WeaponFireMode.BoltAction: return 230f;
-                case Weapon.WeaponFireMode.SemiAuto: return w.BulletsPerMagazine >= 20 ? 110f : 50f;
-                default: return w.BulletsPerMagazine >= 28 ? 90f : 60f;
+                case Weapon.WeaponFireMode.SemiAuto: return w.BulletsPerMagazine >= 20 ? 80f : 40f;
+                default: return 50f;   // SMGs, dual pistols
             }
         }
 
@@ -274,7 +275,7 @@ namespace Project.AI.RL
             {
                 case Weapon.WeaponFireMode.Shotgun: return Mathf.Min(profile, 9f);
                 case Weapon.WeaponFireMode.BoltAction: return 70f;
-                default: return Mathf.Clamp(profile * (w.BulletsPerMagazine >= 28 ? 1.6f : 1f), 10f, 40f);
+                default: return Mathf.Clamp(profile * 1.2f, 10f, 24f);
             }
         }
 
@@ -874,6 +875,10 @@ namespace Project.AI.RL
                     hasCover = FindCover(enemy, true, Mathf.Max(dist, 12f), out coverPos);
                     SetState(TacticState.Retreat, "hurt");
                     if (hasCover) TacticalCoverTaken++;
+                }
+                else if (dist > WeaponRange() * 0.9f)
+                {
+                    SetState(TacticState.Push, "out of range");   // too far for this gun: close in (from cover to cover is the push's job)
                 }
                 else if ((enemyWeak || enemyReloading || dist < 7f || (aggression > 0.7f && hp > 0.6f)) && dist < pref * 2.2f)
                 {
