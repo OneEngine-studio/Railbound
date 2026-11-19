@@ -92,6 +92,13 @@ namespace Railbound.BR
         public int AmmoPlaced;
         public int MedkitsPlaced;
 
+        /// <summary>
+        /// Spawn points a map designed for its mode (team spawns, free-for-all spawns). When there are any, players and bots start on
+        /// these, in order, instead of on random terrain spots. Set by the map loader before Start.
+        /// </summary>
+        public readonly List<Pose> DesignedSpawns = new List<Pose>();
+        private int designedNext;
+
         private readonly List<Vector3> usedSpawnPoints = new List<Vector3>();
         private readonly List<Vector3> usedLootPoints = new List<Vector3>();
         private readonly List<Vector3> playerSpawns = new List<Vector3>();
@@ -150,6 +157,7 @@ namespace Railbound.BR
             playerSpawns.Clear();
             weaponTemplates.Clear();
             BRLootSync.BeginLayout();
+            designedNext = 0;
             BotsPlaced = PlayerSpawnsReady = WeaponsPlaced = AmmoPlaced = MedkitsPlaced = 0;
 
             // Player slots first so players always get a spot, then bots.
@@ -169,6 +177,13 @@ namespace Railbound.BR
         {
             for (int i = 0; i < Mathf.Max(1, PlayerSlots); i++)
             {
+                if (TryDesignedSpawn(out Vector3 dp))
+                {
+                    usedSpawnPoints.Add(dp);
+                    playerSpawns.Add(dp);
+                    if (PlaceStarterLoot) PlaceStarterWeaponNear(dp);
+                    continue;
+                }
                 if (!TryFindPoint(usedSpawnPoints, MinSpawnSpacing, out Vector3 p)) break;
                 usedSpawnPoints.Add(p);
                 playerSpawns.Add(p);
@@ -182,6 +197,18 @@ namespace Railbound.BR
                 Quaternion rot = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
                 TeleportBody(offline.transform, playerSpawns[0], rot);
             }
+        }
+
+        /// <summary>The next of the map's designed spawn points (they are used once each; then random spots take over).</summary>
+        private bool TryDesignedSpawn(out Vector3 point)
+        {
+            point = default;
+            while (designedNext < DesignedSpawns.Count)
+            {
+                Vector3 p = DesignedSpawns[designedNext++].position;
+                if (NavMesh.SamplePosition(p, out NavMeshHit nav, 2f, NavMesh.AllAreas)) { point = nav.position; return true; }
+            }
+            return false;
         }
 
         /// <summary>Spawn position for a player slot (clientId modulo slot count). False if no layout exists yet.</summary>
@@ -207,6 +234,14 @@ namespace Railbound.BR
                 var agent = agents[i];
                 if (agent == null) continue;
 
+                if (TryDesignedSpawn(out Vector3 dp))
+                {
+                    usedSpawnPoints.Add(dp);
+                    agent.TeleportTo(dp, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
+                    BotsPlaced++;
+                    if (PlaceStarterLoot) PlaceStarterWeaponNear(dp);
+                    continue;
+                }
                 if (!TryFindPoint(usedSpawnPoints, MinSpawnSpacing * 0.7f, out Vector3 p))
                 {
                     Debug.LogWarning($"[BRMatchSetup] No free terrain spot for bot '{agent.name}'. Leaving it where it is.");
@@ -225,6 +260,14 @@ namespace Railbound.BR
         public bool TryPlaceBot(JUCharacterRLAgent agent)
         {
             if (agent == null || rng == null) return false;
+            if (TryDesignedSpawn(out Vector3 dp))
+            {
+                usedSpawnPoints.Add(dp);
+                agent.TeleportTo(dp, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
+                BotsPlaced++;
+                if (PlaceStarterLoot) PlaceStarterWeaponNear(dp);
+                return true;
+            }
             if (!TryFindPoint(usedSpawnPoints, MinSpawnSpacing * 0.7f, out Vector3 p)) return false;
 
             usedSpawnPoints.Add(p);
