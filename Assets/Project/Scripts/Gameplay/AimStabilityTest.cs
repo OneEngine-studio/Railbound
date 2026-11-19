@@ -22,7 +22,8 @@ namespace Railbound.Gameplay
         private TPSCameraController tps;
         private float move, run;
         private bool driving, measuring;
-        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>();
+        private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>();
+        private float bodySmoothY, gunSmoothY;
         private Vector3 smoothed, last;
         private Quaternion lastRot;
         private bool hasLast;
@@ -63,11 +64,14 @@ namespace Railbound.Gameplay
 
             pc.UseDefaultControllerInput = false;
             driving = true;
-            foreach (bool steady in new[] { false, true })
+            float bodySmoothing = tps.AimBodyHeightSmoothing;
+            foreach (int mode in new[] { 0, 1, 2 })
             {
+                bool steady = mode > 0;
                 tps.SteadyAim = steady;
                 tps.NoMotionBlurInSights = steady;
-                string tag = steady ? "STEADY" : "OLD";
+                tps.AimBodyHeightSmoothing = mode == 2 ? bodySmoothing : 0f;
+                string tag = mode == 0 ? "OLD" : mode == 1 ? "STEADY" : "STEADY+BODY";
                 yield return Phase(tag, "stand", 0f, 0f, 2.5f, null);
                 yield return Phase(tag, "walk", 1f, 0f, 5f, tag.ToLower() + "_walk");
                 yield return Phase(tag, "run", 1f, 1f, 4f, tag.ToLower() + "_run");
@@ -83,7 +87,7 @@ namespace Railbound.Gameplay
         {
             move = forward; run = running;
             yield return new WaitForSecondsRealtime(1.2f);   // into the gait, sights settled
-            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear();
+            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear();
             hasLast = false;
             measuring = true;
             float t = 0f; int shotNo = 0;
@@ -98,8 +102,8 @@ namespace Railbound.Gameplay
                 yield return null;
             }
             measuring = false;
-            Debug.Log($"[AimTest] {tag,-6} {name,-5} sights={tps.ScopeActive} frames={jumps.Count} shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
-                      $"biggest jump {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
+            Debug.Log($"[AimTest] {tag,-11} {name,-5} sights={tps.ScopeActive} frames={jumps.Count} shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
+                      $"biggest jump {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
         }
 
         private void Update()
@@ -119,7 +123,12 @@ namespace Railbound.Gameplay
             if (!measuring || tps == null || tps.mCamera == null) return;
             var cam = tps.mCamera.transform;
             Vector3 p = cam.position;
-            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; return; }
+            float by = pc.transform.position.y;
+            float gy = pc.WeaponInUseRightHand != null ? pc.WeaponInUseRightHand.transform.position.y - by : 0f;
+            if (!hasLast) { smoothed = last = p; lastRot = cam.rotation; hasLast = true; bodySmoothY = by; gunSmoothY = gy; return; }
+            float kk = 1f - Mathf.Exp(-Time.deltaTime / 0.25f);
+            bodySmoothY = Mathf.Lerp(bodySmoothY, by, kk); gunSmoothY = Mathf.Lerp(gunSmoothY, gy, kk);
+            bodyVertical.Add((by - bodySmoothY) * 100f); gunVertical.Add((gy - gunSmoothY) * 100f);
             // high-pass: the camera's movement around a 0.25 s average of itself (the walk itself is slow, the shake is fast)
             smoothed = Vector3.Lerp(smoothed, p, 1f - Mathf.Exp(-Time.deltaTime / 0.25f));
             Vector3 d = p - smoothed;

@@ -52,11 +52,13 @@ namespace JUTPS.CameraSystems
         [Range(0f, 1f)] public float AimBobKeep = 0.12f;
         [Tooltip("How quickly the sight camera settles onto the weapon (seconds); also the time to raise the sights.")]
         public float AimSettleTime = 0.09f;
+        [Tooltip("Smooths the body's up-and-down jolts (ground snapping, steps) for the sight camera (seconds, 0 = off).")]
+        public float AimBodyHeightSmoothing = 0.12f;
         [Tooltip("No motion blur on this camera while looking down the sights.")]
         public bool NoMotionBlurInSights = true;
 
         private Vector3 bodyPrev, bodyCurr, adsLocal, adsLocalAverage, adsVelocity;
-        private float bodyCurrTime = -1f, chestHeight = 1.4f;
+        private float bodyCurrTime = -1f, chestHeight = 1.4f, bodyHeight;
         private bool adsOn, adsBlurOff;
         private HDAdditionalCameraData hdCamera;
 
@@ -92,6 +94,10 @@ namespace JUTPS.CameraSystems
             if (!SteadyAim || characterTarget == null || mCamera == null || mCamera.transform.parent == null) return raw;
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
             Vector3 body = SmoothBodyPosition();
+            // the capsule jolts up and down as it snaps to the ground and climbs small steps; a head would not
+            if (!adsOn || AimBodyHeightSmoothing <= 0f) bodyHeight = body.y;
+            else bodyHeight = Mathf.Lerp(bodyHeight, body.y, 1f - Mathf.Exp(-dt / AimBodyHeightSmoothing));
+            body.y = bodyHeight;
             if (characterTarget.HumanoidSpine != null)
                 chestHeight = Mathf.Lerp(chestHeight, characterTarget.HumanoidSpine.position.y - characterTarget.transform.position.y, 1f - Mathf.Exp(-dt / 0.5f));
             Vector3 origin = body + Vector3.up * chestHeight;
