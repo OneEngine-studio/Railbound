@@ -156,14 +156,38 @@ namespace Railbound.UI
             player._Move(0f, 0f, false);
             JUCameraController.LockMouse(false, false);
             EnsureEventSystem();
+            HideOtherHud();
             nextNearby = 0f;
             Refresh();
+        }
+
+        // the match HUD (minimap, zone panel, counters, kill feed, prompts, the weapon card) would show through: off while open
+        private readonly List<Canvas> hidden = new List<Canvas>();
+
+        private void HideOtherHud()
+        {
+            hidden.Clear();
+            foreach (var c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (c == null || c == canvas || !c.enabled || !c.isRootCanvas || c.renderMode == RenderMode.WorldSpace) continue;
+                string n = c.gameObject.name.ToLowerInvariant();
+                if (n.Contains("hit feedback") || n.Contains("pause") || n.Contains("settings") || n.Contains("death") || n.Contains("loading") || n.Contains("transition")) continue;
+                c.enabled = false;
+                hidden.Add(c);
+            }
+        }
+
+        private void RestoreOtherHud()
+        {
+            foreach (var c in hidden) if (c != null) c.enabled = true;
+            hidden.Clear();
         }
 
         public void Close()
         {
             if (!IsOpen) return;
             IsOpen = false;
+            RestoreOtherHud();
             if (player != null)
             {
                 player._Move(0f, 0f, false);
@@ -219,7 +243,7 @@ namespace Railbound.UI
                 c.icon.color = equipped ? Color.white : Soft;
                 c.name.text = (entry != null ? entry.displayName : it.ItemName).ToUpperInvariant();
                 c.name.color = Color.white;
-                c.cls.text = entry != null ? WeaponCatalogAsset.CategoryName(entry.category) : (it is Weapon ? "WEAPON" : "MELEE");
+                c.cls.text = entry != null ? ClassName(entry.category) : (it is Weapon ? "WEAPON" : "MELEE");
                 c.cls.color = Dim;
                 if (it is Weapon w)
                 {
@@ -316,6 +340,18 @@ namespace Railbound.UI
             string id = WeaponIds.FromItemName(it.ItemName);
             foreach (var e in catalog.weapons) if (e != null && e.id == id) return e;
             return null;
+        }
+
+        private static string ClassName(WeaponCategory c)
+        {
+            switch (c)
+            {
+                case WeaponCategory.Pistol: return "PISTOL";
+                case WeaponCategory.Smg: return "SUBMACHINE GUN";
+                case WeaponCategory.Shotgun: return "SHOTGUN";
+                case WeaponCategory.Sniper: return "SNIPER RIFLE";
+                default: return "MELEE";
+            }
         }
 
         private static string FireModeName(Weapon.WeaponFireMode m)
