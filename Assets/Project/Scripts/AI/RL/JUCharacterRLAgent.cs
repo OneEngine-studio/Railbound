@@ -365,7 +365,7 @@ namespace Project.AI.RL
             if (selfRb == null) selfRb = GetComponent<Rigidbody>();
 
             transform.SetPositionAndRotation(position, rotation);
-            if (selfRb != null)
+            if (selfRb != null && !selfRb.isKinematic)
             {
                 selfRb.velocity = Vector3.zero;
                 selfRb.angularVelocity = Vector3.zero;
@@ -1531,7 +1531,7 @@ namespace Project.AI.RL
         public void ResetAgentToSpawn()
         {
             transform.SetPositionAndRotation(spawnPosition, spawnRotation);
-            if (selfRb != null)
+            if (selfRb != null && !selfRb.isKinematic)
             {
                 selfRb.velocity = Vector3.zero;
                 selfRb.angularVelocity = Vector3.zero;

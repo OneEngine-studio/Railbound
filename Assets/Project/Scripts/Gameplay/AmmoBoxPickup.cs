@@ -165,8 +165,7 @@ namespace Railbound.Gameplay
             // 8. Make the physical box kinematic so it stays firmly in place on the terrain
             if (_rb != null)
             {
-                _rb.velocity = Vector3.zero;
-                _rb.angularVelocity = Vector3.zero;
+                if (!_rb.isKinematic) { _rb.velocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
                 _rb.isKinematic = true;
             }
 
