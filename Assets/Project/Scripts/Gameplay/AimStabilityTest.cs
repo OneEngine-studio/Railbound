@@ -87,7 +87,7 @@ namespace Railbound.Gameplay
                 if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(startPos, startRot, pc.transform.localScale);
                 else pc.transform.SetPositionAndRotation(startPos, startRot);
                 var body = pc.GetComponent<Rigidbody>();
-                if (body != null) { body.position = startPos; body.velocity = Vector3.zero; }
+                if (body != null && !body.isKinematic) { body.position = startPos; body.velocity = Vector3.zero; }
                 yield return new WaitForSecondsRealtime(1.5f);
                 // OLD: JU's camera and weapon. CAMERA: the first fix (steady sight camera, the weapon still on the spine).
                 // WEAPON: the steady weapon, with the sight camera following it closely.
