@@ -336,7 +336,7 @@ namespace Railbound.UI
             cgo.transform.SetParent(transform, false);
             canvas = cgo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 46;
+            canvas.sortingOrder = 95;   // above the match HUD (minimap, zone panel, counters)
             var sc = cgo.GetComponent<CanvasScaler>();
             sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             sc.referenceResolution = new Vector2(1920, 1080);
@@ -344,7 +344,7 @@ namespace Railbound.UI
             group = cgo.GetComponent<CanvasGroup>();
 
             // the game stays visible: a dark wash, darker at the edges
-            var wash = NewImage("Wash", cgo.transform, null, new Color(0f, 0f, 0f, 0.55f));
+            var wash = NewImage("Wash", cgo.transform, null, new Color(0f, 0f, 0f, 0.74f));
             Stretch(wash.rectTransform);
             var edge = NewImage("Edge", cgo.transform, gradient, new Color(0f, 0f, 0f, 0.6f));
             Stretch(edge.rectTransform);
@@ -561,7 +561,8 @@ namespace Railbound.UI
             go.transform.SetParent(parent, false);
             var t = go.GetComponent<TextMeshProUGUI>();
             t.text = text; t.fontSize = size; t.font = font; t.color = c; t.characterSpacing = spacing; t.alignment = al;
-            t.raycastTarget = false; t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Ellipsis; t.richText = true;
+            // no vertical truncation: a line taller than its box would vanish entirely
+            t.raycastTarget = false; t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Overflow; t.richText = true;
             return t;
         }
 
