@@ -149,7 +149,7 @@ namespace Railbound.BR
                 {
                     go.transform.position = layout[i];
                     var rb = go.GetComponent<Rigidbody>();
-                    if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                    if (rb != null && !rb.isKinematic) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
                     moved++;
                 }
             }
