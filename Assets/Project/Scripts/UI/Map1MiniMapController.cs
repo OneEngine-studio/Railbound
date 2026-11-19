@@ -137,7 +137,7 @@ namespace Railbound.UI
 
         private void FindMapData()
         {
-            _terrain = Terrain.activeTerrain != null ? Terrain.activeTerrain : FindObjectOfType<Terrain>();
+            _terrain = Terrain.activeTerrain != null ? Terrain.activeTerrain : FindAnyObjectByType<Terrain>();
             _multiTile = false;
 
             // Maps built from several terrain tiles (MAP-2): the playable region comes from the MiniMapBounds corners.
