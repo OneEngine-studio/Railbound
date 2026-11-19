@@ -105,7 +105,7 @@ namespace Railbound.Vehicles
             if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(spot, me.transform.rotation, me.transform.localScale);
             else me.transform.position = spot;
             var rb = me.GetComponent<Rigidbody>();
-            if (rb != null) { rb.position = spot; rb.velocity = Vector3.zero; }
+            if (rb != null && !rb.isKinematic) { rb.position = spot; rb.velocity = Vector3.zero; }
             Debug.Log($"[VehicleTest] walked to {v.name} seat {seat} side at {spot:F2} (distance to body {v.DistanceTo(spot):F2}).");
         }
 
