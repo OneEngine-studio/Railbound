@@ -499,7 +499,7 @@ namespace Railbound.BR
             clone.SetActive(true);
             BRLootSync.Register(clone);
             var rb = clone.GetComponent<Rigidbody>();
-            if (rb != null)
+            if (rb != null && !rb.isKinematic)
             {
                 rb.velocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
