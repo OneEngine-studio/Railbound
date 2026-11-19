@@ -166,7 +166,7 @@ namespace Railbound.UI
             logo.localScale = Vector3.one * LogoScale * push;
 
             // HUD boot: grid, scan line
-            grid.color = new Color(1f, 1f, 1f, 0.05f * Smooth(GridIn, GridIn + 0.5f, t) * (1f - ex));
+            grid.color = new Color(1f, 1f, 1f, 0.05f * Smooth(GridIn, GridIn + 0.5f, t) * (1f - 0.45f * Smooth(Impact, Impact + 1f, t)) * (1f - ex));
             grid.uvRect = new Rect(0f, -t * 0.01f, 30f, 17f);
             float sk = Clamp01((t - ScanStart) / ScanTime);
             scan.rectTransform.anchorMin = new Vector2(0f, 1f - EaseInOutCubic(sk));
@@ -233,7 +233,7 @@ namespace Railbound.UI
 
             // the impact: flash, light rays, dust
             flash.color = new Color(1f, 1f, 1f, sinceImpact < 0f ? 0f : 0.35f * Mathf.Exp(-sinceImpact * 6f));
-            float rayA = sinceImpact < 0f ? 0f : 0.16f * Mathf.Exp(-sinceImpact * 1.1f) * Smooth(0f, 0.05f, sinceImpact);
+            float rayA = sinceImpact < 0f ? 0f : 0.14f * Mathf.Exp(-sinceImpact * 2.2f) * Smooth(0f, 0.05f, sinceImpact);
             foreach (var r in rays)
             {
                 r.r.localRotation = Quaternion.Euler(0f, 0f, r.angle + t * r.speed);
@@ -514,7 +514,7 @@ namespace Railbound.UI
             ngo.transform.SetParent(root, false);
             grain = ngo.GetComponent<RawImage>();
             grain.texture = GrainTexture();
-            grain.color = new Color(1f, 1f, 1f, 0.016f);
+            grain.color = new Color(1f, 1f, 1f, 0.01f);
             grain.raycastTarget = false;
             Stretch(grain.rectTransform);
         }
