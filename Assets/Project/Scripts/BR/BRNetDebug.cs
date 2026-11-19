@@ -248,7 +248,7 @@ namespace Railbound.BR
                     Vector3 spot = jp.transform.position + jp.transform.forward * 5f + jp.transform.right * 1.5f;
                     var rb = pc.GetComponent<Rigidbody>();
                     pc.transform.SetPositionAndRotation(spot, Quaternion.LookRotation(jp.transform.position - spot));
-                    if (rb != null) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                    if (rb != null && !rb.isKinematic) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
                     break;
                 }
             }
