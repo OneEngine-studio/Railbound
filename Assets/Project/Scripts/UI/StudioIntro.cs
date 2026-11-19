@@ -164,7 +164,7 @@ namespace Railbound.UI
 
             // the impact flash
             float since = t - Impact;
-            flash.color = new Color(1f, 1f, 1f, since < 0f ? 0f : 0.32f * Mathf.Exp(-since * 5.5f));
+            flash.color = new Color(1f, 1f, 1f, since < 0f ? 0f : 0.28f * Mathf.Exp(-since * 6f));
 
             // STUDIO, letter by letter: rises and tightens into place
             for (int i = 0; i < letters.Count; i++)
@@ -226,8 +226,10 @@ namespace Railbound.UI
             logoGroup = lgo.GetComponent<CanvasGroup>();
 
             var soft = SoftSprite();
+            // the impact glow sits on the mark (the letters are not there yet)
             flash = Img("Flash", logo, soft, new Color(1f, 1f, 1f, 0f));
-            Centre(flash.rectTransform, new Vector2(StudioLogoData.Width * 1.6f, StudioLogoData.Height * 2.6f));
+            Centre(flash.rectTransform, new Vector2(StudioLogoData.Height * 2.2f, StudioLogoData.Height * 2.2f));
+            flash.rectTransform.anchoredPosition = new Vector2(-StudioLogoData.Width * 0.5f + 206f, 0f);
 
             // the line sits where the mark's foot will be, so the mark rises out of it
             float lineY = -StudioLogoData.Height * 0.5f + (StudioLogoData.Height - 26f);
@@ -299,7 +301,7 @@ namespace Railbound.UI
             ggo.transform.SetParent(cgo.transform, false);
             grain = ggo.GetComponent<RawImage>();
             grain.texture = grainTex;
-            grain.color = new Color(1f, 1f, 1f, 0.045f);
+            grain.color = new Color(1f, 1f, 1f, 0.018f);   // barely there: the background stays black
             grain.raycastTarget = false;
             Stretch(grain.rectTransform);
         }
