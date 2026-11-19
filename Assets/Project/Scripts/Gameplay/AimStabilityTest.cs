@@ -25,6 +25,8 @@ namespace Railbound.Gameplay
         private bool driving, measuring;
         private readonly List<float> lateral = new List<float>(), vertical = new List<float>(), jumps = new List<float>(), turns = new List<float>(), bodyVertical = new List<float>(), gunVertical = new List<float>(), gunScreen = new List<float>(), gunScreenJumps = new List<float>(), sightScreen = new List<float>(), gunTilt = new List<float>(), handMiss = new List<float>();
         private Vector2 sightScreenSmooth;
+        private readonly List<float> gunLate = new List<float>(), camLate = new List<float>(), camOffSight = new List<float>();
+        internal Vector3 earlyGun, earlyCam; internal int earlyFrame = -1;
         private Quaternion gunRelSmooth;
         private float bodySmoothY, gunSmoothY;
         private Vector2 gunScreenSmooth, gunScreenLast;
@@ -42,7 +44,8 @@ namespace Railbound.Gameplay
                 if (a[i] != "-aimtest" || FindFirstObjectByType<AimStabilityTest>() != null) continue;
                 var go = new GameObject("[Test] Aim Stability");
                 DontDestroyOnLoad(go);
-                go.AddComponent<AimStabilityTest>().dir = a[i + 1];
+                var t = go.AddComponent<AimStabilityTest>(); t.dir = a[i + 1];
+                go.AddComponent<AimStabilityTestEarly>().test = t;
                 return;
             }
         }
@@ -119,7 +122,7 @@ namespace Railbound.Gameplay
                     foreach (var item in pc.Inventory.HoldableItensRightHand) if (item is Weapon w && w.AimMode != Weapon.WeaponAimMode.None) { pc.SwitchToItem(w.ItemSwitchID); break; }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear(); gunScreen.Clear(); gunScreenJumps.Clear(); sightScreen.Clear(); gunTilt.Clear(); handMiss.Clear();
+            lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear(); gunScreen.Clear(); gunScreenJumps.Clear(); sightScreen.Clear(); gunTilt.Clear(); handMiss.Clear(); gunLate.Clear(); camLate.Clear(); camOffSight.Clear();
             hasLast = false;
             measuring = true;
             float t = 0f; int shotNo = 0;
@@ -134,7 +137,7 @@ namespace Railbound.Gameplay
                 yield return null;
             }
             measuring = false;
-            Debug.Log($"[AimTest] {tag,-6} {name,-7} sights={tps.ScopeActive} frames={jumps.Count} WEAPON ON SCREEN sway {Rms(gunScreen):F1} px, jump p95 {P95(gunScreenJumps):F1} px, biggest {Max(gunScreenJumps):F1} px, sight point {Rms(sightScreen):F1} px, gun tilt {Rms(gunTilt):F2} deg, hand off its IK target {Rms(handMiss):F2} cm | " +
+            Debug.Log($"[AimTest] {tag,-6} {name,-7} sights={tps.ScopeActive} frames={jumps.Count} WEAPON ON SCREEN sway {Rms(gunScreen):F1} px, jump p95 {P95(gunScreenJumps):F1} px, biggest {Max(gunScreenJumps):F1} px, sight point {Rms(sightScreen):F1} px, gun tilt {Rms(gunTilt):F2} deg, hand off its IK target {Rms(handMiss):F2} cm, moved during LateUpdate: gun {Rms(gunLate):F2} cm camera {Rms(camLate):F2} cm, camera off the sight point {Rms(camOffSight):F2} cm | " +
                       $"view shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
                       $"jump p95 {P95(jumps):F2} cm, biggest {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
         }
@@ -174,6 +177,12 @@ namespace Railbound.Gameplay
                 Vector3 v = tps.mCamera.WorldToViewportPoint(sp);
                 ss = new Vector2(v.x * 1080f * tps.mCamera.aspect, v.y * 1080f);
                 rel = Quaternion.Inverse(cam.rotation) * g.transform.rotation;
+                if (earlyFrame == Time.frameCount)
+                {
+                    gunLate.Add((g.transform.position - earlyGun).magnitude * 100f);
+                    camLate.Add((p - earlyCam).magnitude * 100f);
+                }
+                if (cam.parent != null) camOffSight.Add((p - (sp + cam.parent.forward * g.CameraAimingPosition.z)).magnitude * 100f);
                 var hand = pc.anim != null ? pc.anim.GetBoneTransform(HumanBodyBones.RightHand) : null;
                 if (hand != null && pc.IKPositionRightHand != null) handMiss.Add((hand.position - pc.IKPositionRightHand.position).magnitude * 100f);
             }
@@ -203,6 +212,9 @@ namespace Railbound.Gameplay
             last = p; lastRot = cam.rotation;
         }
 
+        internal Vector3 GunNow() => pc != null && pc.WeaponInUseRightHand != null ? pc.WeaponInUseRightHand.transform.position : Vector3.zero;
+        internal Vector3 CamNow() => tps != null && tps.mCamera != null ? tps.mCamera.transform.position : Vector3.zero;
+
         private static float Rms(List<float> v)
         {
             if (v.Count == 0) return 0f;
@@ -218,5 +230,17 @@ namespace Railbound.Gameplay
         }
 
         private static float Max(List<float> v) { float m = 0f; foreach (var x in v) m = Mathf.Max(m, x); return m; }
+    }
+
+    /// <summary>Test aid: notes where the gun and the camera are when LateUpdate starts.</summary>
+    [DefaultExecutionOrder(-32000)]
+    public class AimStabilityTestEarly : MonoBehaviour
+    {
+        internal AimStabilityTest test;
+        private void LateUpdate()
+        {
+            if (test == null) return;
+            test.earlyGun = test.GunNow(); test.earlyCam = test.CamNow(); test.earlyFrame = Time.frameCount;
+        }
     }
 }
