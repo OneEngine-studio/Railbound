@@ -92,7 +92,7 @@ namespace Railbound.Gameplay
             }
             float strength = Mathf.Clamp(damage / 40f, 0.3f, 1f);
             trauma = Mathf.Clamp01(trauma + strength * 0.75f);
-            vignetteAlpha = Mathf.Max(vignetteAlpha, 0.22f + strength * 0.25f);
+            vignetteAlpha = Mathf.Max(vignetteAlpha, 0.14f + strength * 0.2f);
 
             var cam = Camera.main;
             if (known && cam != null)

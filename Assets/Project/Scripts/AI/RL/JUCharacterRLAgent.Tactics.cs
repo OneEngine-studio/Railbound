@@ -743,8 +743,8 @@ namespace Project.AI.RL
                 tAimPoint = ChestOf(focus);
                 return;
             }
-            engagedSince = -1f;
-            hasCover = false;
+            // a fight survives short breaks in sight (the stalemate clock keeps running); after a while it is over
+            if (focus == null || Time.time - focus.LastSeen > 6f) { engagedSince = -1f; hasCover = false; }
 
             // 4. an enemy that slipped away: go and look where he was
             if (focus != null && Time.time - focus.LastSeen < 18f)
@@ -857,8 +857,9 @@ namespace Project.AI.RL
             float coverPriority = runtimeProfile != null ? runtimeProfile.CoverPriority : 0.55f;
             float flankAwareness = runtimeProfile != null ? runtimeProfile.FlankAwareness : 0.5f;
             if (engagedSince < 0f) { engagedSince = Time.time; TacticalEngagements++; tacticTimer = 0f; }
-            bool damagedEnemyRecently = currentTargetHealth != null && Time.time - lastDamageDealtAt < 6f;
             if (currentTargetHealth != null && currentTargetHealth.Health < prevTargetHealth - 0.5f) lastDamageDealtAt = Time.time;
+            if (lastDamageDealtAt < engagedSince) lastDamageDealtAt = engagedSince;
+            bool damagedEnemyRecently = Time.time - lastDamageDealtAt < 6f;
 
             // pick a tactic every few seconds (or when the current one ends)
             tacticTimer -= 0.1f;
@@ -878,7 +879,7 @@ namespace Project.AI.RL
                 {
                     SetState(TacticState.Push, enemyWeak ? "enemy weak" : enemyReloading ? "enemy reloading" : "close");
                 }
-                else if (Time.time - engagedSince > 8f && !damagedEnemyRecently && flankAwareness > 0.45f && dist > 12f && TryFlankPoint(enemy, out flankPoint))
+                else if (Time.time - engagedSince > 8f && !damagedEnemyRecently && flankAwareness > 0.35f && dist > 8f && TryFlankPoint(enemy, out flankPoint))
                 {
                     SetState(TacticState.Flank, "stalemate");
                     TacticalFlanks++;
