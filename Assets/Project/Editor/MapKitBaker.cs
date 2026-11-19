@@ -143,7 +143,9 @@ namespace Railbound.EditorTools
                 layer.normalMapTexture = Tex(n);
                 layer.normalScale = 1f;
                 layer.tileSize = new Vector2(tile, tile);
-                layer.smoothness = 0.1f;
+                layer.smoothness = (Surface)i == Surface.Asphalt || (Surface)i == Surface.Road ? 0.18f : 0.06f;
+                layer.smoothnessSource = TerrainLayerSmoothnessSource.Constant;   // not the textures' alpha (opaque: mirror-smooth ground)
+                layer.metallic = 0f;
                 // the sand texture is near white: a warm, darker sand reads as desert ground instead of snow
                 layer.diffuseRemapMax = (Surface)i == Surface.Sand ? new Vector4(0.82f, 0.66f, 0.48f, 1f) : Vector4.one;
                 EditorUtility.SetDirty(layer);

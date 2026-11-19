@@ -50,7 +50,7 @@ namespace Railbound.Maps
                 Concept = "A compact rail junction town: four districts around a rail yard, tight and fast for respawn fights.",
                 PlayArea = new Vector2(520f, 520f), TerrainSize = 900f, Vehicles = 4,
                 Layout = () => new RailheadLayout(),
-                SunElevation = 38f, SunAzimuth = 120f, SunTint = new Color(1f, 0.95f, 0.88f), FogDistance = 1300f,
+                SunElevation = 38f, SunAzimuth = 120f, SunTint = new Color(1f, 0.95f, 0.88f),
             },
             new MapDefinition
             {
@@ -58,7 +58,7 @@ namespace Railbound.Maps
                 Concept = "Forested highland of ridges, gullies and rock outcrops: natural cover only.",
                 PlayArea = new Vector2(900f, 900f), TerrainSize = 1300f, Vehicles = 0,
                 Layout = () => new TimberlineLayout(),
-                SunElevation = 30f, SunAzimuth = 210f, SunTint = new Color(1f, 0.92f, 0.82f), FogDistance = 1500f,
+                SunElevation = 30f, SunAzimuth = 210f, SunTint = new Color(1f, 0.92f, 0.82f),
             },
             new MapDefinition
             {
@@ -66,7 +66,7 @@ namespace Railbound.Maps
                 Concept = "A mirrored three-lane train depot: engine shed in the middle, containers and a platform on the flanks.",
                 PlayArea = new Vector2(120f, 76f), TerrainSize = 500f,
                 Layout = () => new Depot9Layout(),
-                SunElevation = 52f, SunAzimuth = 160f, FogDistance = 600f,
+                SunElevation = 52f, SunAzimuth = 160f,
             },
             new MapDefinition
             {
@@ -74,7 +74,7 @@ namespace Railbound.Maps
                 Concept = "An industrial courtyard laid out as a ring around a two-floor furnace hall.",
                 PlayArea = new Vector2(76f, 76f), TerrainSize = 420f,
                 Layout = () => new FoundryLayout(),
-                SunElevation = 24f, SunAzimuth = 250f, SunTint = new Color(1f, 0.84f, 0.68f), FogDistance = 380f,
+                SunElevation = 36f, SunAzimuth = 250f, SunTint = new Color(1f, 0.88f, 0.74f),
             },
             new MapDefinition
             {
@@ -82,7 +82,7 @@ namespace Railbound.Maps
                 Concept = "Two tracks crossing at a signal box, wagons for cover, short loops that keep everyone fighting.",
                 PlayArea = new Vector2(60f, 60f), TerrainSize = 400f,
                 Layout = () => new SwitchbackLayout(),
-                SunElevation = 60f, SunAzimuth = 100f, FogDistance = 500f,
+                SunElevation = 60f, SunAzimuth = 100f,
             },
             new MapDefinition
             {
@@ -90,7 +90,7 @@ namespace Railbound.Maps
                 Concept = "Three zones in a line: A relay hut, B radio mast on the hill, C pump house.",
                 PlayArea = new Vector2(160f, 110f), TerrainSize = 560f,
                 Layout = () => new SignalHillLayout(),
-                SunElevation = 34f, SunAzimuth = 300f, SunTint = new Color(1f, 0.93f, 0.85f), FogDistance = 650f,
+                SunElevation = 34f, SunAzimuth = 300f, SunTint = new Color(1f, 0.93f, 0.85f),
             },
             new MapDefinition
             {
@@ -98,7 +98,7 @@ namespace Railbound.Maps
                 Concept = "Attackers west, defenders east; site A at a fuel depot, site B in a warehouse, a rail cut between them.",
                 PlayArea = new Vector2(150f, 96f), TerrainSize = 540f,
                 Layout = () => new BlackwaterLayout(),
-                SunElevation = 18f, SunAzimuth = 80f, SunTint = new Color(1f, 0.86f, 0.74f), FogDistance = 450f,
+                SunElevation = 34f, SunAzimuth = 80f, SunTint = new Color(1f, 0.9f, 0.8f),
             },
             new MapDefinition
             {
@@ -106,7 +106,7 @@ namespace Railbound.Maps
                 Concept = "Dry canyon and mesa country: four loot areas and three extraction pads at the edges.",
                 PlayArea = new Vector2(1000f, 1000f), TerrainSize = 1400f, Vehicles = 6,
                 Layout = () => new DustfallLayout(),
-                SunElevation = 48f, SunAzimuth = 190f, SunTint = new Color(1f, 0.9f, 0.78f), FogDistance = 2200f,
+                SunElevation = 48f, SunAzimuth = 190f, SunTint = new Color(1f, 0.9f, 0.78f),
             },
         };
 

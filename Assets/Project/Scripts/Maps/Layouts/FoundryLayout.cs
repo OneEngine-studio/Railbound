@@ -120,10 +120,10 @@ namespace Railbound.Maps.Layouts
             B.Lamp(B.OnGround(14f, 14f), -135f, site, 5f);
             B.Lamp(B.OnGround(-14f, 14f), 135f, site, 5f);
 
-            View("overview", -34f, -34f, 30f, 2f, 2f);
+            View("overview", -33f, -33f, 28f, 4f, 4f);
             View("hall", -9f, -9f, 1.7f, 4f, 6f);
             View("gallery", 8.6f, 8f, 5.9f, -6f, -6f);
-            View("ring", 14f, -33f, 1.7f, -14f, -30f);
+            View("ring", 33f, -20f, 1.7f, -33f, -20f);
         }
     }
 }

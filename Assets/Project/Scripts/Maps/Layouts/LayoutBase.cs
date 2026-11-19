@@ -46,7 +46,7 @@ namespace Railbound.Maps.Layouts
             }
             // a team-coloured strip on the ground marks the spawn
             Vector3 g = B.OnGround(center.x, center.z, 0.03f);
-            B.Box(null, g, new Vector3(count * spacing + 2f, 0.04f, 0.6f), q, team == 1 ? "team_a" : "team_b", null, false, "Spawn strip");
+            B.Box(null, g, new Vector3(count * spacing + 2f, 0.03f, 0.25f), q, team == 1 ? "team_a" : "team_b", null, false, "Spawn strip");
             if (!cover) return;
             Vector3 front = center + q * Vector3.forward * 4.5f;
             for (int i = -1; i <= 1; i += 2)

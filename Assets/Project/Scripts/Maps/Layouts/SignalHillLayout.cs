@@ -57,11 +57,11 @@ namespace Railbound.Maps.Layouts
             float o = Outside(x, z);
             if (o > 6f) return slope < 32f ? 2f * MapNoise.Perlin(x, z, 0.03f, 2f) : 0f;
             // a few trees in the corners of the play area
-            return Mathf.Abs(x) > 64f && Mathf.Abs(z) > 30f ? 0.5f : 0f;
+            return Mathf.Abs(x) > 66f && Mathf.Abs(z) > 36f ? 0.25f : 0f;
         }
 
-        public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 1f : 0.12f;
-        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.6f : 0.3f * MapNoise.Smooth(0.35f, 0.7f, MapNoise.Perlin(x, z, 0.05f, 9f));
+        public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 0.8f : 0f;
+        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.6f : 0.12f * MapNoise.Smooth(0.45f, 0.75f, MapNoise.Perlin(x, z, 0.05f, 9f));
 
         public override void Build()
         {
@@ -115,7 +115,7 @@ namespace Railbound.Maps.Layouts
 
             PerimeterWall(2f, "wood_dark", 0.4f);
 
-            View("overview", -90f, -70f, 34f, 0f, 0f);
+            View("overview", -76f, -52f, 26f, 0f, 0f);
             View("zone A", -40f, -12f, 1.7f, -55f, 0f);
             View("zone B", 12f, 14f, 1.7f, 0f, 0f, 5f);
             View("zone C", 40f, 12f, 1.7f, 58f, 0f);

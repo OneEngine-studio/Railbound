@@ -127,7 +127,7 @@ namespace Railbound.Maps.Layouts
                 B.Container(B.OnGround(s * 46f, 12f), 0f, yard, 0);
             }
 
-            View("overview", -70f, -50f, 28f, 0f, 0f);
+            View("overview", -57f, -35f, 24f, 4f, 4f);
             View("shed", -18f, -4f, 1.7f, 10f, 2f);
             View("north lane", -50f, 20f, 1.7f, 10f, 25f);
             View("south lane", 50f, -18f, 1.7f, -10f, -24f);

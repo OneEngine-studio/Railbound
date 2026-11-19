@@ -107,7 +107,7 @@ namespace Railbound.Maps.Layouts
             return Mathf.Max(hill, Mathf.Max(river, park));
         }
 
-        public override float BushDensity(float x, float z, float h, float slope) => RoadDistance(x, z) > 6f && Mathf.Abs(z) > 30f ? 0.4f : 0f;
+        public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 0.5f : (RoadDistance(x, z) > 8f && Mathf.Abs(z) > 34f ? 0.08f : 0f);
         public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 0.6f : (RoadDistance(x, z) > 7f && Mathf.Abs(z) > 30f ? 0.25f * MapNoise.Smooth(0.4f, 0.75f, MapNoise.Perlin(x, z, 0.04f, 7f)) : 0f);
 
         // ------------------------------------------------------------------ build

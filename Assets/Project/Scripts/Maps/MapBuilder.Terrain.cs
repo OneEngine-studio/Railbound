@@ -81,7 +81,7 @@ namespace Railbound.Maps
                     if (bushCount > 0)
                     {
                         float d = layout.BushDensity(wx, wz, h, slope) * cell * cell / 100f;
-                        if (roll < d) instances.Add(Tree(bushStart + Rng.Next(bushCount), u, v, 0.7f, 1.3f));
+                        if (roll < d) instances.Add(Tree(bushStart + Rng.Next(bushCount), u, v, 0.4f, 0.8f));
                     }
                 }
             }

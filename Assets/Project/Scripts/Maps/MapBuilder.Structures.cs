@@ -297,7 +297,7 @@ namespace Railbound.Maps
             }
             // lamps under the roof: a hall has almost no daylight inside
             for (int i = 0; i < bays; i++)
-                InteriorLight(g, new Vector3(0f, height - 1.1f, -hl + length * (i + 0.5f) / bays), Mathf.Max(width, 12f) * 1.1f, 9000f);
+                InteriorLight(g, new Vector3(0f, height - 1.1f, -hl + length * (i + 0.5f) / bays), Mathf.Max(width, 12f) * 1.6f, 160000f);
 
             // roof with a skylight strip down the middle (the strip is open: daylight falls in)
             float strip = Mathf.Min(2.4f, width * 0.2f);

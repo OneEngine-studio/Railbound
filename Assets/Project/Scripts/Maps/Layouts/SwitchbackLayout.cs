@@ -43,8 +43,8 @@ namespace Railbound.Maps.Layouts
         }
 
         public override float TreeDensity(float x, float z, float h, float slope) => Outside(x, z) > 10f && slope < 32f ? 1.8f : 0f;
-        public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 1.2f : (Outside(x, z) <= 0f && Mathf.Abs(x) > 24f && Mathf.Abs(z) > 24f ? 0.6f : 0f);
-        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.8f : 0.15f;
+        public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 1.2f : 0f;
+        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.8f : 0f;
 
         public override void Build()
         {
@@ -100,10 +100,10 @@ namespace Railbound.Maps.Layouts
 
             foreach (var p in Spawns) Spawn(p.x, p.y, Mathf.Atan2(-p.x, -p.y) * Mathf.Rad2Deg);
 
-            View("overview", -38f, -38f, 22f, 2f, 2f);
+            View("overview", -28f, -28f, 18f, 4f, 2f);
             View("crossing", 0f, -22f, 1.7f, 6f, 0f);
             View("signal box", -6f, 6f, 4.8f, 20f, -14f);
-            View("sheds", 28f, 4f, 1.7f, 18f, -16f);
+            View("sheds", 27f, -2f, 1.7f, 16f, -20f);
         }
     }
 }

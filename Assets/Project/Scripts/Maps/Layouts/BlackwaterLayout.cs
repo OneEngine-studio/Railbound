@@ -40,7 +40,7 @@ namespace Railbound.Maps.Layouts
 
         public override float TreeDensity(float x, float z, float h, float slope) => Outside(x, z) > 12f && slope < 32f ? 1.4f : 0f;
         public override float BushDensity(float x, float z, float h, float slope) => Outside(x, z) > 4f ? 1f : 0f;
-        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.7f : (x < -40f ? 0.25f : 0f);
+        public override float GrassDensity(float x, float z, float h, float slope) => Outside(x, z) > 2f ? 0.7f : 0f;
 
         public override void Build()
         {
@@ -103,7 +103,7 @@ namespace Railbound.Maps.Layouts
             TeamSpawns(1, new Vector3(-68f, 0f, 0f), 90f, 6, 3f);   // attackers
             TeamSpawns(2, new Vector3(67f, 0f, 0f), -90f, 6, 3f);   // defenders
 
-            View("overview", -85f, -60f, 30f, 10f, 0f);
+            View("overview", -72f, -45f, 26f, 10f, 0f);
             View("site A", 10f, 18f, 1.7f, 28f, 32f);
             View("site B", 12f, -24f, 1.7f, 26f, -28f);
             View("rail cut", -45f, 2f, 1.7f, 10f, 0f, -1f);
