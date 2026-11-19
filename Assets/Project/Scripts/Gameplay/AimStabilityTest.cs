@@ -70,8 +70,17 @@ namespace Railbound.Gameplay
             pc.UseDefaultControllerInput = false;
             driving = true;
             float bodySmoothing = tps.AimBodyHeightSmoothing;
+            Vector3 startPos = pc.transform.position; Quaternion startRot = pc.transform.rotation;
             foreach (int mode in new[] { 0, 1, 2 })
             {
+                // every mode walks and runs the same path: back to the same start, facing the same way
+                move = 0f; run = 0f;
+                var nt = pc.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(startPos, startRot, pc.transform.localScale);
+                else pc.transform.SetPositionAndRotation(startPos, startRot);
+                var body = pc.GetComponent<Rigidbody>();
+                if (body != null) { body.position = startPos; body.velocity = Vector3.zero; }
+                yield return new WaitForSecondsRealtime(1.5f);
                 bool steady = mode > 0;
                 tps.SteadyAim = steady;
                 tps.NoMotionBlurInSights = steady;
@@ -114,7 +123,7 @@ namespace Railbound.Gameplay
             }
             measuring = false;
             Debug.Log($"[AimTest] {tag,-11} {name,-5} sights={tps.ScopeActive} frames={jumps.Count} shake lateral {Rms(lateral):F2} cm, vertical {Rms(vertical):F2} cm, " +
-                      $"biggest jump {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
+                      $"jump p95 {P95(jumps):F2} cm, biggest {Max(jumps):F2} cm, rotation jitter {Rms(turns):F3} deg | body vertical {Rms(bodyVertical):F2} cm, weapon vs body vertical {Rms(gunVertical):F2} cm, speed {pc.GetComponent<Rigidbody>().velocity.magnitude:F1} m/s");
         }
 
         private void Update()
@@ -158,6 +167,13 @@ namespace Railbound.Gameplay
             if (v.Count == 0) return 0f;
             double s = 0; foreach (var x in v) s += x * x;
             return (float)System.Math.Sqrt(s / v.Count);
+        }
+
+        private static float P95(List<float> v)
+        {
+            if (v.Count == 0) return 0f;
+            var c = new List<float>(v); c.Sort();
+            return c[Mathf.Clamp((int)(c.Count * 0.95f), 0, c.Count - 1)];
         }
 
         private static float Max(List<float> v) { float m = 0f; foreach (var x in v) m = Mathf.Max(m, x); return m; }
