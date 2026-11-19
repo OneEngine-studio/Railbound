@@ -34,7 +34,7 @@ namespace Railbound.UI
         {
             get
             {
-                if (_instance == null) _instance = FindObjectOfType<LobbyParty>(true);
+                if (_instance == null) _instance = FindAnyObjectByType<LobbyParty>(FindObjectsInactive.Include);
                 if (_instance == null) _instance = new GameObject("LobbyParty").AddComponent<LobbyParty>();
                 return _instance;
             }
