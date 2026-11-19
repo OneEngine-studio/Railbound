@@ -40,6 +40,9 @@ namespace Project.AI.RL
         /// <summary>The movement the brain asks for this frame (world direction, length 0..1), whichever brain drives the bot.</summary>
         public Vector3 IntendedMove => TacticalActive ? tMove : new Vector3(cachedMoveX, 0f, cachedMoveZ);
         public bool TacticalBrainActive => TacticalActive;
+        /// <summary>Distance to the enemy the bot is fighting (-1 without one), and whether that enemy is a person (test aid).</summary>
+        public float FocusDistance => focus != null && focus.T != null ? Vector3.Distance(transform.position, focus.T.position) : -1f;
+        public bool FocusIsHuman => focus != null && focus.T != null && focus.T.GetComponent<JUCharacterRLAgent>() == null;
         public float StuckSeconds { get; private set; }
         public float MovingSeconds { get; private set; }
 
@@ -90,8 +93,9 @@ namespace Project.AI.RL
             if (Time.time - fightersRefreshedAt < 1f) return;
             fightersRefreshedAt = Time.time;
             fighters.Clear();
-            foreach (var c in Object.FindObjectsByType<JUCharacterController>(FindObjectsSortMode.None))
-                if (c != null && c.isActiveAndEnabled) fighters.Add(c);
+            // a remote player's copy on the server may have its controller switched off: it is still a fighter
+            foreach (var c in Object.FindObjectsByType<JUCharacterController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                if (c != null && c.gameObject.activeInHierarchy) fighters.Add(c);
         }
 
         private Vector3 Eye => transform.position + Vector3.up * (characterBrain != null && characterBrain.IsCrouched ? 1.15f : 1.6f);
@@ -874,7 +878,7 @@ namespace Project.AI.RL
                 {
                     SetState(TacticState.Push, enemyWeak ? "enemy weak" : enemyReloading ? "enemy reloading" : "close");
                 }
-                else if (Time.time - engagedSince > 11f && !damagedEnemyRecently && flankAwareness > 0.45f && dist > 12f && TryFlankPoint(enemy, out flankPoint))
+                else if (Time.time - engagedSince > 8f && !damagedEnemyRecently && flankAwareness > 0.45f && dist > 12f && TryFlankPoint(enemy, out flankPoint))
                 {
                     SetState(TacticState.Flank, "stalemate");
                     TacticalFlanks++;

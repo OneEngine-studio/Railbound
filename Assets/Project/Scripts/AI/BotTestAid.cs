@@ -19,7 +19,8 @@ namespace Project.AI
         private bool measuring, done;
         private float started;
         private float wantMoveTime, stuckTime, pressTime;
-        private int shots, hits, deaths;
+        private int shots, hits, deaths, shotsAtHumans, hitsOnHumans;
+        private readonly int[] shotsByRange = new int[4];   // <20, 20-50, 50-100, >100 m
         private readonly Dictionary<string, float> stateTime = new Dictionary<string, float>();
         private readonly HashSet<JUHealth> deadSeen = new HashSet<JUHealth>();
         private readonly Dictionary<JUCharacterRLAgent, Vector3> lastPos = new Dictionary<JUCharacterRLAgent, Vector3>();
@@ -53,14 +54,24 @@ namespace Project.AI
 
         private void OnShot(Weapon w)
         {
-            if (measuring && w != null && w.GetComponentInParent<JUCharacterRLAgent>() != null) shots++;
+            if (!measuring || w == null) return;
+            var bot = w.GetComponentInParent<JUCharacterRLAgent>();
+            if (bot == null) return;
+            shots++;
+            float d = bot.FocusDistance;
+            if (d >= 0f) shotsByRange[d < 20f ? 0 : d < 50f ? 1 : d < 100f ? 2 : 3]++;
+            if (bot.FocusIsHuman) shotsAtHumans++;
         }
 
         private void OnDamaged(JUHealth h, float dmg, Vector3 at)
         {
             if (!measuring || dmg <= 0f) return;
             var attacker = JUHealth.PendingAttacker;
-            if (attacker != null && attacker.GetComponent<JUCharacterRLAgent>() != null && attacker != h.gameObject) hits++;
+            if (attacker != null && attacker.GetComponent<JUCharacterRLAgent>() != null && attacker != h.gameObject)
+            {
+                hits++;
+                if (h.GetComponent<JUCharacterRLAgent>() == null) hitsOnHumans++;
+            }
         }
 
         private void Update()
@@ -130,6 +141,8 @@ namespace Project.AI
             sb.Append("stuck ").Append(Pct(stuckTime, wantMoveTime)).Append(" of moving time, against obstacle ").Append(Pct(pressTime, wantMoveTime));
             sb.Append(", shots ").Append(shots).Append(", hits ").Append(hits).Append(" (").Append(Pct(hits, Mathf.Max(1, shots))).Append(")");
             sb.Append(", deaths ").Append(deaths);
+            sb.Append(", shots at the player ").Append(shotsAtHumans).Append(" (hits ").Append(hitsOnHumans).Append(")");
+            sb.Append(", shot ranges <20/20-50/50-100/>100 m: ").Append(shotsByRange[0]).Append('/').Append(shotsByRange[1]).Append('/').Append(shotsByRange[2]).Append('/').Append(shotsByRange[3]);
             if (stateTime.Count > 0)
             {
                 float total = 0f; foreach (var v in stateTime.Values) total += v;
