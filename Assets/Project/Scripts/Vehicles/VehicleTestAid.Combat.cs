@@ -36,7 +36,7 @@ namespace Railbound.Vehicles
             if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(spot, rot, me.transform.localScale);
             else me.transform.SetPositionAndRotation(spot, rot);
             var rb = me.GetComponent<Rigidbody>();
-            if (rb != null) { rb.position = spot; rb.velocity = Vector3.zero; }
+            if (rb != null && !rb.isKinematic) { rb.position = spot; rb.velocity = Vector3.zero; }
         }
 
         private IEnumerator TakeWheel(RailboundVehicle v)
