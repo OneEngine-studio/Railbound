@@ -98,6 +98,7 @@ namespace Railbound.Gameplay
                 tps.AimBobKeep = mode == 1 ? 0.12f : mode == 0 ? 1f : bobKeep;
                 pc.SteadyWeapon = mode == 2;
                 string tag = mode == 0 ? "OLD" : mode == 1 ? "CAMERA" : "WEAPON";
+                Debug.Log($"[AimTest] {tag} settings: SteadyAim {tps.SteadyAim} AimBobKeep {tps.AimBobKeep} AimSettleTime {tps.AimSettleTime} body smoothing {tps.AimBodyHeightSmoothing} | SteadyWeapon {pc.SteadyWeapon} WeaponBobKeep {pc.WeaponBobKeep} follow {pc.WeaponFollowTime} | camera type {tps.GetType().Name}, {FindObjectsByType<TPSCameraController>(FindObjectsSortMode.None).Length} TPS cameras");
                 aimDown = true;
                 yield return Phase(tag, "stand", 0f, 0f, 2.5f, null);
                 yield return Phase(tag, "walk", 1f, 0f, 5f, tag.ToLower() + "_walk");
