@@ -15,15 +15,19 @@ namespace Railbound.BR
         public bool Firing;
         public bool Reloading;
         public Vector3 Look;
+        public short Mag;       // rounds in the magazine of the weapon in the hand (-1: no weapon)
+        public short Reserve;   // rounds carried for it
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref Firing);
             serializer.SerializeValue(ref Reloading);
             serializer.SerializeValue(ref Look);
+            serializer.SerializeValue(ref Mag);
+            serializer.SerializeValue(ref Reserve);
         }
 
-        public bool Equals(PuppetPose o) { return Firing == o.Firing && Reloading == o.Reloading && (Look - o.Look).sqrMagnitude < 0.05f; }
+        public bool Equals(PuppetPose o) { return Firing == o.Firing && Reloading == o.Reloading && Mag == o.Mag && Reserve == o.Reserve && (Look - o.Look).sqrMagnitude < 0.05f; }
         public override bool Equals(object obj) { return obj is PuppetPose p && Equals(p); }
         public override int GetHashCode() { return Firing ? 1 : 0; }
     }
@@ -36,7 +40,13 @@ namespace Railbound.BR
             if (c == null || Time.unscaledTime < nextTime) return;
             nextTime = Time.unscaledTime + 0.066f;
             c.CapturePuppetState(out bool firing, out bool reloading, out Vector3 look);
-            var pose = new PuppetPose { Firing = firing, Reloading = reloading, Look = look };
+            var w = c.WeaponInUseRightHand;
+            var pose = new PuppetPose
+            {
+                Firing = firing, Reloading = reloading, Look = look,
+                Mag = (short)(w != null ? Mathf.Clamp(w.BulletsAmounts, 0, short.MaxValue) : -1),
+                Reserve = (short)(w != null ? Mathf.Clamp(w.TotalBullets, 0, short.MaxValue) : 0),
+            };
             if (!pose.Equals(variable.Value)) variable.Value = pose;
         }
 
@@ -48,6 +58,35 @@ namespace Railbound.BR
         {
             if (c != null && c.IsRemotePuppet) c.SwitchToItem(id, true);
             else if (inventory != null) inventory.SwitchToItem(id, true);
+        }
+
+        /// <summary>
+        /// The weapon a character holds on this peer and its ammunition: a copy of another machine's character takes the ammunition from
+        /// the pose that machine publishes (its own counters are not kept up to date here). False without a weapon.
+        /// </summary>
+        public static bool TryGetHeld(JUCharacterController c, out JUTPS.WeaponSystem.Weapon weapon, out int mag, out int reserve)
+        {
+            weapon = null; mag = 0; reserve = 0;
+            if (c == null) return false;
+            var bot = c.GetComponent<BRNetBot>();
+            if (bot != null && bot.IsSpawned && !bot.IsServer)
+            {
+                weapon = bot.HeldWeapon;
+                var p = bot.PoseValue;
+                mag = p.Mag; reserve = p.Reserve;
+                return weapon != null;
+            }
+            var net = c.GetComponent<JUNetworkPlayer>();
+            weapon = c.WeaponInUseRightHand;
+            if (net != null && net.IsSpawned && !net.IsOwner)
+            {
+                var p = net.PoseValue;
+                mag = p.Mag; reserve = p.Reserve;
+                return weapon != null;
+            }
+            if (weapon == null) return false;
+            mag = weapon.BulletsAmounts; reserve = weapon.TotalBullets;
+            return true;
         }
 
         /// <summary>Makes the character a puppet that shows another machine's pose (not on a headless server, which draws nothing).</summary>

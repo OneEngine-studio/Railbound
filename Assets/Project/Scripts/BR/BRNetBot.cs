@@ -30,6 +30,8 @@ namespace Railbound.BR
         private readonly NetworkVariable<PuppetPose> pose = new NetworkVariable<PuppetPose>(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private float nextPosePublish;
+        /// <summary>The pose the server publishes (aim, reload, ammunition in the hand).</summary>
+        public PuppetPose PoseValue => pose.Value;
         private JUCharacterController puppet, controller;
 
         /// <summary>Muzzle flashes/gunshots this peer has shown for bots (test counter).</summary>
