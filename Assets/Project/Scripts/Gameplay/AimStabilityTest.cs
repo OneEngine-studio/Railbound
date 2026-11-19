@@ -77,7 +77,7 @@ namespace Railbound.Gameplay
 
             pc.UseDefaultControllerInput = false;
             driving = true;
-            float bodySmoothing = tps.AimBodyHeightSmoothing, bobKeep = tps.AimBobKeep;
+            float bodySmoothing = tps.AimBodyHeightSmoothing, bobKeep = tps.SightBobKeep;
             Vector3 startPos = pc.transform.position; Quaternion startRot = pc.transform.rotation;
             foreach (int mode in new[] { 0, 1, 2 })
             {
@@ -95,10 +95,10 @@ namespace Railbound.Gameplay
                 tps.SteadyAim = steady;
                 tps.NoMotionBlurInSights = steady;
                 tps.AimBodyHeightSmoothing = steady ? bodySmoothing : 0f;
-                tps.AimBobKeep = mode == 1 ? 0.12f : mode == 0 ? 1f : bobKeep;
+                tps.SightBobKeep = mode == 1 ? 0.12f : mode == 0 ? 1f : bobKeep;
                 pc.SteadyWeapon = mode == 2;
                 string tag = mode == 0 ? "OLD" : mode == 1 ? "CAMERA" : "WEAPON";
-                Debug.Log($"[AimTest] {tag} settings: SteadyAim {tps.SteadyAim} AimBobKeep {tps.AimBobKeep} AimSettleTime {tps.AimSettleTime} body smoothing {tps.AimBodyHeightSmoothing} | SteadyWeapon {pc.SteadyWeapon} WeaponBobKeep {pc.WeaponBobKeep} follow {pc.WeaponFollowTime} | camera type {tps.GetType().Name}, {FindObjectsByType<TPSCameraController>(FindObjectsSortMode.None).Length} TPS cameras");
+                Debug.Log($"[AimTest] {tag} settings: SteadyAim {tps.SteadyAim} SightBobKeep {tps.SightBobKeep} AimSettleTime {tps.AimSettleTime} body smoothing {tps.AimBodyHeightSmoothing} | SteadyWeapon {pc.SteadyWeapon} WeaponBobKeep {pc.WeaponBobKeep} follow {pc.WeaponFollowTime} | camera type {tps.GetType().Name}, {FindObjectsByType<TPSCameraController>(FindObjectsSortMode.None).Length} TPS cameras");
                 aimDown = true;
                 yield return Phase(tag, "stand", 0f, 0f, 2.5f, null);
                 yield return Phase(tag, "walk", 1f, 0f, 5f, tag.ToLower() + "_walk");
