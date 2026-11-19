@@ -297,7 +297,7 @@ namespace Railbound.BR
         {
             body.SetPositionAndRotation(position, rotation);
             var rb = body.GetComponent<Rigidbody>();
-            if (rb != null)
+            if (rb != null && !rb.isKinematic)
             {
                 rb.velocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
