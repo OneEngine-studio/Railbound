@@ -58,7 +58,12 @@ namespace Railbound.Gameplay
                     if (item is Weapon w && w.AimMode != Weapon.WeaponAimMode.None) { gun = w; break; }
             if (gun == null) { Debug.LogError("[AimTest] no weapon with sights"); yield break; }
             gun.Unlocked = true; if (gun.ItemQuantity <= 0) gun.ItemQuantity = 1;
-            if (pc.WeaponInUseRightHand != gun) pc.SwitchToItem(gun.ItemSwitchID);
+            // the loadout is applied at spawn and can switch weapons too: keep asking until the weapon is really in the hand
+            for (int i = 0; i < 30 && !(pc.WeaponInUseRightHand != null && pc.IsItemEquiped); i++)
+            {
+                pc.SwitchToItem(gun.ItemSwitchID);
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
             yield return new WaitForSecondsRealtime(1.5f);
             Debug.Log($"[AimTest] weapon {(pc.WeaponInUseRightHand != null ? pc.WeaponInUseRightHand.ItemName : "none")} aim mode {gun.AimMode}");
 
@@ -87,6 +92,12 @@ namespace Railbound.Gameplay
         {
             move = forward; run = running;
             yield return new WaitForSecondsRealtime(1.2f);   // into the gait, sights settled
+            for (int i = 0; i < 20 && !tps.ScopeActive; i++)
+            {
+                if (pc.WeaponInUseRightHand == null || !pc.IsItemEquiped)
+                    foreach (var item in pc.Inventory.HoldableItensRightHand) if (item is Weapon w && w.AimMode != Weapon.WeaponAimMode.None) { pc.SwitchToItem(w.ItemSwitchID); break; }
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
             lateral.Clear(); vertical.Clear(); jumps.Clear(); turns.Clear(); bodyVertical.Clear(); gunVertical.Clear();
             hasLast = false;
             measuring = true;
