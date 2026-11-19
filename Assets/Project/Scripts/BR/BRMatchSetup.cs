@@ -481,7 +481,7 @@ namespace Railbound.BR
             item.SetParent(lootRoot, true);
             item.SetPositionAndRotation(groundPoint + Vector3.up * 0.4f, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
             var rb = item.GetComponent<Rigidbody>();
-            if (rb != null)
+            if (rb != null && !rb.isKinematic)
             {
                 rb.velocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
