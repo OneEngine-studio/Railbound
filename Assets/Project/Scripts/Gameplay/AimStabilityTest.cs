@@ -90,7 +90,7 @@ namespace Railbound.Gameplay
                 tps.SteadyAim = steady;
                 tps.NoMotionBlurInSights = steady;
                 tps.AimBodyHeightSmoothing = steady ? bodySmoothing : 0f;
-                tps.AimBobKeep = mode == 1 ? 0.12f : bobKeep;
+                tps.AimBobKeep = mode == 1 ? 0.12f : mode == 0 ? 1f : bobKeep;
                 pc.SteadyWeapon = mode == 2;
                 string tag = mode == 0 ? "OLD" : mode == 1 ? "CAMERA" : "WEAPON";
                 aimDown = true;

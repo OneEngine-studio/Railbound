@@ -927,18 +927,22 @@ namespace JUTPS
         // The weapon hangs on PivotItemRotation (the hands are IK'd to it, the weapon sits in the hand). JU put that pivot exactly on
         // the animated spine, read in Update (a frame behind the animation) while the body moves in physics steps: with the weapon up,
         // every step of the walk and run cycle swung the gun around (and, in the sights, the view with it). While the weapon is up the
-        // pivot now rides on the body, interpolated between physics steps, at the spine's average place; only a small part of the
-        // spine's bob gets through and the arms take up the rest, like a shooter's arms do.
+        // pivot now rides on the body, interpolated between physics steps (and, in the sights, without the capsule's up-and-down
+        // jolts from ground snapping), at the spine's average place; only a small part of the spine's bob gets through and the arms
+        // take up the rest, like a shooter's arms do. The sight camera then simply follows the weapon.
         [Header("Steady Weapon (Railbound)")]
         public bool SteadyWeapon = true;
         [Tooltip("How much of the spine's walk / run bob moves the raised weapon (0 = none, 1 = all of it).")]
         [Range(0f, 1f)] public float WeaponBobKeep = 0.15f;
         [Tooltip("How quickly the weapon follows the spine's average place (seconds).")]
         public float WeaponFollowTime = 0.25f;
+        [Tooltip("Smooths the body's up-and-down jolts (ground snapping, small steps) for the weapon in the sights (seconds, 0 = off).")]
+        public float WeaponBodyHeightSmoothing = 0.12f;
 
-        private Vector3 pivotBodyPrev, pivotBodyCurr, pivotSpineAverage;
-        private float pivotBodyTime = -1f;
+        private Vector3 pivotBodyPrev, pivotBodyCurr, pivotSpineAverage, pivotSteadyResult;
+        private float pivotBodyTime = -1f, pivotBodyHeight;
         private bool pivotSteadyOn;
+        private int pivotSteadyFrame = -1;
 
         /// <summary>The body between its last two physics steps (the rigidbody is not interpolated: JU turns the transform itself).</summary>
         private Vector3 InterpolatedBodyPosition()
@@ -955,14 +959,20 @@ namespace JUTPS
         {
             bool raised = SteadyWeapon && (FiringMode || IsAiming) && !IsProne && !IsDriving && !IsRolling && !IsRagdolled && !IsDead;
             if (!raised) { pivotSteadyOn = false; pivotBodyTime = -1f; return spine; }
+            if (pivotSteadyFrame == Time.frameCount) return pivotSteadyResult;   // once per frame (the filters below step with time)
+            pivotSteadyFrame = Time.frameCount;
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
             Vector3 body = IsRemotePuppet ? transform.position : InterpolatedBodyPosition();   // a copy is already smoothed by the network
+            if (!pivotSteadyOn || !IsAiming || WeaponBodyHeightSmoothing <= 0f) pivotBodyHeight = body.y;
+            else pivotBodyHeight = Mathf.Lerp(pivotBodyHeight, body.y, 1f - Mathf.Exp(-dt / WeaponBodyHeightSmoothing));
+            body.y = pivotBodyHeight;
             Quaternion yaw = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
             Vector3 local = Quaternion.Inverse(yaw) * (spine - transform.position);   // the spine in the body's own frame
             if (!pivotSteadyOn) { pivotSteadyOn = true; pivotSpineAverage = local; }
             pivotSpineAverage = Vector3.Lerp(pivotSpineAverage, local, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, WeaponFollowTime)));
             Vector3 steady = pivotSpineAverage + (local - pivotSpineAverage) * WeaponBobKeep;
-            return body + yaw * steady;
+            pivotSteadyResult = body + yaw * steady;
+            return pivotSteadyResult;
         }
 
         private void RefreshItemAimRotationPivot()

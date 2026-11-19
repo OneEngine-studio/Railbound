@@ -49,15 +49,15 @@ namespace JUTPS.CameraSystems
         [Header("Steady Aim (Railbound)")]
         public bool SteadyAim = true;
         [Tooltip("How much of the walk / run bob of the weapon reaches the sight camera (0 = none, 1 = all of it).")]
-        [Range(0f, 1f)] public float AimBobKeep = 0.6f;   // the weapon itself is steady now (JUCharacterController.SteadyWeapon)
-        [Tooltip("How quickly the sight camera settles onto the weapon (seconds); also the time to raise the sights.")]
-        public float AimSettleTime = 0.06f;
+        [Range(0f, 1f)] public float AimBobKeep = 1f;   // the weapon itself is steady (JUCharacterController.SteadyWeapon): the sights stay put on screen
+        [Tooltip("Time to raise the sights (seconds): the camera eases onto the weapon, then follows it exactly.")]
+        public float AimSettleTime = 0.09f;
         [Tooltip("Smooths the body's up-and-down jolts (ground snapping, steps) for the sight camera (seconds, 0 = off).")]
         public float AimBodyHeightSmoothing = 0.12f;
         [Tooltip("No motion blur on this camera while looking down the sights.")]
         public bool NoMotionBlurInSights = true;
 
-        private Vector3 bodyPrev, bodyCurr, adsLocal, adsLocalAverage, adsVelocity;
+        private Vector3 bodyPrev, bodyCurr, adsOffset, adsLocalAverage, adsVelocity;
         private float bodyCurrTime = -1f, chestHeight = 1.4f, bodyHeight;
         private bool adsOn, adsBlurOff;
         private HDAdditionalCameraData hdCamera;
@@ -103,17 +103,15 @@ namespace JUTPS.CameraSystems
             Vector3 origin = body + Vector3.up * chestHeight;
             Quaternion view = mCamera.transform.parent.rotation;
             Vector3 local = Quaternion.Inverse(view) * (raw - origin);
-            if (!adsOn)
-            {
-                adsOn = true;
-                adsLocalAverage = local;
-                adsLocal = Quaternion.Inverse(view) * (mCamera.transform.position - origin);   // raise the sights from where the camera is
-                adsVelocity = Vector3.zero;
-            }
+            bool raising = !adsOn;
+            if (raising) { adsOn = true; adsLocalAverage = local; }
             adsLocalAverage = Vector3.Lerp(adsLocalAverage, local, 1f - Mathf.Exp(-dt / 0.3f));
             Vector3 target = adsLocalAverage + (local - adsLocalAverage) * AimBobKeep;
-            adsLocal = Vector3.SmoothDamp(adsLocal, target, ref adsVelocity, AimSettleTime, Mathf.Infinity, dt);
-            return origin + view * adsLocal;
+            // raising the sights eases in from where the camera is; after that the camera follows the target with no lag
+            // (a lagging camera is what made the weapon swing across the screen)
+            if (raising) { adsOffset = Quaternion.Inverse(view) * (mCamera.transform.position - origin) - target; adsVelocity = Vector3.zero; }
+            adsOffset = Vector3.SmoothDamp(adsOffset, Vector3.zero, ref adsVelocity, AimSettleTime, Mathf.Infinity, dt);
+            return origin + view * (target + adsOffset);
         }
 
         /// <summary>HDRP motion blur on this camera only while looking down the sights (the player's setting stays as it is otherwise).</summary>
