@@ -60,7 +60,7 @@ MonoBehaviour:
     tileMeters: 4
   - id: brick
     material: {fileID: 2100000, guid: 5e00a9be9557c3e4d800ec652d7960a6, type: 2}
-    tileMeters: 2.2
+    tileMeters: 3
   - id: wood
     material: {fileID: 2100000, guid: a1506e4de830a234cb995895bb846167, type: 2}
     tileMeters: 1.6
