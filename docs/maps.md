@@ -2,6 +2,8 @@
 
 Every mode on the mode screen has its own map, designed for how that mode plays. MAP-2 stays the Classic BR map. The eight new maps are listed below.
 
+![The eight maps in a local test build](images/maps-preview.jpg)
+
 ## How maps are built
 
 - **One match scene, many maps.** MAP-2 already holds everything a match needs: networking, the player and camera, match setup, loot sync, zone, bots, HUD, pause menu, lighting and sky. A new map reuses all of that. On scene load, `MapLoader` reads the map ID, switches off MAP-2's own ground (terrain, rocks, water, baked NavMesh, reflection probes) and builds the new map in its place.
@@ -101,9 +103,15 @@ Sizes are the playable area. The terrain around it is bigger, for the view.
 
 ## Testing a map
 
+Preview in the editor: `Railbound > Maps > Preview > ...` builds a map into an empty scene (do not save that scene). After changing the kit list or a surface, run `Railbound > Maps > Bake Map Kit`.
+
+In a build:
+
 ```
 Railbound.exe -batchmode -nographics -server -port 7777 -match test -insecure-join -map depot9
 Railbound.exe -client -ip 127.0.0.1 -port 7777 -match test -join-token local -map depot9
 ```
 
-`-maptest DIR` on the client walks the camera through the map's viewpoints and saves screenshots, and logs the map's build time, object counts, spawn checks and NavMesh size.
+`-maptest DIR` on the client logs the map's build time, object counts and NavMesh size, checks that every spawn and objective marker is on walkable ground and that the player and bots stand on the ground, then flies the camera through the map's viewpoints and saves a screenshot of each.
+
+What a map does not have yet: its mode's rules. A match on a new map runs the battle royale systems (zone, loot, bots) until each mode's rules are built on its markers (`MapAnchor`).
