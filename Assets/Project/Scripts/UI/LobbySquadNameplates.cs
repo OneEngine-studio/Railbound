@@ -100,7 +100,7 @@ namespace Railbound.UI
         {
             var cam = Camera.main;
             if (cam == null) return;
-            if (director == null) director = FindObjectOfType<LobbyStageDirector>();
+            if (director == null) director = FindAnyObjectByType<LobbyStageDirector>();
             if (director == null) return;
 
             var party = LobbyParty.Instance;
