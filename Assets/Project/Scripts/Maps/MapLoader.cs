@@ -45,7 +45,8 @@ namespace Railbound.Maps
             if (scene.name != MatchSceneName) return;
             Active = null;
             LastBuild = null;
-            MapSelection.Set(null);
+            // a dedicated server only unloads the match scene to rebuild it on the allocated map (ServerMapSwitch): keep that choice
+            if (!MapSelection.IsDedicatedServer) MapSelection.Set(null);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

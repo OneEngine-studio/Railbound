@@ -250,6 +250,8 @@ namespace Railbound.Networking
             }
             if (string.IsNullOrEmpty(expected) && AgonesServerLifecycle.InAgones) reject = "THIS SERVER HAS NO MATCH YET";
             else if (!string.IsNullOrEmpty(expected) && expected != p.m) reject = "WRONG MATCH";
+            // the server is rebuilding the match on the chosen map: let the player in once it runs
+            while (reject == null && Railbound.Maps.ServerMapSwitch.StillBusy) yield return null;
 
             // 2. Nakama must know this player's ticket for this match
             if (reject == null && !Insecure)
