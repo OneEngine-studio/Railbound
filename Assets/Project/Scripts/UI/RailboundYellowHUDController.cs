@@ -158,7 +158,6 @@ namespace Railbound.UI
             PlayerDataService.Instance.AttachLobby();
             LobbySquadNameplates.Create(transform, plateFont);
             partyPanel = LobbyPartyPanel.Create(transform, plateFont);
-            modePanel = LobbyGameModePanel.Create(transform, plateFont);
             SetupModeCard();
 
             // the full-screen menus of the top navigation; they go back to PLAY when they close
@@ -217,11 +216,9 @@ namespace Railbound.UI
             if (customizer != null && customizer.BusyThisFrame) return false;
             if (AnyMenuBusy()) return false;
             if (partyPanel != null && partyPanel.IsOpen) return false;
-            if (modePanel != null && modePanel.IsOpen) return false;
             return true;
         }
         private LobbyPartyPanel partyPanel;
-        private LobbyGameModePanel modePanel;
         private readonly LobbyMenuScreen[] menuScreens = new LobbyMenuScreen[6];   // by nav index; null where the tab has no full-screen menu
 
         private LobbyReachSettings settingsScreen;   // the settings menu copied from MAP-2's pause menu (see LobbySettingsImporter)
@@ -316,7 +313,7 @@ namespace Railbound.UI
 
             if (!levelUpRunning && PlayerProgression.Pending.Count > 0 && levelUpPopup != null && !levelUpPopup.IsOpen
                 && (deployState == DeployState.Idle || deployState == DeployState.Failed)
-                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !(modePanel != null && modePanel.IsOpen) && !AnyMenuBusy())
+                && !(customizer != null && customizer.BusyThisFrame) && !(partyPanel != null && partyPanel.IsOpen) && !AnyMenuBusy())
                 StartCoroutine(ShowLevelUps());
         }
 
@@ -403,13 +400,6 @@ namespace Railbound.UI
                 return;
             }
 
-            // the mode screen owns the keyboard while it is open (Space must not deploy, Esc must only close it)
-            if (modePanel != null && modePanel.IsOpen)
-            {
-                TickDeployState();
-                return;
-            }
-
             // typing in the chat or the open inbox owns the keyboard (and the frame its Esc / Enter ended it)
             if (socialHub != null && socialHub.OwnsKeyboard)
             {
@@ -429,10 +419,6 @@ namespace Railbound.UI
             else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
                 if (socialHub != null) socialHub.FocusChat();
-            }
-            else if (Input.GetKeyDown(KeyCode.M))
-            {
-                OpenModePanel();
             }
             else if (Input.GetKeyDown(KeyCode.Space))
             {
@@ -688,9 +674,8 @@ namespace Railbound.UI
         }
 
         // ----------------------------------------------------
-        // 3a. MATCH MODE: the card shows the chosen mode; clicking it (or key M) opens the mode screen
+        // 3a. MATCH MODE: the card shows the game's one mode, Classic Battle Royale on MAP-2
         // ----------------------------------------------------
-        private Button modeCardButton;
         private TextMeshProUGUI modeTagPlayers, modeTagMap;
 
         private void SetupModeCard()
@@ -700,40 +685,7 @@ namespace Railbound.UI
             {
                 var tp = card.Find("Tag_30P"); if (tp != null) modeTagPlayers = tp.GetComponentInChildren<TextMeshProUGUI>(true);
                 var tm = card.Find("Tag_Map"); if (tm != null) modeTagMap = tm.GetComponentInChildren<TextMeshProUGUI>(true);
-
-                var hit = card.GetComponent<Image>();
-                if (hit == null) { hit = card.gameObject.AddComponent<Image>(); hit.color = new Color(0f, 0f, 0f, 0f); }
-                hit.raycastTarget = true;
-                modeCardButton = card.GetComponent<Button>();
-                if (modeCardButton == null) modeCardButton = card.gameObject.AddComponent<Button>();
-                modeCardButton.targetGraphic = hit;
-                modeCardButton.transition = Selectable.Transition.None;
-                modeCardButton.onClick.RemoveAllListeners();
-                modeCardButton.onClick.AddListener(OpenModePanel);
-
-                // a chip on the banner tells the player the mode can be changed (and which key does it)
-                var chipGo = new GameObject("Chip_ChangeMode", typeof(RectTransform), typeof(Image), typeof(Button));
-                chipGo.layer = card.gameObject.layer;
-                chipGo.transform.SetParent(card, false);
-                var cr = (RectTransform)chipGo.transform;
-                cr.anchorMin = cr.anchorMax = new Vector2(1f, 1f); cr.pivot = new Vector2(1f, 1f);
-                cr.anchoredPosition = new Vector2(-30f, -30f); cr.sizeDelta = new Vector2(176f, 30f);
-                var chipImg = chipGo.GetComponent<Image>(); chipImg.color = new Color(0f, 0f, 0f, 0.78f);
-                var chipBtn = chipGo.GetComponent<Button>(); chipBtn.targetGraphic = chipImg;
-                var cb = chipBtn.colors; cb.normalColor = Color.white; cb.highlightedColor = new Color(0.78f, 0.78f, 0.78f, 1f); cb.pressedColor = new Color(0.55f, 0.55f, 0.55f, 1f); cb.fadeDuration = 0.08f; chipBtn.colors = cb;
-                chipBtn.onClick.AddListener(OpenModePanel);
-                var chipTextGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-                chipTextGo.layer = card.gameObject.layer;
-                chipTextGo.transform.SetParent(chipGo.transform, false);
-                var ctr = (RectTransform)chipTextGo.transform; ctr.anchorMin = Vector2.zero; ctr.anchorMax = Vector2.one; ctr.offsetMin = Vector2.zero; ctr.offsetMax = Vector2.zero;
-                var chipText = chipTextGo.GetComponent<TextMeshProUGUI>();
-                chipText.font = modeSubtitleText != null ? modeSubtitleText.font : TMP_Settings.defaultFontAsset;
-                chipText.text = "M   CHANGE MODE"; chipText.fontSize = 14; chipText.fontStyle = FontStyles.Bold; chipText.characterSpacing = 4f;
-                chipText.alignment = TextAlignmentOptions.Center; chipText.color = Color.white; chipText.raycastTarget = false;
             }
-
-            GameModeCatalog.Changed -= ApplyModeToCard;
-            GameModeCatalog.Changed += ApplyModeToCard;
             ApplyModeToCard();
         }
 
@@ -742,30 +694,12 @@ namespace Railbound.UI
             var mode = GameModeCatalog.Selected;
             var team = GameModeCatalog.SelectedTeamSize;
             if (modeTitleText != null) modeTitleText.text = mode.CardTitle;
-            var map = GameModeCatalog.SelectedMap;
-            int players = GameModeCatalog.ChoosesMap(mode) && map != null ? map.Players : mode.Players;
-            if (modeTagPlayers != null) modeTagPlayers.text = players + "P";
-            if (modeTagMap != null) modeTagMap.text = GameModeCatalog.ChoosesMap(mode) && map != null ? map.Name : mode.Map;
+            if (modeTagPlayers != null) modeTagPlayers.text = mode.Players + "P";
+            if (modeTagMap != null) modeTagMap.text = mode.Map;
 
-            // the idle subtitle is the line under the title: team size or format and the player count
+            // the idle subtitle is the line under the title: team size and the player count
             idleSubtitle = GameModeCatalog.Summary(mode, team);
             if (deployState == DeployState.Idle) RefreshDeployVisuals();
-        }
-
-        private void OpenModePanel()
-        {
-            if (modePanel == null) return;
-            if (deployState != DeployState.Idle && deployState != DeployState.Failed) return;   // the mode cannot change while searching
-
-            var party = NakamaPartyService.InstanceIfExists;
-            if (party != null && party.InParty && party.MemberCount > 1 && !party.IsLeader)
-            {
-                noticeText = "ONLY THE PARTY LEADER CHOOSES THE MODE";
-                noticeUntil = Time.unscaledTime + 4f;
-                return;
-            }
-            PlayClickSound();
-            modePanel.Show();
         }
 
         private void ToggleFillSquad()

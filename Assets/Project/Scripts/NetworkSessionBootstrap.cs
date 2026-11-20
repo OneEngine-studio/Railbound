@@ -25,8 +25,8 @@ public sealed class NetworkSessionBootstrap : MonoBehaviour
     private void Awake()
     {
         _networkManager = GetComponent<NetworkManager>();
-        // the match scene was loaded again while a session runs (a server rebuilding its match on another map): the running
-        // NetworkManager stays, this scene's copy would only try to start a second server on the same port
+        // the match scene was loaded again while a server session runs: the running NetworkManager stays, this scene's copy
+        // would only try to start a second server on the same port
         if (_networkManager != null && DedicatedServerRuntime.IsDedicatedServer && NetworkManager.Singleton != null && NetworkManager.Singleton != _networkManager && NetworkManager.Singleton.IsServer)
         {
             Destroy(gameObject);

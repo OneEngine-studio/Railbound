@@ -260,7 +260,7 @@ namespace Railbound.Networking
                 partyMembers = ids.ToArray();
                 Debug.Log($"[LobbyMatchmaker] Queueing as a party of {partyMembers.Length} ({partyId}).");
             }
-            string mode = Railbound.UI.GameModeCatalog.QueueKey;   // with the chosen map, e.g. classic_solo-depot9
+            string mode = Railbound.UI.GameModeCatalog.MatchKey;
 
             UpdateStatus("SEARCHING FOR PLAYERS");
             var result = await MatchmakingQueueClient.QueueAsync(auth.Client, auth.Session, socket, mode, partyId, () => _cancelRequested, p =>

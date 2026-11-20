@@ -56,11 +56,11 @@ namespace Railbound.Networking
 
         [Tooltip("Seconds one connection attempt may take. A server that was just handed out can need a moment before it answers, so several short attempts beat one long wait.")]
         [SerializeField] private float attemptTimeoutSeconds = 8f;
-        [Tooltip("Seconds the first attempt may take to reach a server that was just handed out: it may still be building the chosen map, and it does not answer while it loads.")]
+        [Tooltip("Seconds the first attempt may take to reach a server that was just handed out: it may still be starting its match and does not answer while it loads.")]
         [SerializeField] private float firstAttemptTimeoutSeconds = 20f;
         [SerializeField] private int maxAttempts = 4;
         [SerializeField] private float retryDelaySeconds = 1.5f;
-        [Tooltip("Seconds an attempt may wait once the server answered and is deciding on the join (it may be building the chosen map).")]
+        [Tooltip("Seconds an attempt may wait once the server answered and is deciding on the join (it checks the join ticket with Nakama).")]
         [SerializeField] private float approvalWaitSeconds = 40f;
 
         public string MatchId { get; private set; } = "";
