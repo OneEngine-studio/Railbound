@@ -1109,6 +1109,30 @@ namespace JUTPS.CharacterBrain
         }
 
 
+        /// <summary>Railbound: how close the feet of a falling character must be to the ground to land.</summary>
+        public const float LandingDistance = 0.15f;
+
+        /// <summary>
+        /// Railbound: true when the feet of a falling character are within <see cref="LandingDistance"/> of the ground; it is then put on
+        /// the ground (the gap closes in this physics step instead of over half a second of sinking).
+        /// </summary>
+        private bool TryLand(float radius)
+        {
+            float r = Mathf.Max(0.05f, radius * 0.9f);
+            Vector3 origin = transform.position + transform.up * (r + 0.05f);
+            if (!Physics.SphereCast(origin, r, -transform.up, out RaycastHit hit, 0.05f + LandingDistance + 0.02f, WhatIsGround, QueryTriggerInteraction.Ignore))
+                return false;
+            float gap = hit.distance - 0.05f;
+            if (gap > LandingDistance) return false;
+            if (gap > 0.005f)
+            {
+                Vector3 down = -transform.up * gap;
+                rb.position += down;
+                transform.position += down;
+            }
+            return true;
+        }
+
         protected virtual void GroundCheck()
         {
             //Ground Check
@@ -1118,7 +1142,12 @@ namespace JUTPS.CharacterBrain
                 Collider[] groundcheck = Physics.OverlapBox(transform.position + transform.up * GroundCheckHeighOfsset, new Vector3(effRadius, GroundCheckSize, effRadius), transform.rotation, WhatIsGround, QueryTriggerInteraction.Ignore);
                 if (groundcheck.Length != 0 && IsJumping == false)
                 {
-                    IsGrounded = true;
+                    // Railbound: the box reaches 0.4 m below the feet so a walking character stays grounded over bumps and down slopes.
+                    // Used for LANDING it caught a falling character 0.4 m up in the air, and the grounded slope movement then dropped its
+                    // vertical speed every step: it hung there and sank at one gravity step per frame. A falling character now lands when
+                    // its feet really reach the ground, and is put on it in the same step.
+                    if (IsGrounded || rb == null || rb.isKinematic || rb.velocity.y > -0.5f || TryLand(effRadius))
+                        IsGrounded = true;
                 }
                 else if (IsGrounded == true)
                 {
