@@ -70,6 +70,8 @@ namespace Railbound.BR
                 // the killing hit, from the camera's side, the way the local player's bullet reports it
                 for (int f = 0; f < 40; f++)
                 {
+                    cam = Camera.main;
+                    if (cam == null || t == null) break;
                     Vector3 focus = (ragdoll != null && ragdoll.Hips != null ? ragdoll.Hips.position : t.position + Vector3.up);
                     cam.transform.position = focus + side * 4f + Vector3.up * 0.6f;
                     cam.transform.LookAt(focus);
@@ -84,6 +86,7 @@ namespace Railbound.BR
                     yield return new WaitForSecondsRealtime(0.1f);
                 }
                 yield return new WaitForSecondsRealtime(2f);
+                if (target == null || t == null) { report.AppendLine($"[DeathCam] bot {n}: its object is gone 6 s after the kill"); Debug.Log("[DeathCam] bot gone"); continue; }
 
                 // six seconds after the kill: still down?
                 float hipsUp = ragdoll != null && ragdoll.Hips != null ? ragdoll.Hips.position.y - t.position.y : -1f;
@@ -94,6 +97,7 @@ namespace Railbound.BR
                 Debug.Log(line);
                 report.AppendLine(line);
                 if (camRig != null) camRig.enabled = true;
+                camRig = FindFirstObjectByType<JUTPS.CameraSystems.JUCameraController>();
                 yield return new WaitForSecondsRealtime(1f);
             }
 

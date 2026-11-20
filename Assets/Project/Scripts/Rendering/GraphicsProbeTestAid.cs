@@ -40,6 +40,10 @@ public class GraphicsProbeTestAid : MonoBehaviour
         foreach (bool look in new[] { false, true })
         {
             MatchLook.Set(look);
+            // the old match ran without anti-aliasing on its camera (the saved choice never reached it)
+            var mainCam = Camera.main;
+            if (mainCam != null && mainCam.TryGetComponent(out HDAdditionalCameraData hdc))
+                hdc.antialiasing = look ? (HDAdditionalCameraData.AntialiasingMode)AaFromPrefs() : HDAdditionalCameraData.AntialiasingMode.None;
             yield return new WaitForSecondsRealtime(4f);   // exposure adapts again
             string tag = look ? "new" : "classic";
             all.AppendLine("==== " + tag);
@@ -49,10 +53,26 @@ public class GraphicsProbeTestAid : MonoBehaviour
         Debug.Log("[GfxProbe] DONE");
     }
 
+    private static int AaFromPrefs()
+    {
+        switch (PlayerPrefs.GetInt("Graphics_AntiAliasing", 3))
+        {
+            case 0: return (int)HDAdditionalCameraData.AntialiasingMode.None;
+            case 1: return (int)HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
+            case 2: return (int)HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            default: return (int)HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing;
+        }
+    }
+
     private IEnumerator Probe(string tag, StringBuilder sb)
     {
         var cam = Camera.main;
-        var stack = VolumeManager.instance.stack;
+        // HDRP blends the volumes per camera: read that camera's stack, not the default one
+        var stack = cam != null ? HDCamera.GetOrCreate(cam).volumeStack : VolumeManager.instance.stack;
+        string prefs = "";
+        foreach (var k in new[] { "Graphics_AntiAliasing", "Graphics_DLSS", "Graphics_DLSSQuality", "Graphics_FSR", "Graphics_RenderScaleIndex", "Graphics_MotionBlur", "Graphics_SSAO", "Graphics_Bloom", "Graphics_FilmGrain", "Graphics_ShadowQuality", "Graphics_TextureQuality" })
+            if (PlayerPrefs.HasKey(k)) prefs += k.Replace("Graphics_", "") + "=" + (k == "Graphics_FilmGrain" ? PlayerPrefs.GetFloat(k).ToString("0.00") : PlayerPrefs.GetInt(k).ToString()) + " ";
+        Line("prefs: " + prefs + " dlssDetected=" + HDDynamicResolutionPlatformCapabilities.DLSSDetected);
         void Line(string s) { sb.AppendLine(s); }
         if (cam != null && cam.TryGetComponent(out HDAdditionalCameraData hd))
             Line($"camera: aa={hd.antialiasing} taaQuality={hd.TAAQuality} sharpen={hd.taaSharpenStrength:0.00} dynRes={hd.allowDynamicResolution} dlss={hd.allowDeepLearningSuperSampling} scale={DynamicResolutionHandler.instance.GetCurrentScale():0.00} hdr={cam.allowHDR} fov={cam.fieldOfView:0}");
