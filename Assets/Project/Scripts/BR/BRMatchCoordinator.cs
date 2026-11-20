@@ -318,7 +318,6 @@ namespace Railbound.BR
             HoldBots(false);
             MatchSeconds = 0f;
             SetState(BRMatchState.ActiveBattle);
-            BRFeedNotificationManager.Instance?.ShowInfo("THE MATCH HAS BEGUN - " + localAlive + " COMBATANTS DEPLOYED");
         }
 
         private void EndMatch()
