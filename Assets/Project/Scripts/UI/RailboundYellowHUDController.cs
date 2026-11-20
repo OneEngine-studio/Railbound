@@ -742,8 +742,10 @@ namespace Railbound.UI
             var mode = GameModeCatalog.Selected;
             var team = GameModeCatalog.SelectedTeamSize;
             if (modeTitleText != null) modeTitleText.text = mode.CardTitle;
-            if (modeTagPlayers != null) modeTagPlayers.text = mode.Players + "P";
-            if (modeTagMap != null) modeTagMap.text = mode.Map;
+            var map = GameModeCatalog.SelectedMap;
+            int players = GameModeCatalog.ChoosesMap(mode) && map != null ? map.Players : mode.Players;
+            if (modeTagPlayers != null) modeTagPlayers.text = players + "P";
+            if (modeTagMap != null) modeTagMap.text = GameModeCatalog.ChoosesMap(mode) && map != null ? map.Name : mode.Map;
 
             // the idle subtitle is the line under the title: team size or format and the player count
             idleSubtitle = GameModeCatalog.Summary(mode, team);

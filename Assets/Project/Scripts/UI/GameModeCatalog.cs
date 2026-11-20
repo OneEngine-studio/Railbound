@@ -55,6 +55,7 @@ namespace Railbound.UI
     {
         private const string PrefsMode = "Railbound.Mode";
         private const string PrefsTeam = "Railbound.TeamSize";
+        private const string PrefsMap = "Railbound.ClassicMap";
 
         public static readonly IReadOnlyList<GameModeDefinition> All = new List<GameModeDefinition>
         {
@@ -176,8 +177,58 @@ namespace Railbound.UI
         public static GameModeDefinition Selected { get { EnsureLoaded(); return selected; } }
         public static TeamSize SelectedTeamSize { get { EnsureLoaded(); return selectedTeam; } }
 
-        /// <summary>The key the matchmaker groups players by, for example "classic_solo": only equal keys are matched together.</summary>
+        /// <summary>The mode and team size, for example "classic_solo" (match results and statistics).</summary>
         public static string MatchKey => Selected.Id + "_" + TeamName(SelectedTeamSize).ToLowerInvariant();
+
+        /// <summary>
+        /// The key the matchmaker groups players by: <see cref="MatchKey"/>, plus "-MAP" when Classic BR is played on another map than MAP-2
+        /// (for example "classic_solo-depot9"). Only equal keys are matched together, and Nakama hands the map to the game server.
+        /// </summary>
+        public static string QueueKey
+        {
+            get
+            {
+                var map = SelectedMap;
+                return MatchKey + (ChoosesMap(Selected) && map != null && !map.IsMap2 ? "-" + map.Id : "");
+            }
+        }
+
+        // ---------------- the map (Classic BR can be played on any map, with Battle Royale rules) ----------------
+        private static string selectedMapId;
+
+        /// <summary>True for the modes whose map the player chooses (Classic BR); the others play on the map made for them.</summary>
+        public static bool ChoosesMap(GameModeDefinition m) => m != null && m.Id == "classic";
+
+        /// <summary>The map the chosen mode is played on.</summary>
+        public static Railbound.Maps.MapDefinition SelectedMap
+        {
+            get
+            {
+                EnsureLoaded();
+                Railbound.Maps.MapDefinition m = null;
+                if (ChoosesMap(selected)) m = Railbound.Maps.MapCatalog.Find(selectedMapId);
+                if (m == null) m = Railbound.Maps.MapCatalog.ForMode(selected.Id);
+                return m ?? Railbound.Maps.MapCatalog.Map2;
+            }
+        }
+
+        /// <summary>The map Classic BR is played on (it stays chosen while another mode is selected).</summary>
+        public static Railbound.Maps.MapDefinition ClassicMap
+        {
+            get { EnsureLoaded(); return Railbound.Maps.MapCatalog.Find(selectedMapId) ?? Railbound.Maps.MapCatalog.Map2; }
+        }
+
+        /// <summary>Chooses the map for Classic BR.</summary>
+        public static void SetClassicMap(Railbound.Maps.MapDefinition map)
+        {
+            if (map == null) return;
+            EnsureLoaded();
+            if (selectedMapId == map.Id) return;
+            selectedMapId = map.Id;
+            try { PlayerPrefs.SetString(PrefsMap, map.Id); PlayerPrefs.Save(); }
+            catch (Exception) { /* not saved, still chosen for this session */ }
+            Changed?.Invoke();
+        }
 
         /// <summary>The fact line under the title: team size or format, and the number of players.</summary>
         public static string Summary(GameModeDefinition m, TeamSize t)
@@ -205,6 +256,9 @@ namespace Railbound.UI
             if (m == null || !m.IsPlayable || !m.CanPlay(t)) { m = Find("classic"); t = m.DefaultTeamSize; }
             selected = m;
             selectedTeam = t;
+            try { selectedMapId = PlayerPrefs.GetString(PrefsMap, Railbound.Maps.MapCatalog.Map2Id); }
+            catch (Exception) { selectedMapId = Railbound.Maps.MapCatalog.Map2Id; }
+            if (Railbound.Maps.MapCatalog.Find(selectedMapId) == null) selectedMapId = Railbound.Maps.MapCatalog.Map2Id;
         }
 
         /// <summary>Chooses a mode and team size. Returns false when the game cannot run that combination.</summary>

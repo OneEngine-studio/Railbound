@@ -133,7 +133,11 @@ namespace Railbound.UI
             bool isHost = args.Any(a => string.Equals(a, "-host", StringComparison.OrdinalIgnoreCase));
             bool isClient = args.Any(a => string.Equals(a, "-client", StringComparison.OrdinalIgnoreCase));
 
-            if (isHeadless || isServer)
+            if ((isHeadless || isServer) && NetworkManager.Singleton.IsListening)
+            {
+                // the match scene was loaded again on a running server (rebuilt on the allocated map): it already serves
+            }
+            else if (isHeadless || isServer)
             {
                 Debug.Log($"[TacticalMultiplayerOverlay] Auto-starting Dedicated Server on port {serverPort}...");
                 NetworkManager.Singleton.StartServer();
