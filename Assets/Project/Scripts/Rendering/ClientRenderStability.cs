@@ -55,7 +55,11 @@ public static class ClientRenderStability
                 if (cam == null || !doneCameras.Add(cam.GetInstanceID())) continue;
                 var hd = cam.GetComponent<HDAdditionalCameraData>();
                 if (hd == null) continue;
-                if (cam.CompareTag("MainCamera")) Michsky.UI.Reach.GraphicsManager.ApplySavedUpscaling(hd);   // not minimap / UI cameras
+                if (cam.CompareTag("MainCamera"))   // not minimap / UI cameras
+                {
+                    Michsky.UI.Reach.GraphicsManager.ApplySavedUpscaling(hd);
+                    ApplySavedAntiAliasing(hd);
+                }
                 TuneTaa(hd);
             }
 
@@ -65,6 +69,26 @@ public static class ClientRenderStability
                 if (!v.sharedProfile.TryGet<Fog>(out var authored) || authored.denoisingMode.value == FogDenoisingMode.Gaussian) continue;
                 var live = SafeProfile(v);            // a runtime copy; the saved asset is never touched
                 if (live != null && live.TryGet<Fog>(out var fog)) fog.denoisingMode.Override(FogDenoisingMode.Gaussian);
+            }
+        }
+
+        /// <summary>
+        /// The player's anti-aliasing choice on the match camera. GraphicsManager applies it only to the lobby's camera, so a match ran with
+        /// the camera prefab's "None": every blade of grass shimmered, which read as heavy noise over the whole picture. Nothing saved
+        /// means TAA (the settings menu's default).
+        /// </summary>
+        private static void ApplySavedAntiAliasing(HDAdditionalCameraData hd)
+        {
+            int index = PlayerPrefs.GetInt("Graphics_AntiAliasing", 3);
+            switch (index)
+            {
+                case 0: hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.None; break;
+                case 1: hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing; break;
+                case 2:
+                    hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+                    hd.SMAAQuality = HDAdditionalCameraData.SMAAQualityLevel.High;
+                    break;
+                default: hd.antialiasing = HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing; break;
             }
         }
 
