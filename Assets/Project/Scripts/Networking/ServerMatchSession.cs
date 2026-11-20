@@ -55,7 +55,7 @@ namespace Railbound.Networking
             return Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinPayload { m = matchId ?? "", u = user ?? "", t = joinToken ?? "" }));
         }
 
-        private static string CommandLineValue(string name)
+        internal static string CommandLineValue(string name)
         {
             string[] args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++) if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
@@ -246,7 +246,7 @@ namespace Railbound.Networking
             string reject = null;
 
             // test aid: "-approvaldelay N" (server) holds every decision N seconds, like a slow map rebuild
-            if (float.TryParse(CommandLineValue("-approvaldelay"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float testDelay) && testDelay > 0f)
+            if (float.TryParse(ConnectionApprovalGate.CommandLineValue("-approvaldelay"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float testDelay) && testDelay > 0f)
             {
                 Debug.Log($"[ServerMatch] Test: holding the join of client {clientId} for {testDelay:0} s.");
                 yield return new WaitForSecondsRealtime(testDelay);
