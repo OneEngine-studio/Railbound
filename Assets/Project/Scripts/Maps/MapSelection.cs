@@ -6,7 +6,8 @@ namespace Railbound.Maps
 {
     /// <summary>
     /// Which map this peer builds when the match scene loads. A dedicated server takes <c>-map ID</c> (or <c>-mode ID</c>, the map made
-    /// for that mode). A client takes <c>-map ID</c>, otherwise the map of the mode the player queued for. MAP-2 is the default, so
+    /// for that mode; a fleet server is told its map at the allocation, <see cref="ServerMapSwitch"/>). A client takes <c>-map ID</c>,
+    /// otherwise the map of the mode the player queued for (for Classic BR the map the player chose). MAP-2 is the default, so
     /// Classic BR is unchanged. The server tells every client its map (<see cref="MapSync"/>), so a mismatch is caught at once.
     /// </summary>
     public static class MapSelection
@@ -27,8 +28,7 @@ namespace Railbound.Maps
                 {
                     try
                     {
-                        var mode = GameModeCatalog.Selected;   // only a playable mode can be selected
-                        var m = mode != null ? MapCatalog.ForMode(mode.Id) : null;
+                        var m = GameModeCatalog.SelectedMap;   // the mode's map, or the map chosen for Classic BR
                         if (m != null) return m;
                     }
                     catch (Exception) { /* no catalog (tests): default */ }

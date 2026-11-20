@@ -66,6 +66,20 @@ namespace Railbound.UI
         private Image selectBg;
         private TextMeshProUGUI selectLabel;
 
+        // map strip (Classic BR is played on any map): under the cards while Classic BR is focused
+        private const float MapTileW = 108f, MapTileH = 84f, MapGap = 9f, MapStripY = -405f;
+        private sealed class MapTile
+        {
+            public Railbound.Maps.MapDefinition map;
+            public Image bg, frame;
+            public TextMeshProUGUI name, sub;
+            public bool hover;
+        }
+        private RectTransform mapStrip;
+        private CanvasGroup mapGroup;
+        private TextMeshProUGUI mapHeading;
+        private readonly List<MapTile> mapTiles = new List<MapTile>();
+
         // state
         private int tab;
         private int focus;
@@ -133,7 +147,20 @@ namespace Railbound.UI
                 var col = c.frame.color; col.a = Mathf.Lerp(col.a, fa, dt * 14f); c.frame.color = col;
             }
 
+            bool showMaps = GameModeCatalog.ChoosesMap(Focused);
+            mapGroup.alpha = Mathf.MoveTowards(mapGroup.alpha, showMaps ? 1f : 0f, dt * 6f);
+            mapGroup.blocksRaycasts = showMaps;
+            var chosenMap = GameModeCatalog.ClassicMap;
+            foreach (var tile in mapTiles)
+            {
+                bool on = tile.map == chosenMap;
+                float fa = on ? 1f : (tile.hover ? 0.6f : 0.16f);
+                var fc = tile.frame.color; fc.a = Mathf.Lerp(fc.a, fa, dt * 14f); tile.frame.color = fc;
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape)) { Hide(); return; }
+            if (showMaps && Input.GetKeyDown(KeyCode.Z)) MoveMap(-1);
+            else if (showMaps && Input.GetKeyDown(KeyCode.C)) MoveMap(1);
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) MoveFocus(-1);
             else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) MoveFocus(1);
             else if (Input.GetKeyDown(KeyCode.Q)) SetTab(tab - 1);
@@ -194,6 +221,22 @@ namespace Railbound.UI
             RefreshDetail(false);
         }
 
+        private void MoveMap(int d)
+        {
+            var all = Railbound.Maps.MapCatalog.All;
+            int i = 0;
+            for (int k = 0; k < all.Count; k++) if (all[k] == GameModeCatalog.ClassicMap) i = k;
+            SetMap(all[(i + d + all.Count) % all.Count]);
+        }
+
+        private void SetMap(Railbound.Maps.MapDefinition map)
+        {
+            if (map == null) return;
+            GameModeCatalog.SetClassicMap(map);
+            RebuildCards();   // the Classic BR card names its map
+            RefreshAll(false);
+        }
+
         private bool CanChoose(GameModeDefinition m, TeamSize t) => m != null && m.IsPlayable && (!m.OffersTeamSizes || m.CanPlay(t));
 
         private void Confirm()
@@ -235,7 +278,8 @@ namespace Railbound.UI
             string[] fl = { "PLAYERS", "MAP", "LENGTH", "FORMAT" };
             // the format fact is short: "UP TO 4" for modes with team sizes, "6 V 6" for fixed teams, "SOLO" for free-for-all modes
             string format = m.OffersTeamSizes ? "UP TO " + (int)m.TeamSizes.Max() : (m.FixedFormat.Contains(" V ") ? m.FixedFormat : "SOLO");
-            string[] fv = { m.Players.ToString(), m.Map, m.Length.Replace("ABOUT ", "~ "), format };
+            var cmap = GameModeCatalog.ChoosesMap(m) ? GameModeCatalog.ClassicMap : null;
+            string[] fv = { (cmap != null ? cmap.Players : m.Players).ToString(), cmap != null ? cmap.Name : m.Map, m.Length.Replace("ABOUT ", "~ "), format };
             for (int i = 0; i < 4; i++) { dFactLabel[i].text = fl[i]; dFactValue[i].text = fv[i]; }
 
             // team size row
@@ -257,6 +301,8 @@ namespace Railbound.UI
                 teamBtn[i].interactable = true;
             }
 
+            RefreshMaps();
+
             // select button: always tells the truth about why it cannot be pressed
             bool isCurrent = m == GameModeCatalog.Selected && (!m.OffersTeamSizes || team == GameModeCatalog.SelectedTeamSize);
             bool can = CanChoose(m, team);
@@ -269,6 +315,24 @@ namespace Railbound.UI
             selectButton.interactable = can && !isCurrent;
             selectBg.color = can && !isCurrent ? Color.white : new Color(1f, 1f, 1f, 0.16f);
             selectLabel.color = can && !isCurrent ? Color.black : (isCurrent ? Color.white : Dim);
+        }
+
+        private void RefreshMaps()
+        {
+            var chosen = GameModeCatalog.ClassicMap;
+            foreach (var tile in mapTiles)
+            {
+                bool on = tile.map == chosen;
+                tile.bg.color = on ? Color.white : new Color(1f, 1f, 1f, tile.hover ? 0.12f : 0.06f);
+                tile.name.color = on ? Color.black : Color.white;
+                tile.sub.color = on ? new Color(0f, 0f, 0f, 0.6f) : Faint;
+            }
+            if (chosen.IsMap2) mapHeading.text = "MAP   <color=#FFFFFF>MAP-2</color>   |   THE BATTLE ROYALE MAP";
+            else
+            {
+                var made = GameModeCatalog.Find(chosen.ModeId);
+                mapHeading.text = "MAP   <color=#FFFFFF>" + chosen.Name + "</color>   |   MADE FOR " + (made != null ? made.CardTitle : "ANOTHER MODE") + ", PLAYED WITH BATTLE ROYALE RULES";
+            }
         }
 
         // ---------------- cards ----------------
@@ -305,7 +369,8 @@ namespace Railbound.UI
                     ? (m.TeamSizes.Length == 1 ? GameModeCatalog.TeamName(m.TeamSizes[0]) : GameModeCatalog.TeamName(m.TeamSizes.First()) + " TO " + GameModeCatalog.TeamName(m.TeamSizes.Last()))
                     : m.FixedFormat;
                 Label(rt, cardFormat, 14, false, Dim, new Vector2(0, -135), new Vector2(CardW - 20, 24));
-                Label(rt, m.Players + " PLAYERS   |   " + m.Map, 13, false, Faint, new Vector2(0, -160), new Vector2(CardW - 20, 22));
+                var cardMap = GameModeCatalog.ChoosesMap(m) ? GameModeCatalog.ClassicMap : null;
+                Label(rt, (cardMap != null ? cardMap.Players : m.Players) + " PLAYERS   |   " + (cardMap != null ? cardMap.Name : m.Map), 13, false, Faint, new Vector2(0, -160), new Vector2(CardW - 20, 22));
 
                 // status badge at the bottom
                 var badge = NewImage("Badge", rt, m.IsPlayable ? Color.white : new Color(1f, 1f, 1f, 0.1f));
@@ -383,8 +448,9 @@ namespace Railbound.UI
             cardsRoot = NewRect("Cards", root, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
             BuildDetail();
+            BuildMapStrip();
 
-            Label(root, "A D  BROWSE      Q E  CATEGORY      W S  TEAM SIZE      ENTER  SELECT      ESC  CLOSE", 14, false, Faint, new Vector2(0, -492), new Vector2(1500, 24));
+            Label(root, "A D  BROWSE      Q E  CATEGORY      W S  TEAM SIZE      Z C  MAP      ENTER  SELECT      ESC  CLOSE", 14, false, Faint, new Vector2(0, -492), new Vector2(1600, 24));
 
             canvasGo.SetActive(false);
         }
@@ -452,6 +518,41 @@ namespace Railbound.UI
             selectButton.onClick.AddListener(Confirm);
             selectLabel = Label(selectBg.rectTransform, "SELECT MODE", 24, true, Color.black, Vector2.zero, new Vector2(W - 20, 40));
             selectLabel.characterSpacing = 10f;
+        }
+
+        private void BuildMapStrip()
+        {
+            mapStrip = NewRect("Maps", root, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            mapGroup = mapStrip.gameObject.AddComponent<CanvasGroup>();
+            mapGroup.alpha = 0f;
+            mapHeading = LabelLeft(mapStrip, "", 14, false, Dim, CardsLeft, MapStripY + MapTileH * 0.5f + 22f, 1060f);
+            mapHeading.richText = true;
+
+            var maps = Railbound.Maps.MapCatalog.All;
+            for (int i = 0; i < maps.Count; i++)
+            {
+                var map = maps[i];
+                float cx = CardsLeft + MapTileW * 0.5f + i * (MapTileW + MapGap);
+                var frame = NewImage("Map " + map.Id, mapStrip, new Color(1f, 1f, 1f, 0.16f));
+                Place(frame.rectTransform, new Vector2(cx, MapStripY), new Vector2(MapTileW, MapTileH));
+                frame.raycastTarget = true;
+                // dark inside, then the tile colour: the frame reads as a thin outline
+                var ink = NewImage("Ink", frame.rectTransform, Ink);
+                ink.rectTransform.anchorMin = Vector2.zero; ink.rectTransform.anchorMax = Vector2.one;
+                ink.rectTransform.offsetMin = new Vector2(2, 2); ink.rectTransform.offsetMax = new Vector2(-2, -2);
+                var bg = NewImage("Bg", frame.rectTransform, new Color(1f, 1f, 1f, 0.06f));
+                bg.rectTransform.anchorMin = Vector2.zero; bg.rectTransform.anchorMax = Vector2.one;
+                bg.rectTransform.offsetMin = new Vector2(2, 2); bg.rectTransform.offsetMax = new Vector2(-2, -2);
+                var name = Label(frame.rectTransform, map.Name, 15, true, Color.white, new Vector2(0, 10), new Vector2(MapTileW - 8, 24));
+                name.characterSpacing = 2f;
+                var sub = Label(frame.rectTransform, map.Players + " PLAYERS", 11, false, Faint, new Vector2(0, -16), new Vector2(MapTileW - 8, 18));
+                var tile = new MapTile { map = map, bg = bg, frame = frame, name = name, sub = sub };
+                var handler = frame.gameObject.AddComponent<ModeCardHandler>();
+                handler.OnEnter = () => { tile.hover = true; RefreshMaps(); };
+                handler.OnExit = () => { tile.hover = false; RefreshMaps(); };
+                handler.OnClick = clicks => SetMap(tile.map);
+                mapTiles.Add(tile);
+            }
         }
 
         // ---------------- card pointer handler ----------------

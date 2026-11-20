@@ -77,6 +77,9 @@ public sealed class AgonesServerLifecycle : MonoBehaviour
                 {
                     allocated = true;
                     allocatedAt = Time.unscaledTime;
+                    // the map the players chose (Classic BR on another map): rebuild the match before the match id lets them in
+                    string map = (string)gs["object_meta"]?["annotations"]?["railbound.io/map"] ?? "";
+                    if (!string.IsNullOrEmpty(map)) Railbound.Maps.ServerMapSwitch.SwitchTo(map);
                     MatchId = (string)gs["object_meta"]?["annotations"]?["railbound.io/match-id"] ?? "";
                     int expected = 0;
                     int.TryParse((string)gs["object_meta"]?["annotations"]?["railbound.io/expected-players"], out expected);
