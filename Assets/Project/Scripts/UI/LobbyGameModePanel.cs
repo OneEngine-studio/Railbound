@@ -233,6 +233,7 @@ namespace Railbound.UI
         {
             if (map == null) return;
             GameModeCatalog.SetClassicMap(map);
+            RebuildCards();   // the Classic BR card names its map
             RefreshAll(false);
         }
 
@@ -368,7 +369,8 @@ namespace Railbound.UI
                     ? (m.TeamSizes.Length == 1 ? GameModeCatalog.TeamName(m.TeamSizes[0]) : GameModeCatalog.TeamName(m.TeamSizes.First()) + " TO " + GameModeCatalog.TeamName(m.TeamSizes.Last()))
                     : m.FixedFormat;
                 Label(rt, cardFormat, 14, false, Dim, new Vector2(0, -135), new Vector2(CardW - 20, 24));
-                Label(rt, m.Players + " PLAYERS   |   " + m.Map, 13, false, Faint, new Vector2(0, -160), new Vector2(CardW - 20, 22));
+                var cardMap = GameModeCatalog.ChoosesMap(m) ? GameModeCatalog.ClassicMap : null;
+                Label(rt, (cardMap != null ? cardMap.Players : m.Players) + " PLAYERS   |   " + (cardMap != null ? cardMap.Name : m.Map), 13, false, Faint, new Vector2(0, -160), new Vector2(CardW - 20, 22));
 
                 // status badge at the bottom
                 var badge = NewImage("Badge", rt, m.IsPlayable ? Color.white : new Color(1f, 1f, 1f, 0.1f));
