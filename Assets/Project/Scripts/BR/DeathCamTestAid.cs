@@ -94,6 +94,22 @@ namespace Railbound.BR
                 if (camRig != null) camRig.enabled = true;
                 yield return new WaitForSecondsRealtime(1f);
             }
+
+            // and the player's own death, as the player sees it (the server applies the damage)
+            var myHealth = me.GetComponent<JUHealth>();
+            if (myHealth != null && !myHealth.IsDead)
+            {
+                myHealth.DoDamage(9999f);
+                for (int f = 0; f < 48; f++)
+                {
+                    ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"self_{f:00}.png"));
+                    yield return new WaitForSecondsRealtime(0.15f);
+                }
+                var myRagdoll = me.GetComponent<AdvancedRagdollController>();
+                string self = $"[DeathCam] self: dead={myHealth.IsDead} ragdoll={(myRagdoll != null ? myRagdoll.State.ToString() : "none")} timeScale={Time.timeScale:0.00}";
+                Debug.Log(self);
+                report.AppendLine(self);
+            }
             File.WriteAllText(Path.Combine(dir, "deaths.txt"), report.ToString());
             Debug.Log("[DeathCam] DONE");
         }
