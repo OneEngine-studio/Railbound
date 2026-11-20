@@ -10,8 +10,9 @@ using UnityEngine.Rendering.HighDefinition;
 ///    and a slight post-exposure lift and contrast keep the overall brightness.
 ///  * Motion blur: 0.4 with camera blur smeared every turn; 0.2 when the player's Motion Blur setting is on, none when it is off.
 ///  * Vignette 0.45 darkened a third of the screen; 0.3.
-/// The map keeps its ACES tonemapping, ambient occlusion, contact shadows, fog and sky. The noise that covered the picture was the
-/// missing anti-aliasing on the match camera (see ClientRenderStability), not film grain. Clients only; <c>-classiclook</c> switches it
+///  * Film grain: the player's setting at the menu's new scale (100 % = HDRP 0.3, fine grain); at 100 % HDRP's own scale it covered the
+///    whole picture in noise. Anti-aliasing reaches the match camera too now (see ClientRenderStability).
+/// The map keeps its ACES tonemapping, ambient occlusion, contact shadows, fog and sky. Clients only; <c>-classiclook</c> switches it
 /// off (to compare), and the probe test aid flips it at runtime.
 /// </summary>
 public static class MatchLook
@@ -67,6 +68,10 @@ public static class MatchLook
         // the player's Motion Blur setting (the settings menu only reaches the lobby's volumes)
         var mb = p.Add<MotionBlur>(); mb.intensity.Override(PlayerPrefs.GetInt("Graphics_MotionBlur", 1) == 1 ? 0.2f : 0f);
         var vg = p.Add<Vignette>(); vg.intensity.Override(0.3f);
+        // the player's Film Grain setting, scaled like the settings menu now does (100 % used to be HDRP's maximum, which buried the
+        // picture in noise); 0 % means none, which also covers MAP-2's own grain
+        float grain01 = Mathf.Clamp01(PlayerPrefs.GetFloat("Graphics_FilmGrain", 0f));
+        var fg = p.Add<FilmGrain>(); fg.type.Override(FilmGrainLookup.Thin1); fg.intensity.Override(Michsky.UI.Reach.GraphicsManager.FilmGrainIntensity(grain01));
         v.sharedProfile = p;
         return v;
     }

@@ -712,21 +712,29 @@ namespace Michsky.UI.Reach
             catch (Exception) { }
         }
 
+        /// <summary>
+        /// Railbound: HDRP film grain at full intensity buries the picture in noise (at 100 % the match looked like a dirty screen). The
+        /// slider keeps its 0-100 % range; 100 % is now a subtle, fine grain.
+        /// </summary>
+        public const float FilmGrainMax = 0.3f;
+        public static float FilmGrainIntensity(float setting01) => Mathf.Clamp01(setting01) * FilmGrainMax;
+
         public void SetFilmGrain(float intensity01)
         {
             if (IsHDRP)
             {
                 PlayerPrefs.SetFloat("Graphics_FilmGrain", intensity01);
                 bool any = false;
-                HdEach<HD.FilmGrain>(g => { any = true; g.active = intensity01 > 0.01f; g.intensity.Override(Mathf.Clamp01(intensity01)); });
+                float grain = FilmGrainIntensity(intensity01);
+                HdEach<HD.FilmGrain>(g => { any = true; g.active = intensity01 > 0.01f; g.type.Override(HD.FilmGrainLookup.Thin1); g.intensity.Override(grain); });
                 if (!any && intensity01 > 0.01f)
                 {
                     var profiles = HdProfiles();
                     if (profiles.Count > 0)
                     {
                         var g = profiles[0].Add<HD.FilmGrain>(true);
-                        g.type.Override(HD.FilmGrainLookup.Medium1);
-                        g.intensity.Override(Mathf.Clamp01(intensity01));
+                        g.type.Override(HD.FilmGrainLookup.Thin1);
+                        g.intensity.Override(grain);
                     }
                 }
                 return;
