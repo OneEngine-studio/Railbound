@@ -36,8 +36,21 @@ public class GraphicsProbeTestAid : MonoBehaviour
         while (waited < 240f && (JUTPS.JUGameManager.PlayerController == null || Railbound.BR.BRMatchCoordinator.Instance == null || !Railbound.BR.BRMatchCoordinator.Instance.IsMatchLive))
         { waited += 0.5f; yield return new WaitForSecondsRealtime(0.5f); }
         yield return new WaitForSecondsRealtime(8f);   // exposure adapts
+        var all = new StringBuilder();
+        foreach (bool look in new[] { false, true })
+        {
+            MatchLook.Set(look);
+            yield return new WaitForSecondsRealtime(4f);   // exposure adapts again
+            string tag = look ? "new" : "classic";
+            all.AppendLine("==== " + tag);
+            yield return Probe(tag, all);
+        }
+        File.WriteAllText(Path.Combine(dir, "gfx.txt"), all.ToString());
+        Debug.Log("[GfxProbe] DONE");
+    }
 
-        var sb = new StringBuilder();
+    private IEnumerator Probe(string tag, StringBuilder sb)
+    {
         var cam = Camera.main;
         var stack = VolumeManager.instance.stack;
         void Line(string s) { sb.AppendLine(s); }
@@ -77,11 +90,10 @@ public class GraphicsProbeTestAid : MonoBehaviour
                 cam.transform.position = me.position + yaw * new Vector3(0.6f, 1.8f, -3.2f);
                 cam.transform.rotation = yaw * Quaternion.Euler(6f, 0f, 0f);
                 yield return new WaitForSecondsRealtime(1.5f);
-                ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"view{i}.png"));
+                ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"view{i}_{tag}.png"));
                 yield return new WaitForSecondsRealtime(0.4f);
             }
             rig.enabled = true;
         }
-        Debug.Log("[GfxProbe] DONE");
     }
 }
