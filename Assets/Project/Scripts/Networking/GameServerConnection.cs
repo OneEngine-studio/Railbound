@@ -58,6 +58,8 @@ namespace Railbound.Networking
         [SerializeField] private float attemptTimeoutSeconds = 8f;
         [SerializeField] private int maxAttempts = 4;
         [SerializeField] private float retryDelaySeconds = 1.5f;
+        [Tooltip("Seconds an attempt may wait once the server answered and is deciding on the join (it may be building the chosen map).")]
+        [SerializeField] private float approvalWaitSeconds = 40f;
 
         public string MatchId { get; private set; } = "";
         public string Host { get; private set; } = "";
@@ -72,7 +74,7 @@ namespace Railbound.Networking
         public bool HasEndpoint => !string.IsNullOrEmpty(Host) && Port != 0;
         public string Endpoint => Host + ":" + Port;
         /// <summary>Total time all attempts together may take.</summary>
-        public float ConnectTimeoutSeconds => (attemptTimeoutSeconds + retryDelaySeconds) * Mathf.Max(1, maxAttempts);
+        public float ConnectTimeoutSeconds => approvalWaitSeconds + (attemptTimeoutSeconds + retryDelaySeconds) * Mathf.Max(1, maxAttempts);
         /// <summary>Number of the running connection attempt (1-based) and how many there are.</summary>
         public int Attempt { get; private set; }
         public int MaxAttempts => Mathf.Max(1, maxAttempts);
@@ -227,12 +229,19 @@ namespace Railbound.Networking
                 ConnectionApprovalGate.Configure(nm);            // same flag as the server (part of the netcode config hash)
                 nm.NetworkConfig.ConnectionData = ConnectionApprovalGate.BuildClientPayload(MatchId, JoinToken);   // match id, Nakama user id, join ticket
                 if (!ApplyToTransport()) { Fail("NETWORK TRANSPORT MISSING"); yield break; }
-                if (!nm.StartClient()) { Fail("FAILED TO START NETWORK CLIENT"); yield break; }
+                // once the transport is connected the server is deciding on the join: that gets its own, longer limit
+                bool transportUp = false;
+                var transport = nm.NetworkConfig.NetworkTransport;
+                NetworkTransport.TransportEventDelegate onTransport = (e, id, payload, at) => { if (e == NetworkEvent.Connect) transportUp = true; };
+                if (transport != null) transport.OnTransportEvent += onTransport;
+                if (!nm.StartClient()) { if (transport != null) transport.OnTransportEvent -= onTransport; Fail("FAILED TO START NETWORK CLIENT"); yield break; }
                 Debug.Log($"[GameServer] Netcode client started -> {Endpoint} (attempt {Attempt}/{attempts})");
 
                 float elapsed = 0f;
-                while (elapsed < attemptTimeoutSeconds)
+                bool waitLogged = false;
+                while (elapsed < (transportUp ? attemptTimeoutSeconds + approvalWaitSeconds : attemptTimeoutSeconds))
                 {
+                    if (transportUp && !waitLogged) { waitLogged = true; Debug.Log("[GameServer] Reached the server; waiting for it to accept the join."); }
                     if (nm.IsConnectedClient) { connected = true; break; }
                     // a frame can take seconds while the map loads; that must not use up the attempt, so one frame counts at most 0.25 s
                     elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.25f);
@@ -245,6 +254,7 @@ namespace Railbound.Networking
                     }
                     yield return null;
                 }
+                if (transport != null) transport.OnTransportEvent -= onTransport;
 
                 if (!connected)
                 {
