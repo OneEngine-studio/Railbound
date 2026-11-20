@@ -56,6 +56,8 @@ namespace Railbound.Networking
 
         [Tooltip("Seconds one connection attempt may take. A server that was just handed out can need a moment before it answers, so several short attempts beat one long wait.")]
         [SerializeField] private float attemptTimeoutSeconds = 8f;
+        [Tooltip("Seconds the first attempt may take to reach a server that was just handed out: it may still be building the chosen map, and it does not answer while it loads.")]
+        [SerializeField] private float firstAttemptTimeoutSeconds = 20f;
         [SerializeField] private int maxAttempts = 4;
         [SerializeField] private float retryDelaySeconds = 1.5f;
         [Tooltip("Seconds an attempt may wait once the server answered and is deciding on the join (it may be building the chosen map).")]
@@ -74,7 +76,7 @@ namespace Railbound.Networking
         public bool HasEndpoint => !string.IsNullOrEmpty(Host) && Port != 0;
         public string Endpoint => Host + ":" + Port;
         /// <summary>Total time all attempts together may take.</summary>
-        public float ConnectTimeoutSeconds => approvalWaitSeconds + (attemptTimeoutSeconds + retryDelaySeconds) * Mathf.Max(1, maxAttempts);
+        public float ConnectTimeoutSeconds => approvalWaitSeconds + Mathf.Max(0f, firstAttemptTimeoutSeconds - attemptTimeoutSeconds) + (attemptTimeoutSeconds + retryDelaySeconds) * Mathf.Max(1, maxAttempts);
         /// <summary>Number of the running connection attempt (1-based) and how many there are.</summary>
         public int Attempt { get; private set; }
         public int MaxAttempts => Mathf.Max(1, maxAttempts);
@@ -239,7 +241,8 @@ namespace Railbound.Networking
 
                 float elapsed = 0f;
                 bool waitLogged = false;
-                while (elapsed < (transportUp ? attemptTimeoutSeconds + approvalWaitSeconds : attemptTimeoutSeconds))
+                float reachLimit = Attempt <= 1 ? Mathf.Max(attemptTimeoutSeconds, firstAttemptTimeoutSeconds) : attemptTimeoutSeconds;
+                while (elapsed < (transportUp ? reachLimit + approvalWaitSeconds : reachLimit))
                 {
                     if (transportUp && !waitLogged) { waitLogged = true; Debug.Log("[GameServer] Reached the server; waiting for it to accept the join."); }
                     if (nm.IsConnectedClient) { connected = true; break; }
