@@ -34,9 +34,35 @@ namespace Railbound.AI
         public GameObject ammoBoxPrefab;
 
         [Header("Drop Physics")]
-        public float popUpForce = 3.6f;
-        public float spreadForce = 1.4f;
-        public float randomTorque = 5f;
+        public float popUpForce = 2.2f;
+        public float spreadForce = 0.8f;
+        public float randomTorque = 1.5f;
+
+        /// <summary>
+        /// A drop must not be thrown around by bodies: it used to appear inside the falling corpse, which shoved it out at speed (a crate
+        /// flying through the body into the camera). It ignores collisions with every character body and ragdoll bone near it, on every
+        /// machine (the clients' copies call this too).
+        /// </summary>
+        public static void IgnoreNearbyBodies(GameObject item)
+        {
+            if (item == null) return;
+            var own = item.GetComponentsInChildren<Collider>(true);
+            if (own.Length == 0) return;
+            foreach (var c in Physics.OverlapSphere(item.transform.position, 3f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (c == null || c.transform.IsChildOf(item.transform)) continue;
+                if (c.GetComponentInParent<JUTPS.JUCharacterController>() == null && c.GetComponentInParent<JUTPS.PhysicsScripts.AdvancedRagdollController>() == null) continue;
+                foreach (var o in own) if (o != null) Physics.IgnoreCollision(o, c, true);
+            }
+        }
+
+        // beside the body, at chest height, on the given side (never inside the ragdoll)
+        private Vector3 Beside(Vector3 side)
+        {
+            side.y = 0f;
+            if (side.sqrMagnitude < 0.001f) side = Vector3.right;
+            return transform.position + side.normalized * 0.9f + Vector3.up * 0.8f;
+        }
 
         private JUHealth _health;
         private bool _hasDropped;
@@ -89,20 +115,20 @@ namespace Railbound.AI
 
                 if (dropAmmo && ammoBoxPrefab != null)
                 {
-                    DropSingleAmmoBox(center + transform.forward * 0.35f);
+                    DropSingleAmmoBox(Beside(transform.right));
                 }
                 else if (!dropAmmo && medkitPrefab != null)
                 {
-                    DropSingleMedkit(center + transform.forward * 0.35f);
+                    DropSingleMedkit(Beside(transform.right));
                 }
             }
             else
             {
                 if (medkitPrefab != null)
-                    DropSingleMedkit(center - transform.right * 0.35f);
+                    DropSingleMedkit(Beside(-transform.right));
 
                 if (ammoBoxPrefab != null)
-                    DropSingleAmmoBox(center + transform.right * 0.35f);
+                    DropSingleAmmoBox(Beside(transform.right));
             }
         }
 
@@ -117,17 +143,19 @@ namespace Railbound.AI
                 Random.Range(-10f, 10f));
 
             var medkitObj = Instantiate(medkitPrefab, pos, spawnRot);
+            IgnoreNearbyBodies(medkitObj);
             var medkitPickup = medkitObj.GetComponent<MedkitPickup>();
 
+            Vector3 out1 = pos - transform.position; out1.y = 0f;
             Vector3 medkitVel =
-                Vector3.up * popUpForce +
-                transform.forward * spreadForce +
-                Random.insideUnitSphere * 0.25f;
+                Vector3.up * Mathf.Min(popUpForce, 2.2f) +
+                out1.normalized * Mathf.Min(spreadForce, 0.8f) +
+                Random.insideUnitSphere * 0.15f;
 
             Vector3 medkitTorque = new Vector3(
-                Random.Range(-1f, 1f),
-                Random.Range(-4f, 4f),
-                Random.Range(-1f, 1f));
+                Random.Range(-0.3f, 0.3f),
+                Random.Range(-Mathf.Min(randomTorque, 1.5f), Mathf.Min(randomTorque, 1.5f)),
+                Random.Range(-0.3f, 0.3f));
 
             if (medkitPickup != null)
             {
@@ -156,17 +184,19 @@ namespace Railbound.AI
                 Random.Range(-8f, 8f));
 
             var ammoObj = Instantiate(ammoBoxPrefab, pos, spawnRot);
+            IgnoreNearbyBodies(ammoObj);
             var ammoPickup = ammoObj.GetComponent<AmmoBoxPickup>();
 
+            Vector3 out2 = pos - transform.position; out2.y = 0f;
             Vector3 ammoVel =
-                Vector3.up * popUpForce +
-                transform.forward * spreadForce +
-                Random.insideUnitSphere * 0.25f;
+                Vector3.up * Mathf.Min(popUpForce, 2.2f) +
+                out2.normalized * Mathf.Min(spreadForce, 0.8f) +
+                Random.insideUnitSphere * 0.15f;
 
             Vector3 ammoTorque = new Vector3(
-                Random.Range(-1f, 1f),
-                Random.Range(-4f, 4f),
-                Random.Range(-1f, 1f));
+                Random.Range(-0.3f, 0.3f),
+                Random.Range(-Mathf.Min(randomTorque, 1.5f), Mathf.Min(randomTorque, 1.5f)),
+                Random.Range(-0.3f, 0.3f));
 
             if (ammoPickup != null)
             {
