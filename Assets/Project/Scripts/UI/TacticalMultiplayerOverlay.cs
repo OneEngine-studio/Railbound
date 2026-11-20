@@ -135,7 +135,7 @@ namespace Railbound.UI
 
             if ((isHeadless || isServer) && NetworkManager.Singleton.IsListening)
             {
-                // the match scene was loaded again on a running server (rebuilt on the allocated map): it already serves
+                // the match scene was loaded again on a running server: it already serves
             }
             else if (isHeadless || isServer)
             {

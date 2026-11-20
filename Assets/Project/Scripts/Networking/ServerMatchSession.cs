@@ -36,8 +36,8 @@ namespace Railbound.Networking
         {
             if (nm == null || nm.IsListening) return;
             nm.NetworkConfig.ConnectionApproval = true;
-            // a join can take a while to be decided: Nakama checks the ticket, and a fleet server first rebuilds its match on the
-            // map the players chose (ServerMapSwitch). Netcode's default of 10 s dropped the first attempt; not part of the config hash.
+            // a join can take a while to be decided (Nakama checks the ticket, a just-allocated server may still be busy): Netcode's
+            // default of 10 s dropped first attempts. Not part of the config hash, so old and new builds still connect.
             nm.NetworkConfig.ClientConnectionBufferTimeout = ApprovalTimeoutSeconds;
             if (nm.ConnectionApprovalCallback == null) nm.ConnectionApprovalCallback = ServerMatchSession.Approve;   // only a server or host ever calls it
         }
@@ -263,8 +263,6 @@ namespace Railbound.Networking
             }
             if (string.IsNullOrEmpty(expected) && AgonesServerLifecycle.InAgones) reject = "THIS SERVER HAS NO MATCH YET";
             else if (!string.IsNullOrEmpty(expected) && expected != p.m) reject = "WRONG MATCH";
-            // the server is rebuilding the match on the chosen map: let the player in once it runs
-            while (reject == null && Railbound.Maps.ServerMapSwitch.StillBusy) yield return null;
 
             // 2. Nakama must know this player's ticket for this match
             if (reject == null && !Insecure)

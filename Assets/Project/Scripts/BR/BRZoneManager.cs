@@ -285,12 +285,10 @@ namespace Railbound.BR
                 {
                     wasLocalPlayerInsideSafeZone = false;
                     lastOutsideWarningTime = Time.time;
-                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: YOU ARE OUTSIDE THE SAFE ZONE - TAKE SHELTER!");
                 }
                 else if (Time.time - lastOutsideWarningTime > 12.0f)
                 {
                     lastOutsideWarningTime = Time.time;
-                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: TAKING STORM DAMAGE - RETURN TO SAFE ZONE!");
                 }
             }
             else
@@ -298,7 +296,6 @@ namespace Railbound.BR
                 if (!wasLocalPlayerInsideSafeZone)
                 {
                     wasLocalPlayerInsideSafeZone = true;
-                    BRFeedNotificationManager.Instance?.ShowInfo("SAFE: RE-ENTERED SAFE ZONE");
                 }
             }
         }
@@ -500,8 +497,6 @@ namespace Railbound.BR
                 notified10sWarning = false;
                 notifiedShrinkStart = false;
 
-                // Notify new phase
-                BRFeedNotificationManager.Instance?.ShowInfo($"NEW SAFE ZONE LOCATED ({phase.PhaseName})");
 
                 while (timer > 0f)
                 {
@@ -513,12 +508,10 @@ namespace Railbound.BR
                     if (timer <= 30.5f && timer > 28.5f && !notified30sWarning)
                     {
                         notified30sWarning = true;
-                        BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 30 SECONDS");
                     }
                     else if (timer <= 10.5f && timer > 8.5f && !notified10sWarning)
                     {
                         notified10sWarning = true;
-                        BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 10 SECONDS - MOVE NOW!");
                     }
 
                     yield return null;
@@ -536,11 +529,9 @@ namespace Railbound.BR
 
                 if (p == activePhases.Length - 1)
                 {
-                    BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: FINAL COLLAPSE INITIATED - ELIMINATE ALL HOSTILES!");
                 }
                 else
                 {
-                    BRFeedNotificationManager.Instance?.ShowWarning("RESTRICTED AREA: SAFE ZONE IS NOW SHRINKING");
                 }
 
                 timer = phase.ShrinkDuration;
@@ -600,8 +591,6 @@ namespace Railbound.BR
                 clientPhaseSeen = p;
                 clientShrinkSeen = shrinking;
                 notified30sWarning = notified10sWarning = false;
-                if (!firstSight && p >= 0 && p < phases.Length)
-                    BRFeedNotificationManager.Instance?.ShowInfo($"NEW SAFE ZONE LOCATED ({phases[p].PhaseName})");
             }
 
             if (shrinking)
@@ -609,8 +598,6 @@ namespace Railbound.BR
                 if (!clientShrinkSeen)
                 {
                     clientShrinkSeen = true;
-                    if (p == phases.Length - 1) BRFeedNotificationManager.Instance?.ShowCritical("CRITICAL: FINAL COLLAPSE INITIATED - ELIMINATE ALL HOSTILES!");
-                    else BRFeedNotificationManager.Instance?.ShowWarning("RESTRICTED AREA: SAFE ZONE IS NOW SHRINKING");
                 }
             }
             else
@@ -619,12 +606,10 @@ namespace Railbound.BR
                 if (t <= 30.5f && t > 28.5f && !notified30sWarning)
                 {
                     notified30sWarning = true;
-                    BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 30 SECONDS");
                 }
                 else if (t <= 10.5f && t > 8.5f && !notified10sWarning)
                 {
                     notified10sWarning = true;
-                    BRFeedNotificationManager.Instance?.ShowWarning("WARNING: SAFE ZONE COLLAPSE IN 10 SECONDS - MOVE NOW!");
                 }
             }
         }

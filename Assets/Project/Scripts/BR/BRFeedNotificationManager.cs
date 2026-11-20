@@ -15,6 +15,10 @@ namespace Railbound.BR
     }
 
     /// <summary>
+    /// RETIRED: nothing calls it any more and it switches itself off. Its Reach UI feed bars slid over the new match HUD (the alive / kills
+    /// counters) and kept going after the match ended. Zone events are shown by the match HUD: the objective card (phase, countdown,
+    /// RETURN TO THE SAFE ZONE) and MatchEventHUD's banners. The component stays only because the MAP-2 scene references it.
+    ///
     /// Manages Reach UI Feed Notifications for Battle Royale zone events, storm alerts, and tactical messages.
     /// Spawns Reach UI Feed Notification prefabs, colorizes them according to priority (Yellow for Warning,
     /// Red for Critical, Cyan for Info), and plays the designated tactical notification sound.
@@ -66,6 +70,8 @@ namespace Railbound.BR
 
         private void Awake()
         {
+            enabled = false;   // retired (see the class summary)
+            return;
             if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);

@@ -55,7 +55,6 @@ namespace Railbound.UI
     {
         private const string PrefsMode = "Railbound.Mode";
         private const string PrefsTeam = "Railbound.TeamSize";
-        private const string PrefsMap = "Railbound.ClassicMap";
 
         public static readonly IReadOnlyList<GameModeDefinition> All = new List<GameModeDefinition>
         {
@@ -69,77 +68,6 @@ namespace Railbound.UI
                 Rules = new[] { "Drop with minimal gear and scavenge weapons", "The safe zone shrinks: stay inside or take damage", "The last player or team alive wins" },
                 TeamSizes = new[] { TeamSize.Solo, TeamSize.Duo, TeamSize.Trio, TeamSize.Squad },
                 PlayableTeamSizes = new[] { TeamSize.Solo },
-            },
-            new GameModeDefinition
-            {
-                Id = "resurgence", Name = "RESURGENCE", CardTitle = "RESURGENCE", Glyph = "RS",
-                Category = ModeCategory.CoreSurvival, Players = 20, Map = "RAILHEAD", Length = "ABOUT 8 MIN",
-                Tagline = "FALL, AND RISE AGAIN.",
-                Description = "A faster battle royale on a tighter circle. Fallen players come back after a short countdown, as long as one teammate is still alive.",
-                Rules = new[] { "Faster pace and a smaller circle", "Eliminated players respawn after a short countdown", "Respawns stop once the last teammate falls" },
-                TeamSizes = new[] { TeamSize.Duo, TeamSize.Trio, TeamSize.Squad },
-            },
-            new GameModeDefinition
-            {
-                Id = "tactical", Name = "ZERO BUILD / TACTICAL", CardTitle = "TACTICAL", Glyph = "ZB",
-                Category = ModeCategory.CoreSurvival, Players = 20, Map = "TIMBERLINE", Length = "ABOUT 12 MIN",
-                Tagline = "NO TRICKS. JUST GUNPLAY.",
-                Description = "The battle royale stripped of building and special abilities. Positioning, natural cover and aim decide every fight.",
-                Rules = new[] { "No building and no special abilities", "Fights are decided by cover and positioning", "The same shrinking zone as the classic mode" },
-                TeamSizes = new[] { TeamSize.Solo, TeamSize.Duo, TeamSize.Trio, TeamSize.Squad },
-            },
-
-            // ------------------------------------------------------------ respawn and combat
-            new GameModeDefinition
-            {
-                Id = "tdm", Name = "TEAM DEATHMATCH", CardTitle = "TEAM DEATHMATCH", Glyph = "TDM",
-                Category = ModeCategory.RespawnCombat, Players = 12, Map = "DEPOT 9", Length = "ABOUT 10 MIN", FixedFormat = "6 V 6",
-                Tagline = "TWO TEAMS. ONE KILL COUNT.",
-                Description = "Two teams fight in a small arena with instant respawns. Reach the kill limit first, or lead on kills when time runs out.",
-                Rules = new[] { "Two teams in a compact arena", "Instant respawns, no waiting", "First to the kill limit or most kills at time wins" },
-            },
-            new GameModeDefinition
-            {
-                Id = "ffa", Name = "FREE-FOR-ALL", CardTitle = "FREE-FOR-ALL", Glyph = "FFA",
-                Category = ModeCategory.RespawnCombat, Players = 8, Map = "FOUNDRY", Length = "ABOUT 8 MIN", FixedFormat = "EVERY PLAYER FOR THEMSELVES",
-                Tagline = "EVERYONE IS AN ENEMY.",
-                Description = "Every player fights alone with instant respawns. The first player to reach the kill target takes the match.",
-                Rules = new[] { "Everyone fights for themselves", "Instant respawns", "First to the kill target wins" },
-            },
-            new GameModeDefinition
-            {
-                Id = "gungame", Name = "GUN GAME", CardTitle = "GUN GAME", Glyph = "GG",
-                Category = ModeCategory.RespawnCombat, Players = 8, Map = "SWITCHBACK", Length = "ABOUT 10 MIN", FixedFormat = "EVERY PLAYER FOR THEMSELVES",
-                Tagline = "EVERY KILL, A NEW WEAPON.",
-                Description = "Start with a basic weapon and move up a fixed list of guns with every elimination. Get a kill with the final weapon to win.",
-                Rules = new[] { "Everyone starts with the same basic weapon", "Each elimination promotes you to the next gun", "A kill with the final weapon wins the match" },
-            },
-
-            // ------------------------------------------------------------ objective and extraction
-            new GameModeDefinition
-            {
-                Id = "control", Name = "CONTROL", CardTitle = "CONTROL", Glyph = "CTL",
-                Category = ModeCategory.ObjectiveExtraction, Players = 12, Map = "SIGNAL HILL", Length = "ABOUT 12 MIN", FixedFormat = "6 V 6",
-                Tagline = "HOLD THE GROUND.",
-                Description = "Teams fight to capture and hold zones across the map. Held zones earn points over time; the team with the most points wins.",
-                Rules = new[] { "Capture and hold the zones on the map", "Held zones earn points over time", "The team with the most points wins" },
-            },
-            new GameModeDefinition
-            {
-                Id = "snd", Name = "SEARCH & DESTROY", CardTitle = "SEARCH & DESTROY", Glyph = "S&D",
-                Category = ModeCategory.ObjectiveExtraction, Players = 12, Map = "BLACKWATER", Length = "ABOUT 15 MIN", FixedFormat = "6 V 6",
-                Tagline = "ONE LIFE. ONE BOMB.",
-                Description = "A round-based mode with no respawns. One team plants a bomb at a target site while the other defends it or defuses the bomb.",
-                Rules = new[] { "Round based, no respawns", "Attackers plant the bomb at a site", "Defenders stop the plant or defuse the bomb" },
-            },
-            new GameModeDefinition
-            {
-                Id = "extraction", Name = "EXTRACTION", CardTitle = "EXTRACTION", Glyph = "EX",
-                Category = ModeCategory.ObjectiveExtraction, Players = 20, Map = "DUSTFALL", Length = "ABOUT 20 MIN",
-                Tagline = "TAKE THE LOOT. GET OUT ALIVE.",
-                Description = "Squads drop into the map to collect loot, cash and objectives, then must reach an extraction point without being wiped out.",
-                Rules = new[] { "Collect loot, cash and objectives", "Reach an extraction point to keep what you found", "A squad wiped out loses its loot" },
-                TeamSizes = new[] { TeamSize.Duo, TeamSize.Trio, TeamSize.Squad },
             },
         };
 
@@ -177,58 +105,9 @@ namespace Railbound.UI
         public static GameModeDefinition Selected { get { EnsureLoaded(); return selected; } }
         public static TeamSize SelectedTeamSize { get { EnsureLoaded(); return selectedTeam; } }
 
-        /// <summary>The mode and team size, for example "classic_solo" (match results and statistics).</summary>
+        /// <summary>The key the matchmaker groups players by, for example "classic_solo": only equal keys are matched together.</summary>
         public static string MatchKey => Selected.Id + "_" + TeamName(SelectedTeamSize).ToLowerInvariant();
 
-        /// <summary>
-        /// The key the matchmaker groups players by: <see cref="MatchKey"/>, plus "-MAP" when Classic BR is played on another map than MAP-2
-        /// (for example "classic_solo-depot9"). Only equal keys are matched together, and Nakama hands the map to the game server.
-        /// </summary>
-        public static string QueueKey
-        {
-            get
-            {
-                var map = SelectedMap;
-                return MatchKey + (ChoosesMap(Selected) && map != null && !map.IsMap2 ? "-" + map.Id : "");
-            }
-        }
-
-        // ---------------- the map (Classic BR can be played on any map, with Battle Royale rules) ----------------
-        private static string selectedMapId;
-
-        /// <summary>True for the modes whose map the player chooses (Classic BR); the others play on the map made for them.</summary>
-        public static bool ChoosesMap(GameModeDefinition m) => m != null && m.Id == "classic";
-
-        /// <summary>The map the chosen mode is played on.</summary>
-        public static Railbound.Maps.MapDefinition SelectedMap
-        {
-            get
-            {
-                EnsureLoaded();
-                Railbound.Maps.MapDefinition m = null;
-                if (ChoosesMap(selected)) m = Railbound.Maps.MapCatalog.Find(selectedMapId);
-                if (m == null) m = Railbound.Maps.MapCatalog.ForMode(selected.Id);
-                return m ?? Railbound.Maps.MapCatalog.Map2;
-            }
-        }
-
-        /// <summary>The map Classic BR is played on (it stays chosen while another mode is selected).</summary>
-        public static Railbound.Maps.MapDefinition ClassicMap
-        {
-            get { EnsureLoaded(); return Railbound.Maps.MapCatalog.Find(selectedMapId) ?? Railbound.Maps.MapCatalog.Map2; }
-        }
-
-        /// <summary>Chooses the map for Classic BR.</summary>
-        public static void SetClassicMap(Railbound.Maps.MapDefinition map)
-        {
-            if (map == null) return;
-            EnsureLoaded();
-            if (selectedMapId == map.Id) return;
-            selectedMapId = map.Id;
-            try { PlayerPrefs.SetString(PrefsMap, map.Id); PlayerPrefs.Save(); }
-            catch (Exception) { /* not saved, still chosen for this session */ }
-            Changed?.Invoke();
-        }
 
         /// <summary>The fact line under the title: team size or format, and the number of players.</summary>
         public static string Summary(GameModeDefinition m, TeamSize t)
@@ -256,9 +135,6 @@ namespace Railbound.UI
             if (m == null || !m.IsPlayable || !m.CanPlay(t)) { m = Find("classic"); t = m.DefaultTeamSize; }
             selected = m;
             selectedTeam = t;
-            try { selectedMapId = PlayerPrefs.GetString(PrefsMap, Railbound.Maps.MapCatalog.Map2Id); }
-            catch (Exception) { selectedMapId = Railbound.Maps.MapCatalog.Map2Id; }
-            if (Railbound.Maps.MapCatalog.Find(selectedMapId) == null) selectedMapId = Railbound.Maps.MapCatalog.Map2Id;
         }
 
         /// <summary>Chooses a mode and team size. Returns false when the game cannot run that combination.</summary>

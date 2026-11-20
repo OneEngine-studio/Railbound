@@ -172,12 +172,7 @@ namespace Railbound.BR
                     small = "MATCH STARTS IN";
                     big = Mathf.Max(1, Mathf.CeilToInt(c.WarmupRemaining)).ToString();
                     break;
-                case BRMatchState.ActiveBattle:
-                    if (c.MatchSeconds < 3f) { small = "DEPLOYED"; big = ""; }
-                    break;
-                case BRMatchState.FinalShowdown:
-                    if (c.MatchSeconds >= 0f && c.AliveCount <= c.FinalShowdownAlive && c.AliveCount > 1 && Time.unscaledTime % 12f < 4f) small = "FINAL SHOWDOWN";
-                    break;
+                // the start of the battle and the final showdown are MatchEventHUD's banners (they used to show here as well)
             }
             centerSmall.text = small;
             centerBig.text = big;
@@ -466,8 +461,15 @@ namespace Railbound.BR
             // ---- centre: waiting / countdown
             var center = NewRect("Center", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 150), new Vector2(900, 240));
             centerGroup = center.gameObject.AddComponent<CanvasGroup>(); centerGroup.alpha = 0f;
-            var cplate = NewImage("Plate", center, px, new Color(0f, 0f, 0f, 0.42f)); var cpr = cplate.rectTransform;
-            cpr.anchorMin = cpr.anchorMax = new Vector2(0.5f, 0.5f); cpr.pivot = new Vector2(0.5f, 0.5f); cpr.anchoredPosition = new Vector2(0, 20); cpr.sizeDelta = new Vector2(640, 230);
+            // no box: a soft shadow band behind the words and two hairlines, like the match event banners
+            var cplate = NewImage("Shade", center, SoftBand(), new Color(0f, 0f, 0f, 0.55f)); var cpr = cplate.rectTransform;
+            cpr.anchorMin = cpr.anchorMax = new Vector2(0.5f, 0.5f); cpr.pivot = new Vector2(0.5f, 0.5f); cpr.anchoredPosition = new Vector2(0, 20); cpr.sizeDelta = new Vector2(900, 260);
+            for (int i = 0; i < 2; i++)
+            {
+                var line = NewImage("Rule", center, px, new Color(1f, 1f, 1f, 0.45f)); var lr = line.rectTransform;
+                lr.anchorMin = lr.anchorMax = new Vector2(0.5f, 0.5f); lr.pivot = new Vector2(0.5f, 0.5f);
+                lr.anchoredPosition = new Vector2(0, i == 0 ? 104 : 38); lr.sizeDelta = new Vector2(i == 0 ? 360 : 160, 2);
+            }
             centerSmall = NewText("Small", center, "", 30, fontSemi, Dim, 14f, TextAlignmentOptions.Center);
             var cs = centerSmall.rectTransform; cs.anchorMin = cs.anchorMax = new Vector2(0.5f, 0.5f); cs.pivot = new Vector2(0.5f, 0.5f); cs.anchoredPosition = new Vector2(0, 70); cs.sizeDelta = new Vector2(900, 50);
             centerBig = NewText("Big", center, "", 150, fontBold, Color.white, 6f, TextAlignmentOptions.Center);
@@ -639,5 +641,25 @@ namespace Railbound.BR
         }
 
         private static void Stretch(RectTransform r) { r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = Vector2.zero; r.offsetMax = Vector2.zero; }
+
+        // a horizontal band that fades out to the sides and to top and bottom (a shadow behind centred words)
+        private static Sprite softBand;
+        private static Sprite SoftBand()
+        {
+            if (softBand != null) return softBand;
+            const int W = 64, Hh = 32;
+            var tex = new Texture2D(W, Hh, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[W * Hh];
+            for (int y = 0; y < Hh; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    float u = Mathf.Abs((x + 0.5f) / W * 2f - 1f), v = Mathf.Abs((y + 0.5f) / Hh * 2f - 1f);
+                    float a = Mathf.Clamp01(1f - u * u) * Mathf.Clamp01(1f - v * v);
+                    px[y * W + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                }
+            tex.SetPixels32(px); tex.Apply();
+            softBand = Sprite.Create(tex, new Rect(0, 0, W, Hh), new Vector2(0.5f, 0.5f), 100f);
+            return softBand;
+        }
     }
 }

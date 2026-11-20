@@ -202,6 +202,22 @@ namespace Railbound.UI
                 if (!string.IsNullOrEmpty(saved) && operators[i].operatorId == saved && IsOperatorOwned(i)) { equippedOperatorIndex = i; break; }
             currentOperatorIndex = equippedOperatorIndex;
             CharacterSkins.SetEquipped(operators.Count > 0 ? operators[equippedOperatorIndex].skinId : CharacterSkinCatalog.DefaultSkinId);
+            SaveEquippedLook();
+            LobbyOperatorLooks.Changed -= SaveEquippedLook;
+            LobbyOperatorLooks.Changed += SaveEquippedLook;
+        }
+
+        private void OnDestroy() { LobbyOperatorLooks.Changed -= SaveEquippedLook; }
+
+        /// <summary>
+        /// The match puts this look on the player's character (every peer sees it): the starting operators are tints of the MIL-R5 model,
+        /// so without it every one of them looked like the plain model in a match, and customization choices never showed.
+        /// </summary>
+        private void SaveEquippedLook()
+        {
+            bool tinted = operators != null && equippedOperatorIndex < operators.Count && equippedOperatorIndex < LobbyOperatorLooks.OperatorCount
+                && operators[equippedOperatorIndex].skinId == CharacterSkinCatalog.DefaultSkinId;
+            CharacterSkins.SetEquippedLook(tinted ? OperatorLookApplier.Encode(LobbyOperatorLooks.Resolve(equippedOperatorIndex, true)) : "");
         }
 
         private void Update()
@@ -238,6 +254,7 @@ namespace Railbound.UI
                 equippedOperatorIndex = index;
                 PlayerPrefs.SetString(EquippedOperatorKey, operators[index].operatorId);
                 CharacterSkins.SetEquipped(operators[index].skinId);
+                SaveEquippedLook();
                 PlayerPrefs.Save();
             }
             SpawnOperator(currentOperatorIndex);
@@ -298,17 +315,6 @@ namespace Railbound.UI
 
         private enum GearGroup { Skin, Suit, Plate, Pouches, Pads, Cap, Headset }
 
-        private static GearGroup GroupOf(string rendererName)
-        {
-            if (rendererName.Contains("Eye") || rendererName.Contains("Head") && !rendererName.Contains("Headphones")) return GearGroup.Skin;
-            if (rendererName.Contains("Headphones")) return GearGroup.Headset;
-            if (rendererName.Contains("Cap")) return GearGroup.Cap;
-            if (rendererName.Contains("Plate")) return GearGroup.Plate;
-            if (rendererName.Contains("Puches")) return GearGroup.Pouches;
-            if (rendererName.Contains("Pads")) return GearGroup.Pads;
-            return GearGroup.Suit;
-        }
-
         /// <summary>
         /// Dresses a model in its operator's look (per-group tints, cap / headset on or off); also used for party members'
         /// models. brightness &lt; 1 dims models that are out of the spotlight. <paramref name="local"/> applies the local
@@ -318,32 +324,7 @@ namespace Railbound.UI
         {
             if (model == null) return;
 
-            var look = LobbyOperatorLooks.Resolve(index, local);
-            var renderers = model.GetComponentsInChildren<Renderer>(true);
-            var propBlock = new MaterialPropertyBlock();
-            foreach (var r in renderers)
-            {
-                if (r == null) continue;
-                var group = GroupOf(r.name);
-
-                Color tint;
-                switch (group)
-                {
-                    case GearGroup.Suit: tint = look.suit; break;
-                    case GearGroup.Plate: tint = look.plate; break;
-                    case GearGroup.Pouches: tint = look.pouches; break;
-                    case GearGroup.Pads: tint = look.pads; break;
-                    case GearGroup.Cap: tint = look.cap; r.enabled = look.wearCap; break;
-                    case GearGroup.Headset: tint = look.headset; r.enabled = look.wearHeadset; break;
-                    default: tint = Color.white; break;      // face and eyes keep their own colour
-                }
-                tint = new Color(tint.r * brightness, tint.g * brightness, tint.b * brightness, 1f);
-
-                r.GetPropertyBlock(propBlock);
-                propBlock.SetColor("_BaseColor", tint);
-                propBlock.SetColor("_Color", tint);
-                r.SetPropertyBlock(propBlock);
-            }
+            OperatorLookApplier.Apply(model, LobbyOperatorLooks.Resolve(index, local), brightness);
         }
 
         // Pointer Drag rotation handlers

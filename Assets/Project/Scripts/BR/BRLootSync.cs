@@ -243,6 +243,7 @@ namespace Railbound.BR
             if (prefab == null) return;
 
             var go = Instantiate(prefab, position, rotation);
+            Railbound.AI.BattleRoyaleLootDropper.IgnoreNearbyBodies(go);   // this machine's corpse must not shove it either
             dynamicItems[id] = go;
             var med = go.GetComponent<Railbound.Gameplay.MedkitPickup>();
             var ammo = go.GetComponent<Railbound.Gameplay.AmmoBoxPickup>();

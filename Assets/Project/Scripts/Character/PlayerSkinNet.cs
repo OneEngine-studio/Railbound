@@ -15,8 +15,12 @@ namespace Project.Character
     {
         private readonly NetworkVariable<FixedString32Bytes> skinId = new NetworkVariable<FixedString32Bytes>(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        // the operator's look on that model (tints, cap, headset), see OperatorLookApplier; empty = the model as authored
+        private readonly NetworkVariable<FixedString64Bytes> lookCode = new NetworkVariable<FixedString64Bytes>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         private string applied;
+        private string appliedLook = "";
 
         private void Awake()
         {
@@ -27,18 +31,39 @@ namespace Project.Character
         public override void OnNetworkSpawn()
         {
             skinId.OnValueChanged += HandleChanged;
-            if (IsOwner) skinId.Value = new FixedString32Bytes(CharacterSkins.EquippedSkinId);
+            lookCode.OnValueChanged += HandleLookChanged;
+            if (IsOwner)
+            {
+                skinId.Value = new FixedString32Bytes(CharacterSkins.EquippedSkinId);
+                lookCode.Value = new FixedString64Bytes(CharacterSkins.EquippedLookCode);
+            }
             Apply(skinId.Value.ToString());
+            ApplyLook(lookCode.Value.ToString());
         }
 
         public override void OnNetworkDespawn()
         {
             skinId.OnValueChanged -= HandleChanged;
+            lookCode.OnValueChanged -= HandleLookChanged;
         }
 
         private void HandleChanged(FixedString32Bytes previous, FixedString32Bytes current)
         {
             Apply(current.ToString());
+            ApplyLook(lookCode.Value.ToString(), true);   // a new model starts untinted
+        }
+
+        private void HandleLookChanged(FixedString64Bytes previous, FixedString64Bytes current)
+        {
+            ApplyLook(current.ToString());
+        }
+
+        private void ApplyLook(string code, bool force = false)
+        {
+            if (CharacterSkinApplier.NoVisuals) return;
+            if (!force && code == appliedLook) return;
+            if (OperatorLookApplier.TryDecode(code, out var look)) OperatorLookApplier.ApplyToCharacter(gameObject, look);
+            appliedLook = code;
         }
 
         private System.Collections.IEnumerator Start()
@@ -49,6 +74,7 @@ namespace Project.Character
             var nm = NetworkManager.Singleton;
             if (nm != null && (nm.IsListening || nm.IsConnectedClient)) yield break;
             Apply(CharacterSkins.EquippedSkinId);
+            ApplyLook(CharacterSkins.EquippedLookCode, true);
         }
 
         private void Apply(string id)
