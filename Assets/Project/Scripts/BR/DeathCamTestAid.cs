@@ -32,6 +32,13 @@ namespace Railbound.BR
             }
         }
 
+        private static int CountOn(GameObject go)
+        {
+            int n = 0;
+            foreach (var r in go.GetComponentsInChildren<Renderer>(false)) if (r.enabled) n++;
+            return n;
+        }
+
         private IEnumerator Start()
         {
             Directory.CreateDirectory(dir);
@@ -85,7 +92,17 @@ namespace Railbound.BR
                     ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"death{n}_{f:00}.png"));
                     yield return new WaitForSecondsRealtime(0.1f);
                 }
-                yield return new WaitForSecondsRealtime(2f);
+                // the corpse, second by second
+                var go = target != null ? target.gameObject : null;
+                var hipsT = ragdoll != null ? ragdoll.Hips : null;
+                for (int sec = 0; sec < 8; sec++)
+                {
+                    string st = go == null ? "object destroyed" :
+                        $"active={go.activeInHierarchy} ragdoll={(ragdoll != null ? ragdoll.State.ToString() : "-")} renderers={CountOn(go)} hips={(hipsT != null ? (hipsT.gameObject.activeInHierarchy ? hipsT.position.ToString("F1") : "inactive") : "destroyed")} root={go.transform.position.ToString("F1")}";
+                    Debug.Log($"[DeathCam] bot {n} +{4 + sec} s: {st}");
+                    report.AppendLine($"[DeathCam] bot {n} +{4 + sec} s: {st}");
+                    yield return new WaitForSecondsRealtime(1f);
+                }
                 if (target == null || t == null) { report.AppendLine($"[DeathCam] bot {n}: its object is gone 6 s after the kill"); Debug.Log("[DeathCam] bot gone"); continue; }
 
                 // six seconds after the kill: still down?
