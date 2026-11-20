@@ -103,6 +103,7 @@ namespace Project.AI.RL
         private static Vector3 ChestOf(Known k)
         {
             if (k.Brain != null && k.Brain.HumanoidSpine != null) return k.Brain.HumanoidSpine.position;
+            if (k.T == null) return k.LastPos + Vector3.up * 1.2f;   // removed since it was last seen (a player who left)
             return k.T.position + Vector3.up * 1.2f;
         }
 
@@ -584,6 +585,9 @@ namespace Project.AI.RL
         private void TacticalTick()
         {
             HookTactical();
+            // a fighter can be removed between perception ticks (a player who left the match): forget it at once
+            if (focus != null && focus.T == null) { focus = null; currentTarget = null; currentTargetBrain = null; currentTargetHealth = null; }
+            known.RemoveAll(k => k.T == null);
             if (aimNoiseSeed == Vector2.zero) aimNoiseSeed = new Vector2(Random.Range(0f, 100f), Random.Range(100f, 200f));
 
             perceptionTimer -= Time.deltaTime;
