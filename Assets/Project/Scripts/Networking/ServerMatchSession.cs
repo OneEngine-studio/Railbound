@@ -29,10 +29,16 @@ namespace Railbound.Networking
     /// </summary>
     public static class ConnectionApprovalGate
     {
+        /// <summary>How long a connected client may wait for the server's decision (both sides use it).</summary>
+        public const int ApprovalTimeoutSeconds = 45;
+
         public static void Configure(NetworkManager nm)
         {
             if (nm == null || nm.IsListening) return;
             nm.NetworkConfig.ConnectionApproval = true;
+            // a join can take a while to be decided: Nakama checks the ticket, and a fleet server first rebuilds its match on the
+            // map the players chose (ServerMapSwitch). Netcode's default of 10 s dropped the first attempt; not part of the config hash.
+            nm.NetworkConfig.ClientConnectionBufferTimeout = ApprovalTimeoutSeconds;
             if (nm.ConnectionApprovalCallback == null) nm.ConnectionApprovalCallback = ServerMatchSession.Approve;   // only a server or host ever calls it
         }
 
@@ -49,7 +55,7 @@ namespace Railbound.Networking
             return Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinPayload { m = matchId ?? "", u = user ?? "", t = joinToken ?? "" }));
         }
 
-        private static string CommandLineValue(string name)
+        internal static string CommandLineValue(string name)
         {
             string[] args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++) if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
@@ -238,6 +244,13 @@ namespace Railbound.Networking
         private IEnumerator VerifyRoutine(ulong clientId, JoinPayload p, NetworkManager.ConnectionApprovalResponse response)
         {
             string reject = null;
+
+            // test aid: "-approvaldelay N" (server) holds every decision N seconds, like a slow map rebuild
+            if (float.TryParse(ConnectionApprovalGate.CommandLineValue("-approvaldelay"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float testDelay) && testDelay > 0f)
+            {
+                Debug.Log($"[ServerMatch] Test: holding the join of client {clientId} for {testDelay:0} s.");
+                yield return new WaitForSecondsRealtime(testDelay);
+            }
 
             // 1. the match id must be the one this server was allocated for (Agones tells the lifecycle a moment after the allocation)
             float waited = 0f;
