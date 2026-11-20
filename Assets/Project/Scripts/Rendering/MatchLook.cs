@@ -5,9 +5,8 @@ using UnityEngine.Rendering.HighDefinition;
 /// <summary>
 /// The match's image, applied in code on top of MAP-2's GlobalVolume (scene assets are not edited by hand): a global volume of its own,
 /// above the map's, that only overrides what made the picture look cheap. Measured against the map's volume:
-///  * Colour cast: white balance -13 tinted the whole image blue (the far mountains purple); -2 is natural daylight.
-///  * Light: indirect diffuse 2.5 and reflections 1.5 flattened and washed out every surface; 1.4 / 1.1 keep shade and shape readable,
-///    and a slight post-exposure lift and contrast keep the overall brightness.
+///  * Light: indirect diffuse 2.5 and reflections 1.5 flattened every surface; 2.0 / 1.3 and a touch of contrast give shapes back their
+///    shade without darkening the map (tested against the map's own grade: a stronger correction looked yellow and flat).
 ///  * Motion blur: 0.4 with camera blur smeared every turn; 0.2 when the player's Motion Blur setting is on, none when it is off.
 ///  * Vignette 0.45 darkened a third of the screen; 0.3.
 ///  * Film grain: the player's setting at the menu's new scale (100 % = HDRP 0.3, fine grain); at 100 % HDRP's own scale it covered the
@@ -62,9 +61,8 @@ public static class MatchLook
         var p = ScriptableObject.CreateInstance<VolumeProfile>();
         p.name = "MatchLook";
 
-        var wb = p.Add<WhiteBalance>(); wb.temperature.Override(-2f); wb.tint.Override(0f);
-        var il = p.Add<IndirectLightingController>(); il.indirectDiffuseLightingMultiplier.Override(1.4f); il.reflectionLightingMultiplier.Override(1.1f);
-        var ca = p.Add<ColorAdjustments>(); ca.postExposure.Override(0.15f); ca.contrast.Override(5f); ca.saturation.Override(2f);
+        var il = p.Add<IndirectLightingController>(); il.indirectDiffuseLightingMultiplier.Override(2.0f); il.reflectionLightingMultiplier.Override(1.3f);
+        var ca = p.Add<ColorAdjustments>(); ca.contrast.Override(4f);
         // the player's Motion Blur setting (the settings menu only reaches the lobby's volumes)
         var mb = p.Add<MotionBlur>(); mb.intensity.Override(PlayerPrefs.GetInt("Graphics_MotionBlur", 1) == 1 ? 0.2f : 0f);
         var vg = p.Add<Vignette>(); vg.intensity.Override(0.3f);
