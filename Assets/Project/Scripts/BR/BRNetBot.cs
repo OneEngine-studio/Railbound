@@ -112,8 +112,6 @@ namespace Railbound.BR
             retired.OnValueChanged -= HandleRetired;
             skinId.OnValueChanged -= HandleSkinChanged;
             rightHandItem.OnValueChanged -= HandleItemChanged;
-            var hp = GetComponent<JUHealth>();
-            if (hp != null) hp.OnDeath.RemoveListener(HandleProxyDeath);
         }
 
         /// <summary>The weapon in the bot's right hand on this peer (the controller's own field is not kept up to date on a client).</summary>
@@ -130,17 +128,9 @@ namespace Railbound.BR
             }
         }
 
-        // On a client the character controller (which normally ragdolls the body on death) is switched off, so do it here.
-        private void HandleProxyDeath()
-        {
-            var ragdoll = GetComponent<AdvancedRagdollController>();
-            if (ragdoll != null) ragdoll.State = AdvancedRagdollController.RagdollState.Ragdolled;
-        }
-
         private void MakeClientProxy()
         {
-            var hp = GetComponent<JUHealth>();
-            if (hp != null) { hp.OnDeath.RemoveListener(HandleProxyDeath); hp.OnDeath.AddListener(HandleProxyDeath); if (hp.IsDead) HandleProxyDeath(); }
+            // its death on this machine (ragdoll, no getting up, momentum) is handled by BRNetHealth / CorpseRagdoll
             foreach (var b in GetComponents<Behaviour>())
             {
                 if (b == null) continue;

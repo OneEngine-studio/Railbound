@@ -30,6 +30,13 @@ namespace Railbound.BR
         private float lastServerValue = -1f;
         private float nextHealReport;
 
+        // a copy of a body on this machine (not the server's, not the owner's): how it moves and where this machine last shot it
+        private const float ResyncSeconds = 1.2f;        // a local hit the server did not confirm is undone after this
+        private Vector3 lastPos, velocity;
+        private bool hasLastPos, corpse;
+        private float lastLocalDamageAt = -99f, lastShotAt = -99f;
+        private Vector3 lastShotPoint, lastShotDir;
+
         private void Awake()
         {
             health = GetComponent<JUHealth>();
@@ -50,20 +57,22 @@ namespace Railbound.BR
             {
                 netHealth.OnValueChanged += HandleServerHealth;
                 ApplyServerValue(netHealth.Value);
-                // another player's copy on this machine: nobody switches its ragdoll on when it dies (bots do it in BRNetBot)
-                if (!IsOwner && GetComponent<BRNetBot>() == null) { health.OnDeath.RemoveListener(RagdollRemotePlayer); health.OnDeath.AddListener(RagdollRemotePlayer); if (health.IsDead) RagdollRemotePlayer(); }
+                // another player's or a bot's copy on this machine: its character controller does not run the death, so do it here
+                if (!IsOwner) { health.OnDeath.RemoveListener(HandleCopyDeath); health.OnDeath.AddListener(HandleCopyDeath); if (health.IsDead) HandleCopyDeath(); }
             }
         }
 
-        private void RagdollRemotePlayer()
+        private void HandleCopyDeath()
         {
-            var ragdoll = GetComponent<AdvancedRagdollController>();
-            if (ragdoll != null) ragdoll.State = AdvancedRagdollController.RagdollState.Ragdolled;
+            if (corpse) return;
+            corpse = true;
+            bool shot = Time.time - lastShotAt < 1.5f;   // this machine fired the killing shot (or one just before it)
+            CorpseRagdoll.Begin(gameObject, velocity, shot, lastShotPoint, lastShotDir);
         }
 
         public override void OnNetworkDespawn()
         {
-            if (health != null) health.OnDeath.RemoveListener(RagdollRemotePlayer);
+            if (health != null) health.OnDeath.RemoveListener(HandleCopyDeath);
             JUHealth.OnAnyDamaged -= HandleAnyDamaged;
             netHealth.OnValueChanged -= HandleServerHealth;
             if (health != null) health.OnTakeDamage -= ServerDamaged;
@@ -105,6 +114,8 @@ namespace Railbound.BR
         {
             if (value < 0f || health == null) return;
             lastServerValue = value;
+            // the server brought the body back (a new round): it is not a corpse any more
+            if (corpse && value > 0f) { corpse = false; CorpseRagdoll.End(gameObject); }
             if (Mathf.Abs(health.Health - value) > 0.01f)
             {
                 health.Health = Mathf.Clamp(value, 0f, health.MaxHealth);
@@ -116,6 +127,17 @@ namespace Railbound.BR
         private void HandleAnyDamaged(JUHealth h, float damage, Vector3 hitPosition)
         {
             if (h != health || !IsSpawned || IsServer || damage <= 0f) return;
+
+            // only the server decides that a body dies: a copy that died here first and was then corrected by the server used to
+            // die, come back and die again (the corpse stood up and fell). The hit still shows; the server's value ends it.
+            if (health.Health <= 0f && lastServerValue > 0f) health.Health = 0.01f;
+            lastLocalDamageAt = Time.time;
+            if (!IsOwner)
+            {
+                var shooter = JUHealth.PendingAttacker;
+                Vector3 from = shooter != null ? shooter.transform.position + Vector3.up * 1.4f : (Camera.main != null ? Camera.main.transform.position : hitPosition - transform.forward);
+                lastShotAt = Time.time; lastShotPoint = hitPosition; lastShotDir = hitPosition - from; lastShotDir.y *= 0.35f;
+            }
 
             // who is shooting: bullets set JUHealth.PendingAttacker while they apply damage (the local player's character)
             ulong attackerId = 0;
@@ -163,6 +185,22 @@ namespace Railbound.BR
             {
                 if (Mathf.Abs(health.Health - netHealth.Value) > 0.01f) netHealth.Value = health.Health;
                 return;
+            }
+
+            // a copy's speed, for a death that keeps the body's momentum
+            if (!IsOwner && !corpse)
+            {
+                Vector3 p = transform.position;
+                if (hasLastPos && Time.deltaTime > 0f) velocity = Vector3.Lerp(velocity, (p - lastPos) / Time.deltaTime, Mathf.Clamp01(Time.deltaTime * 10f));
+                lastPos = p; hasLastPos = true;
+            }
+
+            // a local hit the server never confirmed (it missed there, or the report was refused): back to the server's value
+            if (lastServerValue >= 0f && !health.IsDead && Time.time - lastLocalDamageAt > ResyncSeconds && Mathf.Abs(health.Health - lastServerValue) > 0.5f
+                && !(IsOwner && health.Health > lastServerValue))
+            {
+                health.Health = Mathf.Clamp(lastServerValue, 0f, health.MaxHealth);
+                health.CheckHealthState();
             }
 
             // the owner heals itself locally (medkit): tell the server, or the next published value would undo it
