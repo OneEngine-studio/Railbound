@@ -54,7 +54,8 @@ namespace Railbound.Gameplay
                 running = i >= 3;
                 // stand still (or run) on the ground for a moment first
                 float settle = 0f;
-                while (settle < 1.5f) { settle += Time.deltaTime; if (running) Run(); yield return null; }
+                // the input handler re-arms jumping after a landing (_NewJumpDelay); with its input off, this does it
+                while (settle < 1.5f) { settle += Time.deltaTime; if (running) Run(); pc._NewJumpDelay(0.2f); yield return null; }
                 while (!pc.IsGrounded) yield return null;
                 jump = i; startY = pc.transform.position.y; jumpStart = Time.time;
                 ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"jump{i}_takeoff.png"));

@@ -47,6 +47,8 @@ namespace Railbound.BR
 
             for (int n = 0; n < 3; n++)
             {
+                me = JUGameManager.PlayerController;   // the player may have been replaced (killed by a bot meanwhile)
+                if (me == null) break;
                 // the nearest living bot
                 JUHealth target = null; float best = float.MaxValue;
                 foreach (var b in FindObjectsByType<BRNetBot>(FindObjectsSortMode.None))
@@ -96,7 +98,8 @@ namespace Railbound.BR
             }
 
             // and the player's own death, as the player sees it (the server applies the damage)
-            var myHealth = me.GetComponent<JUHealth>();
+            me = JUGameManager.PlayerController;
+            var myHealth = me != null ? me.GetComponent<JUHealth>() : null;
             if (myHealth != null && !myHealth.IsDead)
             {
                 myHealth.DoDamage(9999f);
