@@ -65,6 +65,10 @@ namespace Railbound.BR
 
         public override void OnNetworkSpawn()
         {
+            // the bots come from JU's patrol AI sample, whose OnDeath destroys the whole character 4-5 s after it dies (AutoDestroy): on
+            // the server that despawned the network object, so every corpse popped out of existence. The body now stays, and the
+            // clients clean it up gracefully (CorpseRagdoll).
+            foreach (var ad in GetComponentsInChildren<JUTPS.Utilities.AutoDestroy>(true)) if (ad != null && !ad.DestroyOnStart) Destroy(ad);
             retired.OnValueChanged += HandleRetired;
             if (retired.Value) gameObject.SetActive(false);
 

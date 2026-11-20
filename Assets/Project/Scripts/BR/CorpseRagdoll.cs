@@ -25,6 +25,9 @@ namespace Railbound.BR
         private const float SettleSpeed = 0.08f;          // the hips count as resting below this (m/s)
         private const float SettleSeconds = 1.2f;         // resting this long freezes the body
         private const float MaxSimulatedSeconds = 8f;     // frozen after this at the latest
+        private const float CorpseSeconds = 40f;          // a body lies this long once it has settled
+        private const float SinkSeconds = 3f;             // then sinks into the ground over this long and is hidden
+        private const float SinkDepth = 0.8f;
 
         /// <summary>Ragdolls a body that died on another machine. <paramref name="velocity"/> is how it was moving.</summary>
         public static void Begin(GameObject body, Vector3 velocity, bool hasShot, Vector3 shotPoint, Vector3 shotDirection)
@@ -127,6 +130,25 @@ namespace Railbound.BR
                     if (b == null) continue;
                     b.velocity = Vector3.zero; b.angularVelocity = Vector3.zero;
                     b.isKinematic = true;
+                }
+
+                // it lies there for a while, then sinks out of sight (no body popping out of existence)
+                yield return new WaitForSeconds(CorpseSeconds);
+                var hipsT = ragdoll.Hips;
+                if (hipsT != null)
+                {
+                    foreach (var c in hipsT.GetComponentsInChildren<Collider>()) if (c != null) c.enabled = false;
+                    Vector3 from = hipsT.position;
+                    float s = 0f;
+                    while (s < SinkSeconds && hipsT != null)
+                    {
+                        s += Time.deltaTime;
+                        float k = s / SinkSeconds;
+                        hipsT.position = from + Vector3.down * (SinkDepth * k * k);
+                        yield return null;
+                    }
+                    foreach (var r in GetComponentsInChildren<Renderer>()) if (r != null) r.enabled = false;
+                    if (hipsT != null) foreach (var r in hipsT.GetComponentsInChildren<Renderer>()) if (r != null) r.enabled = false;
                 }
                 routine = null;
             }
