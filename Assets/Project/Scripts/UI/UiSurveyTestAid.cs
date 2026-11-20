@@ -78,9 +78,16 @@ namespace Railbound.UI
                 if (words.Length > 80) words = words.Substring(0, 80);
                 if (System.Text.RegularExpressions.Regex.IsMatch(words, @"^[\d\s:./%+-]+$")) continue;   // bare numbers change every frame
                 var canvas = g.canvas != null ? g.canvas.rootCanvas : null;
-                string key = (canvas != null ? canvas.name : "?") + " :: " + words;
+                string key = (canvas != null ? canvas.name : "?") + " :: " + words + "   @ " + RelPath(g.transform, canvas != null ? canvas.transform : null);
                 if (!texts.ContainsKey(key)) texts[key] = t;
             }
+        }
+
+        private static string RelPath(Transform t, Transform root)
+        {
+            var parts = new List<string>();
+            for (var p = t; p != null && p != root; p = p.parent) parts.Insert(0, p.name);
+            return string.Join("/", parts);
         }
 
         private static bool Visible(Transform t)
