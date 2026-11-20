@@ -116,7 +116,8 @@ namespace Railbound.BR
             lastServerValue = value;
             // the server brought the body back (a new round): it is not a corpse any more
             if (corpse && value > 0f) { corpse = false; CorpseRagdoll.End(gameObject); }
-            if (Mathf.Abs(health.Health - value) > 0.01f)
+            // a server 0 always ends a copy that is not dead yet (it may hold 0.01 from a local hit waiting for this)
+            if (Mathf.Abs(health.Health - value) > 0.01f || (value <= 0f && !health.IsDead))
             {
                 health.Health = Mathf.Clamp(value, 0f, health.MaxHealth);
                 health.CheckHealthState();
