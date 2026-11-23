@@ -82,7 +82,7 @@ public class GraphicsSettingsTestAid : MonoBehaviour
             ("Exposure mode (auto / fixed)", () => gm.SetExposureAutomatic(), () => gm.SetExposureFixed()),
             ("Exposure compensation (20 % / 80 %)", () => gm.SetExposureCompensation(0.2f), () => gm.SetExposureCompensation(0.8f)),
             ("Exposure adaptation (0 / 2)", () => gm.SetExposureAdaptation(0), () => gm.SetExposureAdaptation(2)),
-            ("VSync (off / on)", () => gm.SetVSync(false), () => gm.SetVSync(true)),
+            ("VSync, no frame limit (off / on)", () => { gm.SetFrameRate(-1); gm.SetVSync(false); }, () => gm.SetVSync(true)),
             ("Frame rate limit (30 / none)", () => gm.SetFrameRate(30), () => gm.SetFrameRate(-1)),
         };
 
@@ -150,7 +150,17 @@ public class GraphicsSettingsTestAid : MonoBehaviour
             d["grain"] = stack.GetComponent<FilmGrain>().intensity.value.ToString("0.00");
             d["shadowDist"] = stack.GetComponent<HDShadowSettings>().maxShadowDistance.value.ToString("0");
         }
-        d["res.scale"] = DynamicResolutionHandler.instance.GetCurrentScale().ToString("0.00");
+        // the handler between frames is the default one: select the game camera's own (what HDRP uses when it renders it)
+        if (cam != null)
+        {
+            DynamicResolutionHandler.UpdateAndUseCamera(cam);
+            var drs = DynamicResolutionHandler.instance;
+            d["res.scale"] = drs.GetCurrentScale().ToString("0.00");
+            d["res.filter"] = drs.filter.ToString();
+            var hc = HDCamera.GetOrCreate(cam);
+            d["res.rendered"] = hc.actualWidth + "x" + hc.actualHeight;
+            DynamicResolutionHandler.ClearSelectedCamera();
+        }
         d["q.mip"] = QualitySettings.globalTextureMipmapLimit.ToString();
         d["q.aniso"] = QualitySettings.anisotropicFiltering.ToString();
         d["q.lod"] = QualitySettings.lodBias.ToString("0.0");

@@ -224,6 +224,16 @@ namespace Railbound.BR
         // ------------------------------------------------------------------ drops from dying bots
         public enum DropKind : byte { Medkit = 0, AmmoBox = 1, Weapon = 2 }
 
+        /// <summary>True when <paramref name="go"/> is a dead character's dropped weapon announced on this peer.</summary>
+        public static bool IsWeaponDrop(GameObject go)
+        {
+            var s = Instance;
+            if (s == null || go == null) return false;
+            foreach (var kv in s.dynamicItems)
+                if (kv.Value == go && s.dynamicKinds.TryGetValue(kv.Key, out var k) && k == (byte)DropKind.Weapon) return true;
+            return false;
+        }
+
         /// <summary>Server only: a dead character's weapon lies beside its body (<see cref="WeaponDrop"/>); make the same pickup on every client.</summary>
         public static void ServerAnnounceWeaponDrop(GameObject item, string weaponName)
         {
@@ -246,6 +256,7 @@ namespace Railbound.BR
             if (go == null) { Debug.LogWarning($"[BRLootSync] Weapon drop {id}: no world copy of {weaponName}."); return; }
             Debug.Log($"[BRLootSync] Drop {id} (weapon {weaponName}) created at {position}.");
             dynamicItems[id] = go;
+            dynamicKinds[id] = (byte)DropKind.Weapon;
             nextDynamicId = Mathf.Max(nextDynamicId, id + 1);
             for (int i = 0; i < taken.Count; i++) if (taken[i] == id) { seenTaken.Add(id); go.SetActive(false); break; }
         }

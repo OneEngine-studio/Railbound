@@ -94,9 +94,20 @@ namespace Railbound.BR
         {
             if (!IsSpawned) return;
             velocity = Vector3.ClampMagnitude(velocity, MaxImpactSpeed);
-            if (IsServer) ImpactClientRpc(velocity, point);
-            else ImpactServerRpc(velocity, point);
+            if (IsServer) { ImpactClientRpc(velocity, point); return; }
+            // the driver sees the hit at once: its copy is thrown now, not a round trip later (meanwhile the car, which no longer collides
+            // with the body, would drive through it); the echo from the server is then skipped here
+            if (!SimulatesBody && health != null)
+            {
+                CorpseRagdoll.Knockdown(gameObject, velocity, point, false);
+                knockedDown = true;
+                predictedImpactAt = Time.time;
+                Debug.Log($"[Impact] {name} thrown at {velocity.magnitude:0.0} m/s (this driver's copy, at once).");
+            }
+            ImpactServerRpc(velocity, point);
         }
+
+        private float predictedImpactAt = -99f;
 
         [ServerRpc(RequireOwnership = false)]
         private void ImpactServerRpc(Vector3 velocity, Vector3 point)
@@ -110,6 +121,7 @@ namespace Railbound.BR
         {
             if (health == null) return;
             bool sim = SimulatesBody;
+            if (!sim && Time.time - predictedImpactAt < 2f) { predictedImpactAt = -99f; return; }   // this machine threw it already
             Debug.Log($"[Impact] {name} thrown at {velocity.magnitude:0.0} m/s ({(sim ? "simulating" : "copy")}{(health.IsDead ? ", dead" : "")}).");
             if (!sim) { CorpseRagdoll.Knockdown(gameObject, velocity, point, false); knockedDown = true; return; }
             CorpseRagdoll.Knockdown(gameObject, velocity, point, true);

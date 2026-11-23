@@ -113,13 +113,14 @@ namespace Railbound.BR
             private Coroutine routine;
             private AdvancedRagdollController ragdoll;
             private float thrownAt = -99f;
+            private bool throwPending;   // the throw is waiting for the bones to switch to physics
 
             public bool Dead { get; private set; }
             public bool Thrown => Time.time - thrownAt < 4f;
 
             public static Runner On(GameObject body) => body.GetComponent<Runner>() ?? body.AddComponent<Runner>();
 
-            public void Reset() { Dead = false; thrownAt = -99f; }
+            public void Reset() { Dead = false; thrownAt = -99f; throwPending = false; }
 
             public void PlayDeath(AdvancedRagdollController r, Vector3 velocity, bool hasShot, Vector3 point, Vector3 dir)
             {
@@ -141,6 +142,8 @@ namespace Railbound.BR
                 if (Dead) return;
                 Dead = true;
                 if (ragdoll == null) ragdoll = GetComponent<AdvancedRagdollController>();
+                // the kill usually arrives a frame after the hit, before the throw has reached the bones: let the throw run, it settles the corpse
+                if (throwPending && routine != null) return;
                 Stop();
                 routine = StartCoroutine(SettleAndRest());
             }
@@ -151,6 +154,7 @@ namespace Railbound.BR
             {
                 if (routine != null) StopCoroutine(routine);
                 routine = null;
+                throwPending = false;
                 if (ragdoll != null && ragdoll.RagdollBones != null && ragdoll.RagdollEnabled)
                     foreach (var b in ragdoll.RagdollBones) if (b != null) b.isKinematic = false;
             }
@@ -184,7 +188,9 @@ namespace Railbound.BR
 
             private IEnumerator Throw(Vector3 velocity, Vector3 point, bool dead)
             {
+                throwPending = true;
                 yield return WaitForPhysicsBones();
+                throwPending = false;
                 if (ragdoll == null || ragdoll.RagdollBones == null || ragdoll.RagdollBones.Length == 0) yield break;
                 // the whole body takes the vehicle's speed; the part struck takes a little more, which tips the body over the bonnet
                 Rigidbody struck = Nearest(point);
@@ -194,7 +200,7 @@ namespace Railbound.BR
                     b.velocity = velocity * (b == struck ? 1.15f : 1f);
                     b.angularVelocity = Vector3.zero;
                 }
-                if (dead) yield return SettleAndRest();
+                if (dead || Dead) yield return SettleAndRest();
             }
 
             private IEnumerator SettleAndRest()

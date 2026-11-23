@@ -40,6 +40,30 @@ namespace Railbound.Vehicles
         private Profile p;
         private float airborneFor;
         private bool applied;
+        // the prefab's own values, so the tuning can be switched off again (the -cartest comparison drives each vehicle stock and tuned)
+        private float[] stockTravel, stockBump, stockRebound;
+        private bool stockUseDefaultCom, stockSaved;
+        private Vector3 stockCom;
+
+        public bool Applied => applied;
+
+        /// <summary>Switches the tuning on or off on this vehicle (off: the prefab's own suspension and centre of mass, no extra forces).</summary>
+        public void SetApplied(bool on)
+        {
+            if (on) { Apply(); return; }
+            if (!applied || !stockSaved || vehicle == null || vehicle.Controller == null) return;
+            applied = false;
+            var wheels = vehicle.Controller.powertrain.wheels;
+            for (int i = 0; i < wheels.Count && i < stockTravel.Length; i++)
+            {
+                var w = wheels[i].wheelUAPI;
+                if (w == null) continue;
+                w.SpringMaxLength = stockTravel[i]; w.DamperBumpRate = stockBump[i]; w.DamperReboundRate = stockRebound[i];
+            }
+            var com = vehicle.GetComponent<VariableCenterOfMass>();
+            if (com != null) { com.useDefaultCenterOfMass = stockUseDefaultCom; com.centerOfMass = stockCom; }
+            else if (vehicle.Body != null) vehicle.Body.centerOfMass = stockCom;
+        }
 
         public static void Attach(RailboundVehicle v)
         {
@@ -55,28 +79,41 @@ namespace Railbound.Vehicles
             if (applied || vehicle == null || vehicle.Controller == null) return;
             applied = true;
             var wheels = vehicle.Controller.powertrain.wheels;
+            var com = vehicle.GetComponent<VariableCenterOfMass>();
+            if (!stockSaved)
+            {
+                stockSaved = true;
+                stockTravel = new float[wheels.Count]; stockBump = new float[wheels.Count]; stockRebound = new float[wheels.Count];
+                for (int i = 0; i < wheels.Count; i++)
+                {
+                    var w0 = wheels[i].wheelUAPI;
+                    if (w0 == null) continue;
+                    stockTravel[i] = w0.SpringMaxLength; stockBump[i] = w0.DamperBumpRate; stockRebound[i] = w0.DamperReboundRate;
+                }
+                if (com != null) { stockUseDefaultCom = com.useDefaultCenterOfMass; stockCom = com.centerOfMass; }
+                else if (vehicle.Body != null) stockCom = vehicle.Body.centerOfMass;
+            }
             for (int i = 0; i < wheels.Count; i++)
             {
                 var w = wheels[i].wheelUAPI;
                 if (w == null) continue;
-                w.SpringMaxLength *= p.travel;
-                float bump = w.DamperBumpRate * p.bump;
+                w.SpringMaxLength = stockTravel[i] * p.travel;
+                float bump = stockBump[i] * p.bump;
                 w.DamperBumpRate = bump;
-                w.DamperReboundRate = Mathf.Max(w.DamperReboundRate, bump * p.reboundRatio);
+                w.DamperReboundRate = Mathf.Max(stockRebound[i], bump * p.reboundRatio);
             }
-            var com = vehicle.GetComponent<VariableCenterOfMass>();
             if (com != null && p.comDrop > 0f)
             {
                 com.useDefaultCenterOfMass = false;
-                com.centerOfMass += Vector3.down * p.comDrop;
+                com.centerOfMass = stockCom + Vector3.down * p.comDrop;
             }
-            else if (vehicle.Body != null && p.comDrop > 0f) vehicle.Body.centerOfMass += Vector3.down * p.comDrop;
-            Debug.Log($"[VehicleTuning] {vehicle.DisplayName}: travel x{p.travel}, bump x{p.bump}, rebound {p.reboundRatio}x bump, centre of mass -{p.comDrop} m, downforce {p.downforce}, air gravity x{p.airGravity}.");
+            else if (vehicle.Body != null && p.comDrop > 0f) vehicle.Body.centerOfMass = stockCom + Vector3.down * p.comDrop;
+            Debug.Log($"[VehicleTuning] {vehicle.DisplayName}: travel x{p.travel}, bump x{p.bump}, rebound {p.reboundRatio}x bump, centre of mass -{p.comDrop} m, downforce {p.downforce}, air gravity x{p.airGravity}; mass {(vehicle.Body != null ? vehicle.Body.mass : 0f):0} kg.");
         }
 
         private void FixedUpdate()
         {
-            if (vehicle == null || !vehicle.IsSimulating || vehicle.Body == null || vehicle.Body.isKinematic || vehicle.Controller == null) return;
+            if (!applied || vehicle == null || !vehicle.IsSimulating || vehicle.Body == null || vehicle.Body.isKinematic || vehicle.Controller == null) return;
             var body = vehicle.Body;
             var wheels = vehicle.Controller.powertrain.wheels;
             int down = 0;

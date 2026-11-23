@@ -92,7 +92,8 @@ namespace Railbound.Vehicles
                 float t = 0f;
                 if (camRig != null) camRig.enabled = false;
                 var cam = Camera.main;
-                while (t < 14f)
+                string chase = "";
+                while (t < 22f)
                 {
                     t += Time.deltaTime;
                     // drive at the bot, holding the target speed
@@ -106,6 +107,7 @@ namespace Railbound.Vehicles
                     }
                     else { VehicleTestAid.Throttle = 0f; VehicleTestAid.Brake = 1f; VehicleTestAid.Steer = 0f; }
                     if (bot == null) break;
+                    if (!hit && Mathf.Abs(t % 1f) < Time.deltaTime) chase += $" {t:0}s:{Vector3.Distance(v.transform.position, bot.transform.position):0.0}m@{v.SpeedKmh:0}";
                     closest = Mathf.Min(closest, Vector3.Distance(v.transform.position, bot.transform.position));
                     if (ragdoll != null && ragdoll.Hips != null) hipsMax = Mathf.Max(hipsMax, ragdoll.Hips.position.y);
                     // a camera beside the meeting point
@@ -125,7 +127,7 @@ namespace Railbound.Vehicles
                 VehicleTestAid.Throttle = 0f; VehicleTestAid.Brake = 1f;
                 string line = bot == null ? $"run {run}: bot object gone" :
                     $"run {run} at ~{targetKmh} km/h: hit={hit} thrown {(bot.transform.position - hitFrom).magnitude:0.0} m, flew {hipsMax - startY - 1f:0.00} m above standing hips, " +
-                    $"now {(bot.IsDead ? "dead" : "alive")} health {bot.Health:0} ragdoll {(ragdoll != null ? ragdoll.State.ToString() : "-")} following network {(nt != null && nt.enabled)} | closest {closest:0.0} m, touched: {v.TakeContacts()} | {states}";
+                    $"now {(bot.IsDead ? "dead" : "alive")} health {bot.Health:0} ragdoll {(ragdoll != null ? ragdoll.State.ToString() : "-")} following network {(nt != null && nt.enabled)} | closest {closest:0.0} m, touched: {v.TakeContacts()} | chase (distance@km/h):{chase} | after the hit:{states}";
                 Debug.Log("[ImpactTest] " + line);
                 report.AppendLine(line);
                 yield return new WaitForSecondsRealtime(2f);

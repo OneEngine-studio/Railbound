@@ -39,14 +39,15 @@ namespace Railbound.BR
         {
             routine = null;
             if (corpse == null || me == null) return $"[DeathCam] bot {n} loot: no corpse or player";
+            // the weapon the server dropped for this body (not world loot that happens to lie near it, nor the hidden one in the dead hand)
             JUTPS.WeaponSystem.Weapon best = null; float bd = 4f;
             foreach (var w in FindObjectsByType<JUTPS.WeaponSystem.Weapon>(FindObjectsSortMode.None))
             {
-                if (w == null || !w.gameObject.activeInHierarchy || w.GetComponentInParent<JUTPS.InventorySystem.JUInventory>() != null) continue;
+                if (w == null || !w.gameObject.activeInHierarchy || !BRLootSync.IsWeaponDrop(w.gameObject)) continue;
                 float d = Vector3.Distance(w.transform.position, corpse.transform.position);
                 if (d < bd) { bd = d; best = w; }
             }
-            if (best == null) return $"[DeathCam] bot {n} loot: NO weapon pickup within 4 m of the corpse";
+            if (best == null) return $"[DeathCam] bot {n} loot: NO dropped weapon within 4 m of the corpse (the server log says whether it carried one)";
             routine = TakeIt(n, best, me);
             return $"[DeathCam] bot {n} loot: {best.ItemName} lies {bd:0.0} m from the corpse";
         }
@@ -158,11 +159,16 @@ namespace Railbound.BR
                 // the corpse from above (how it lies), then: can its weapon be taken?
                 if (go != null && cam != null && hipsT != null)
                 {
-                    cam.transform.position = hipsT.position + Vector3.up * 3.2f + side * 0.6f;
-                    cam.transform.LookAt(hipsT.position);
-                    yield return new WaitForSecondsRealtime(0.3f);
-                    ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"corpse{n}_above.png"));
-                    yield return new WaitForSecondsRealtime(0.3f);
+                    // set every frame: the player camera's late update moves it back otherwise
+                    for (int f = 0; f < 40; f++)
+                    {
+                        cam = Camera.main;
+                        if (cam == null || hipsT == null) break;
+                        cam.transform.position = hipsT.position + Vector3.up * 2.6f + side * 1.4f;
+                        cam.transform.LookAt(hipsT.position);
+                        if (f == 20) ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"corpse{n}_above.png"));
+                        yield return new WaitForEndOfFrame();
+                    }
                 }
                 if (camRig != null) camRig.enabled = true;
                 camRig = FindFirstObjectByType<JUTPS.CameraSystems.JUCameraController>();
