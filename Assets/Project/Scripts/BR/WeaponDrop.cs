@@ -86,12 +86,26 @@ namespace Railbound.BR
         }
 
         // a spot on the ground beside the body, clear of it
-        private static Vector3 GroundBeside(Transform body)
+        private static Vector3 GroundBeside(Transform body) => OnGround(body.position + body.right * 0.8f);
+
+        /// <summary>
+        /// The ground under <paramref name="near"/> (terrain, rocks, floors). Bodies and anything that moves are skipped: the ray used to
+        /// land on the dead body's own arm, and the pickup then hung in the air at arm height on every machine once the body slid on.
+        /// </summary>
+        public static Vector3 OnGround(Vector3 near)
         {
-            Vector3 from = body.position + body.right * 0.8f + Vector3.up * 1.5f;
-            int mask = LayerMask.GetMask("Default", "Terrain", "Walls");
-            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, 4f, mask == 0 ? ~0 : mask, QueryTriggerInteraction.Ignore)) return hit.point + Vector3.up * 0.08f;
-            return body.position + body.right * 0.8f + Vector3.up * 0.1f;
+            Vector3 from = near + Vector3.up * 1.5f;
+            float best = float.MaxValue; Vector3 at = near + Vector3.up * 0.1f;
+            foreach (var hit in Physics.RaycastAll(from, Vector3.down, 5f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                var c = hit.collider;
+                if (c == null || hit.distance >= best) continue;
+                if (c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic) continue;   // ragdoll bones, props, vehicles
+                if (c.GetComponentInParent<JUHealth>() != null) continue;                          // a character (alive or dead)
+                if (c.GetComponentInParent<JUItem>() != null) continue;                           // other loot
+                best = hit.distance; at = hit.point + Vector3.up * 0.08f;
+            }
+            return at;
         }
     }
 }

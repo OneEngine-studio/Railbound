@@ -156,6 +156,15 @@ namespace Railbound.BR
                               $"after={Time.realtimeSinceStartup - startSecs:0.0} s";
                 Debug.Log(line);
                 report.AppendLine(line);
+                foreach (var w in FindObjectsByType<JUTPS.WeaponSystem.Weapon>(FindObjectsSortMode.None))
+                {
+                    if (w == null || go == null || Vector3.Distance(w.transform.position, go.transform.position) > 6f) continue;
+                    int shown = 0; foreach (var r in w.GetComponentsInChildren<Renderer>()) if (r.enabled && r.gameObject.activeInHierarchy) shown++;
+                    float above = w.transform.position.y - WeaponDrop.OnGround(w.transform.position).y;
+                    string what = BRLootSync.IsWeaponDrop(w.gameObject) ? "the drop" : w.GetComponentInParent<JUTPS.InventorySystem.JUInventory>() != null ? "in " + w.GetComponentInParent<JUTPS.InventorySystem.JUInventory>().name + "'s hands" : "world loot";
+                    string wl = $"[DeathCam] bot {n} near: {w.ItemName} ({what}) {Vector3.Distance(w.transform.position, go.transform.position):0.0} m away, {above:0.00} m above the ground, renderers shown {shown}, active {w.gameObject.activeInHierarchy}";
+                    Debug.Log(wl); report.AppendLine(wl);
+                }
                 // the corpse from above (how it lies), then: can its weapon be taken?
                 if (go != null && cam != null && hipsT != null)
                 {
@@ -167,7 +176,7 @@ namespace Railbound.BR
                         cam.transform.position = hipsT.position + Vector3.up * 2.6f + side * 1.4f;
                         cam.transform.LookAt(hipsT.position);
                         if (f == 20) ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"corpse{n}_above.png"));
-                        yield return new WaitForEndOfFrame();
+                        yield return null;
                     }
                 }
                 if (camRig != null) camRig.enabled = true;

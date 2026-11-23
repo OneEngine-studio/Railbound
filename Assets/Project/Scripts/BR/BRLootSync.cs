@@ -252,6 +252,8 @@ namespace Railbound.BR
         {
             if (IsServer) return;
             if (dynamicItems.TryGetValue(id, out var already) && already != null) return;
+            // this machine's own ground under the announced spot (the same terrain, but no stray body in the way)
+            position = WeaponDrop.OnGround(new Vector3(position.x, position.y + 0.5f, position.z));
             var go = WeaponDrop.Spawn(weaponName.ToString(), position, rotation);
             if (go == null) { Debug.LogWarning($"[BRLootSync] Weapon drop {id}: no world copy of {weaponName}."); return; }
             Debug.Log($"[BRLootSync] Drop {id} (weapon {weaponName}) created at {position}.");
