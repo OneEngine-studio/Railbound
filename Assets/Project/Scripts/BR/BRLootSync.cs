@@ -36,6 +36,7 @@ namespace Railbound.BR
 
         private readonly Dictionary<int, GameObject> dynamicItems = new Dictionary<int, GameObject>();
         private readonly Dictionary<int, byte> dynamicKinds = new Dictionary<int, byte>();
+        private readonly Dictionary<int, string> dynamicWeapons = new Dictionary<int, string>();   // weapon drops: the weapon's name
         private readonly HashSet<int> seenTaken = new HashSet<int>();      // ids this peer already knows are gone
         private int nextDynamicId = DynamicIdBase;
         private bool layoutPublished, layoutApplied;
@@ -107,7 +108,9 @@ namespace Railbound.BR
                 var go = kv.Value;
                 if (go == null || !go.activeInHierarchy || seenTaken.Contains(kv.Key)) continue;
                 if (!dynamicKinds.TryGetValue(kv.Key, out byte kind)) continue;
-                DropClientRpc(kv.Key, kind, go.transform.position, go.transform.rotation, Vector3.zero, Vector3.zero, target);
+                if (kind == (byte)DropKind.Weapon && dynamicWeapons.TryGetValue(kv.Key, out var weaponName))
+                    WeaponDropClientRpc(kv.Key, new Unity.Collections.FixedString32Bytes(weaponName), go.transform.position, go.transform.rotation, target);
+                else DropClientRpc(kv.Key, kind, go.transform.position, go.transform.rotation, Vector3.zero, Vector3.zero, target);
                 sent++;
             }
             if (sent > 0) Debug.Log($"[BRLootSync] Sent {sent} existing drop(s) to late-joining client {clientId}.");
@@ -219,7 +222,33 @@ namespace Railbound.BR
         }
 
         // ------------------------------------------------------------------ drops from dying bots
-        public enum DropKind : byte { Medkit = 0, AmmoBox = 1 }
+        public enum DropKind : byte { Medkit = 0, AmmoBox = 1, Weapon = 2 }
+
+        /// <summary>Server only: a dead character's weapon lies beside its body (<see cref="WeaponDrop"/>); make the same pickup on every client.</summary>
+        public static void ServerAnnounceWeaponDrop(GameObject item, string weaponName)
+        {
+            var s = Instance;
+            if (s == null || !s.IsSpawned || !s.IsServer || item == null || string.IsNullOrEmpty(weaponName)) return;
+            int id = s.nextDynamicId++;
+            s.dynamicItems[id] = item;
+            s.dynamicKinds[id] = (byte)DropKind.Weapon;
+            s.dynamicWeapons[id] = weaponName;
+            Debug.Log($"[BRLootSync] Drop {id} (weapon {weaponName}) announced at {item.transform.position}.");
+            s.WeaponDropClientRpc(id, new Unity.Collections.FixedString32Bytes(weaponName), item.transform.position, item.transform.rotation);
+        }
+
+        [ClientRpc]
+        private void WeaponDropClientRpc(int id, Unity.Collections.FixedString32Bytes weaponName, Vector3 position, Quaternion rotation, ClientRpcParams rpcParams = default)
+        {
+            if (IsServer) return;
+            if (dynamicItems.TryGetValue(id, out var already) && already != null) return;
+            var go = WeaponDrop.Spawn(weaponName.ToString(), position, rotation);
+            if (go == null) { Debug.LogWarning($"[BRLootSync] Weapon drop {id}: no world copy of {weaponName}."); return; }
+            Debug.Log($"[BRLootSync] Drop {id} (weapon {weaponName}) created at {position}.");
+            dynamicItems[id] = go;
+            nextDynamicId = Mathf.Max(nextDynamicId, id + 1);
+            for (int i = 0; i < taken.Count; i++) if (taken[i] == id) { seenTaken.Add(id); go.SetActive(false); break; }
+        }
 
         /// <summary>Server only: a bot dropped <paramref name="item"/>; make the same pickup appear on every client.</summary>
         public static void ServerAnnounceDrop(DropKind kind, GameObject item, Vector3 velocity, Vector3 torque)
