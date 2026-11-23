@@ -697,7 +697,20 @@ namespace Michsky.UI.Reach
             if (IsHDRP)
             {
                 PlayerPrefs.SetInt("Graphics_DepthOfField", enabled ? 1 : 0);
-                HdEach<HD.DepthOfField>(d => d.active = enabled);
+                bool anyDof = false;
+                HdEach<HD.DepthOfField>(d => { anyDof = true; d.active = enabled; });
+                // Railbound: the map's volumes have no depth of field, so the switch did nothing: add a subtle distance blur
+                if (!anyDof && enabled)
+                {
+                    var profiles = HdProfiles();
+                    if (profiles.Count > 0)
+                    {
+                        var d = profiles[0].Add<HD.DepthOfField>(true);
+                        d.focusMode.Override(HD.DepthOfFieldMode.Manual);
+                        d.nearFocusStart.Override(0f); d.nearFocusEnd.Override(0f);
+                        d.farFocusStart.Override(120f); d.farFocusEnd.Override(600f);
+                    }
+                }
                 return;
             }
             PlayerPrefs.SetInt("Graphics_DepthOfField", enabled ? 1 : 0);
@@ -762,6 +775,8 @@ namespace Michsky.UI.Reach
         public void SetFieldOfView(float fov)
         {
             PlayerPrefs.SetFloat("Graphics_FOV", fov);
+            // Railbound: the match camera's states set the FOV every frame; they now add the setting (see JUCameraController.PlayerFovOffset)
+            JUTPS.CameraSystems.JUCameraController.PlayerFovOffset = Mathf.Clamp(fov, 60f, 120f) - 60f;
             if (mainCamera == null) mainCamera = Camera.main;
             if (mainCamera != null)
             {

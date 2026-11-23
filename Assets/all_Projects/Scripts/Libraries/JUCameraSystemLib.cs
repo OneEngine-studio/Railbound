@@ -432,12 +432,30 @@ namespace JUTPS.CameraSystems
 			}
 		}
 
+		/// <summary>Railbound: the Field Of View setting minus the slider's lowest value (60); 0 when the player never changed it.</summary>
+		public static float PlayerFovOffset
+		{
+			get
+			{
+				if (fovOffsetRead) return fovOffset;
+				fovOffsetRead = true;
+				fovOffset = PlayerPrefs.HasKey("Graphics_FOV") ? Mathf.Clamp(PlayerPrefs.GetFloat("Graphics_FOV"), 60f, 120f) - 60f : 0f;
+				return fovOffset;
+			}
+			set { fovOffset = Mathf.Clamp(value, 0f, 60f); fovOffsetRead = true; }
+		}
+		private static float fovOffset;
+		private static bool fovOffsetRead;
+
 		/// <summary>
 		/// Change the field of view of the camera
 		/// </summary>
 		/// <param name="FOV"> field of view value </param>
 		public virtual void SetFieldOfView(float FOV)
 		{
+			// Railbound: the player's Field Of View setting widens (or narrows) every camera state by the same amount, relative to the
+			// slider's lowest value: the states (normal, aiming, driving) are re-applied every frame, so setting the camera once did nothing
+			FOV = Mathf.Clamp(FOV + PlayerFovOffset, 20f, 130f);
 			if (mCamera.orthographic == true)
 			{
 				mCamera.orthographicSize = FOV / 10;
