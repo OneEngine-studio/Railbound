@@ -87,7 +87,7 @@ namespace Railbound.Vehicles
                 var nt = bot.GetComponent<Unity.Netcode.Components.NetworkTransform>();
                 Vector3 hitFrom = bot.transform.position;
                 float hipsMax = -999f, startY = bot.transform.position.y; bool hit = false; float hitAt = -1f; int frame = 0;
-                string states = "";
+                string states = ""; float closest = 999f; v.TakeContacts();
                 VehicleTestAid.Handbrake = 0f; VehicleTestAid.Brake = 0f;
                 float t = 0f;
                 if (camRig != null) camRig.enabled = false;
@@ -106,6 +106,7 @@ namespace Railbound.Vehicles
                     }
                     else { VehicleTestAid.Throttle = 0f; VehicleTestAid.Brake = 1f; VehicleTestAid.Steer = 0f; }
                     if (bot == null) break;
+                    closest = Mathf.Min(closest, Vector3.Distance(v.transform.position, bot.transform.position));
                     if (ragdoll != null && ragdoll.Hips != null) hipsMax = Mathf.Max(hipsMax, ragdoll.Hips.position.y);
                     // a camera beside the meeting point
                     if (cam != null)
@@ -124,7 +125,7 @@ namespace Railbound.Vehicles
                 VehicleTestAid.Throttle = 0f; VehicleTestAid.Brake = 1f;
                 string line = bot == null ? $"run {run}: bot object gone" :
                     $"run {run} at ~{targetKmh} km/h: hit={hit} thrown {(bot.transform.position - hitFrom).magnitude:0.0} m, flew {hipsMax - startY - 1f:0.00} m above standing hips, " +
-                    $"now {(bot.IsDead ? "dead" : "alive")} health {bot.Health:0} ragdoll {(ragdoll != null ? ragdoll.State.ToString() : "-")} following network {(nt != null && nt.enabled)} | {states}";
+                    $"now {(bot.IsDead ? "dead" : "alive")} health {bot.Health:0} ragdoll {(ragdoll != null ? ragdoll.State.ToString() : "-")} following network {(nt != null && nt.enabled)} | closest {closest:0.0} m, touched: {v.TakeContacts()} | {states}";
                 Debug.Log("[ImpactTest] " + line);
                 report.AppendLine(line);
                 yield return new WaitForSecondsRealtime(2f);

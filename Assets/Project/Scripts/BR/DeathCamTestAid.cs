@@ -55,13 +55,15 @@ namespace Railbound.BR
         {
             var inv = me.GetComponent<JUTPS.InventorySystem.JUInventory>();
             string name = w.ItemName;
-            Vector3 spot = w.transform.position + Vector3.up * 0.2f;
+            // stand so the inventory's pickup sphere (radius 1 at CheckerOffset) is centred on the weapon, as when a player walks onto it
+            Vector3 spot = w.transform.position - (inv != null ? me.transform.TransformVector(inv.CheckerOffset) : Vector3.zero);
+            spot.y = w.transform.position.y + 0.05f;
             var nt = me.GetComponent<Unity.Netcode.Components.NetworkTransform>();
             if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(spot, me.transform.rotation, me.transform.localScale); else me.transform.position = spot;
             var rb = me.GetComponent<Rigidbody>(); if (rb != null) { rb.position = spot; rb.velocity = Vector3.zero; }
             yield return new WaitForSecondsRealtime(0.8f);
             bool offered = inv != null && inv.ItemToPickUp != null;
-            string offeredName = offered ? inv.ItemToPickUp.ItemName : "-";
+            string offeredName = offered ? inv.ItemToPickUp.ItemName + (inv.ItemToPickUp.gameObject == w.gameObject ? " (the drop)" : " (ANOTHER item: " + inv.ItemToPickUp.transform.root.name + ")") : "-";
             bool had = false;
             if (inv != null) foreach (var it in inv.HoldableItensRightHand) if (it != null && it.ItemName == name && it.Unlocked) had = true;
             if (offered) inv.PickUp();
