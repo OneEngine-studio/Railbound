@@ -60,10 +60,11 @@ public class GraphicsSettingsTestAid : MonoBehaviour
         var tests = new List<(string name, Action a, Action b)>
         {
             ("Anti-aliasing (Off / TAA)", () => gm.SetAntiAliasing(0), () => gm.SetAntiAliasing(3)),
-            ("Render scale (50 % / 100 %)", () => gm.SetRenderScale(0), () => gm.SetRenderScale(2)),
+            // DLSS picks its own resolution, so render scale and FSR are checked with DLSS off (as the menu greys them out with it on)
+            ("Render scale, DLSS off (50 % / 100 %)", () => { gm.SetDLSS(false); gm.SetRenderScale(0); }, () => gm.SetRenderScale(2)),
             ("DLSS (off / on)", () => gm.SetDLSS(false), () => gm.SetDLSS(true)),
             ("DLSS quality (0 / 3)", () => gm.SetDLSSQuality(0), () => gm.SetDLSSQuality(3)),
-            ("FSR (off / on)", () => gm.SetFSR(false), () => gm.SetFSR(true)),
+            ("FSR at 50 %, DLSS off (off / on)", () => { gm.SetDLSS(false); gm.SetRenderScale(0); gm.SetFSR(false); }, () => gm.SetFSR(true)),
             ("Field of view (60 / 90)", () => gm.SetFieldOfView(60f), () => gm.SetFieldOfView(90f)),
             ("Texture quality (full / quarter)", () => gm.SetTextureQuality(0), () => gm.SetTextureQuality(2)),
             ("Anisotropic (off / forced)", () => gm.SetAnisotropicFiltering(0), () => gm.SetAnisotropicFiltering(2)),
