@@ -32,6 +32,46 @@ namespace Railbound.BR
             }
         }
 
+        private string lastLoot = "";
+
+        // the dropped weapon nearest the corpse: walk to it and take it the way the player does
+        private string LootCheck(int n, GameObject corpse, JUCharacterController me, out IEnumerator routine)
+        {
+            routine = null;
+            if (corpse == null || me == null) return $"[DeathCam] bot {n} loot: no corpse or player";
+            JUTPS.WeaponSystem.Weapon best = null; float bd = 4f;
+            foreach (var w in FindObjectsByType<JUTPS.WeaponSystem.Weapon>(FindObjectsSortMode.None))
+            {
+                if (w == null || !w.gameObject.activeInHierarchy || w.GetComponentInParent<JUTPS.InventorySystem.JUInventory>() != null) continue;
+                float d = Vector3.Distance(w.transform.position, corpse.transform.position);
+                if (d < bd) { bd = d; best = w; }
+            }
+            if (best == null) return $"[DeathCam] bot {n} loot: NO weapon pickup within 4 m of the corpse";
+            routine = TakeIt(n, best, me);
+            return $"[DeathCam] bot {n} loot: {best.ItemName} lies {bd:0.0} m from the corpse";
+        }
+
+        private IEnumerator TakeIt(int n, JUTPS.WeaponSystem.Weapon w, JUCharacterController me)
+        {
+            var inv = me.GetComponent<JUTPS.InventorySystem.JUInventory>();
+            string name = w.ItemName;
+            Vector3 spot = w.transform.position + Vector3.up * 0.2f;
+            var nt = me.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null && nt.IsSpawned && nt.CanCommitToTransform) nt.Teleport(spot, me.transform.rotation, me.transform.localScale); else me.transform.position = spot;
+            var rb = me.GetComponent<Rigidbody>(); if (rb != null) { rb.position = spot; rb.velocity = Vector3.zero; }
+            yield return new WaitForSecondsRealtime(0.8f);
+            bool offered = inv != null && inv.ItemToPickUp != null;
+            string offeredName = offered ? inv.ItemToPickUp.ItemName : "-";
+            bool had = false;
+            if (inv != null) foreach (var it in inv.HoldableItensRightHand) if (it != null && it.ItemName == name && it.Unlocked) had = true;
+            if (offered) inv.PickUp();
+            yield return new WaitForSecondsRealtime(0.5f);
+            bool has = false;
+            if (inv != null) foreach (var it in inv.HoldableItensRightHand) if (it != null && it.ItemName == name && it.Unlocked) has = true;
+            lastLoot = $"[DeathCam] bot {n} loot: offered={offered} ({offeredName}) taken={(has ? (had ? "already had it" : "YES") : "NO")} pickupStillThere={(w != null && w.gameObject.activeInHierarchy)}";
+            Debug.Log(lastLoot);
+        }
+
         private static int CountOn(GameObject go)
         {
             int n = 0;
@@ -113,8 +153,20 @@ namespace Railbound.BR
                               $"after={Time.realtimeSinceStartup - startSecs:0.0} s";
                 Debug.Log(line);
                 report.AppendLine(line);
+                // the corpse from above (how it lies), then: can its weapon be taken?
+                if (go != null && cam != null && hipsT != null)
+                {
+                    cam.transform.position = hipsT.position + Vector3.up * 3.2f + side * 0.6f;
+                    cam.transform.LookAt(hipsT.position);
+                    yield return new WaitForSecondsRealtime(0.3f);
+                    ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"corpse{n}_above.png"));
+                    yield return new WaitForSecondsRealtime(0.3f);
+                }
                 if (camRig != null) camRig.enabled = true;
                 camRig = FindFirstObjectByType<JUTPS.CameraSystems.JUCameraController>();
+                report.AppendLine(LootCheck(n, go, me, out var lootRoutine));
+                if (lootRoutine != null) yield return lootRoutine;
+                report.AppendLine(lastLoot);
                 yield return new WaitForSecondsRealtime(1f);
             }
 
