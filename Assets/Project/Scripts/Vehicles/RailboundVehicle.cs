@@ -377,6 +377,7 @@ namespace Railbound.Vehicles
         {
             initialized = true;
             EnableDrivingAids();
+            VehicleDriveTuning.Attach(this);   // suspension, centre of mass, downforce and in-air behaviour (see its summary)
             ApplyAuthority();
             if (!HasDriver && IsSimulating && vc.powertrain.engine.IsRunning) vc.powertrain.engine.StopEngine();
         }
