@@ -52,6 +52,9 @@ namespace Railbound.BR
                 netHealth.Value = health.Health;
                 health.OnTakeDamage -= ServerDamaged;
                 health.OnTakeDamage += ServerDamaged;
+                // the dead character's weapon becomes a pickup beside the body, the same on every peer
+                health.OnDeath.RemoveListener(ServerDeath);
+                health.OnDeath.AddListener(ServerDeath);
             }
             else
             {
@@ -60,6 +63,9 @@ namespace Railbound.BR
                 // another player's or a bot's copy on this machine: its character controller does not run the death, so do it here
                 if (!IsOwner) { health.OnDeath.RemoveListener(HandleCopyDeath); health.OnDeath.AddListener(HandleCopyDeath); if (health.IsDead) HandleCopyDeath(); }
             }
+            // on every peer the weapon in the dead hand is hidden (the pickup beside the body is the one to take)
+            health.OnDeath.RemoveListener(HideDeadHandWeapon);
+            health.OnDeath.AddListener(HideDeadHandWeapon);
         }
 
         private void HandleCopyDeath()
@@ -70,9 +76,73 @@ namespace Railbound.BR
             CorpseRagdoll.Begin(gameObject, velocity, shot, lastShotPoint, lastShotDir);
         }
 
+        private void ServerDeath() { WeaponDrop.ServerDrop(GetComponent<JUTPS.JUCharacterController>()); }
+        private void HideDeadHandWeapon() { WeaponDrop.HideHeld(gameObject); }
+
+        // ------------------------------------------------------------------ vehicle hits (knockdown)
+        /// <summary>Who runs this body's physics: the server for a bot, the owner for a player.</summary>
+        private bool SimulatesBody => GetComponent<BRNetBot>() != null ? IsServer : IsOwner;
+        private const float MaxImpactSpeed = 30f;
+        private bool knockedDown;
+
+        /// <summary>
+        /// A vehicle hit this body (called on the driver's machine, before the damage is reported, so the throw is in place when a death
+        /// arrives). The server passes it to every peer: the one that simulates the body throws it for real and lets it get up, the
+        /// others throw their copies and wait for it.
+        /// </summary>
+        public void RequestImpact(Vector3 velocity, Vector3 point)
+        {
+            if (!IsSpawned) return;
+            velocity = Vector3.ClampMagnitude(velocity, MaxImpactSpeed);
+            if (IsServer) ImpactClientRpc(velocity, point);
+            else ImpactServerRpc(velocity, point);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void ImpactServerRpc(Vector3 velocity, Vector3 point)
+        {
+            if (health == null) return;
+            ImpactClientRpc(Vector3.ClampMagnitude(velocity, MaxImpactSpeed), point);
+        }
+
+        [ClientRpc]
+        private void ImpactClientRpc(Vector3 velocity, Vector3 point)
+        {
+            if (health == null) return;
+            bool sim = SimulatesBody;
+            Debug.Log($"[Impact] {name} thrown at {velocity.magnitude:0.0} m/s ({(sim ? "simulating" : "copy")}{(health.IsDead ? ", dead" : "")}).");
+            if (!sim) { CorpseRagdoll.Knockdown(gameObject, velocity, point, false); knockedDown = true; return; }
+            CorpseRagdoll.Knockdown(gameObject, velocity, point, true);
+            if (!health.IsDead) { knockedDown = true; StopCoroutine(nameof(WatchGetUp)); StartCoroutine(nameof(WatchGetUp)); }
+        }
+
+        // the simulating peer: once JU has the body standing again (and it is still alive), every copy gets up too
+        private System.Collections.IEnumerator WatchGetUp()
+        {
+            var ragdoll = GetComponent<AdvancedRagdollController>();
+            float t = 0f;
+            yield return new WaitForSeconds(0.3f);
+            while (ragdoll != null && ragdoll.State != AdvancedRagdollController.RagdollState.Animated && t < 12f) { t += Time.deltaTime; yield return null; }
+            if (health == null || health.IsDead) yield break;
+            if (ragdoll != null && ragdoll.State != AdvancedRagdollController.RagdollState.Animated) ragdoll.State = AdvancedRagdollController.RagdollState.WaitStablePosition;
+            knockedDown = false;
+            if (IsServer) RecoveredClientRpc(); else RecoveredServerRpc();
+        }
+
+        [ServerRpc]
+        private void RecoveredServerRpc() { RecoveredClientRpc(); }
+
+        [ClientRpc]
+        private void RecoveredClientRpc()
+        {
+            if (SimulatesBody || health == null || health.IsDead) return;
+            knockedDown = false;
+            CorpseRagdoll.Recover(gameObject);
+        }
+
         public override void OnNetworkDespawn()
         {
-            if (health != null) health.OnDeath.RemoveListener(HandleCopyDeath);
+            if (health != null) { health.OnDeath.RemoveListener(HandleCopyDeath); health.OnDeath.RemoveListener(ServerDeath); health.OnDeath.RemoveListener(HideDeadHandWeapon); }
             JUHealth.OnAnyDamaged -= HandleAnyDamaged;
             netHealth.OnValueChanged -= HandleServerHealth;
             if (health != null) health.OnTakeDamage -= ServerDamaged;

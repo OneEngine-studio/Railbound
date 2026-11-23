@@ -136,6 +136,7 @@ namespace Railbound.Vehicles
 
         [Header("Run-over")]
         [SerializeField] private float runOverMinSpeed = 6f;
+        private const float PersonMass = 80f;   // kg, a character hit by the vehicle
         [SerializeField] private float runOverDamagePerMs = 7.5f;
 
         private const float MaxEnterSpeed = 9f;          // m/s: nobody jumps into a car going faster
@@ -890,7 +891,9 @@ namespace Railbound.Vehicles
 
         // ---------------------------------------------------------------- running people over
         /// <summary>
-        /// On the driver's machine (where the vehicle has real physics) a hit on a character hurts it through the normal damage path:
+        /// On the driver's machine (where the vehicle has real physics) a hit on a character throws it (a ragdoll with the car's momentum,
+        /// on every peer: <see cref="Railbound.BR.BRNetHealth.RequestImpact"/>; it gets up again if it survives) and hurts it through the
+        /// normal damage path:
         /// <see cref="Railbound.BR.BRNetHealth"/> forwards it to the server with the driver as the attacker, and the squad filter
         /// still protects teammates. The body is then let through (a kinematic copy of a player would stop the car like a wall).
         /// </summary>
@@ -905,7 +908,9 @@ namespace Railbound.Vehicles
             var victimColliders = victim.GetComponentsInChildren<Collider>(false);
             SetIgnore(victimColliders, true);
             ignoredVictims.Add((victimColliders, Time.time + 1.5f));
-            body.velocity = lastVelocity * 0.88f;
+            // momentum: the car keeps its motion minus what it gave the body (a person of ~80 kg against a car of 1.2-4 t)
+            float share = PersonMass / (body.mass + PersonMass);
+            body.velocity = lastVelocity * (1f - share);
             body.angularVelocity = lastAngular;
 
             var driver = Driver;
@@ -914,6 +919,14 @@ namespace Railbound.Vehicles
             if (speed < runOverMinSpeed) return;
             if (runOverCooldown.TryGetValue(victimHealth, out float until) && Time.time < until) return;
             runOverCooldown[victimHealth] = Time.time + 0.75f;
+
+            // the body is thrown: the car's velocity (an inelastic hit, the person barely slows the car), lifted over the bonnet the faster
+            // the car is. Sent before the damage, so a death arrives on a body that is already flying.
+            Vector3 point = c.GetContact(0).point;
+            Vector3 throwVelocity = lastVelocity * (1f - share) * 0.95f + Vector3.up * Mathf.Clamp(speed * 0.22f, 1.2f, 5f);
+            var net = victimHealth.GetComponent<Railbound.BR.BRNetHealth>();
+            if (net != null && net.IsSpawned) net.RequestImpact(throwVelocity, point);
+            else Railbound.BR.CorpseRagdoll.Knockdown(victim, throwVelocity, point, true);   // offline: this machine simulates the body
 
             float damage = Mathf.Clamp((speed - runOverMinSpeed * 0.66f) * runOverDamagePerMs, 5f, 250f);
             JUHealth.PendingAttacker = driver;
