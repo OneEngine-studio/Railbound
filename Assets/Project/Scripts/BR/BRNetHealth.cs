@@ -94,7 +94,7 @@ namespace Railbound.BR
         {
             if (!IsSpawned) return;
             velocity = Vector3.ClampMagnitude(velocity, MaxImpactSpeed);
-            if (IsServer) { ImpactClientRpc(velocity, point); return; }
+            if (IsServer) { ApplyImpact(velocity, point); ImpactClientRpc(velocity, point); return; }
             // the driver sees the hit at once: its copy is thrown now, not a round trip later (meanwhile the car, which no longer collides
             // with the body, would drive through it); the echo from the server is then skipped here
             if (!SimulatesBody && health != null)
@@ -113,11 +113,20 @@ namespace Railbound.BR
         private void ImpactServerRpc(Vector3 velocity, Vector3 point)
         {
             if (health == null) return;
-            ImpactClientRpc(Vector3.ClampMagnitude(velocity, MaxImpactSpeed), point);
+            velocity = Vector3.ClampMagnitude(velocity, MaxImpactSpeed);
+            // a dedicated server is no client: a ClientRpc does not run here, and the server is the one that simulates a bot
+            ApplyImpact(velocity, point);
+            ImpactClientRpc(velocity, point);
         }
 
         [ClientRpc]
         private void ImpactClientRpc(Vector3 velocity, Vector3 point)
+        {
+            if (IsServer) return;   // a host applied it in the ServerRpc
+            ApplyImpact(velocity, point);
+        }
+
+        private void ApplyImpact(Vector3 velocity, Vector3 point)
         {
             if (health == null) return;
             bool sim = SimulatesBody;
@@ -142,10 +151,20 @@ namespace Railbound.BR
         }
 
         [ServerRpc]
-        private void RecoveredServerRpc() { RecoveredClientRpc(); }
+        private void RecoveredServerRpc()
+        {
+            RecoverCopy();   // the server's own copy of a player's body (a ClientRpc does not run on a dedicated server)
+            RecoveredClientRpc();
+        }
 
         [ClientRpc]
         private void RecoveredClientRpc()
+        {
+            if (IsServer) return;
+            RecoverCopy();
+        }
+
+        private void RecoverCopy()
         {
             if (SimulatesBody || health == null || health.IsDead) return;
             knockedDown = false;
